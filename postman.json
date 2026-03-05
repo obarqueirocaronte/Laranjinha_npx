@@ -1,0 +1,1744 @@
+{
+  "info": {
+    "_postman_id": "6a5c2cc0-b84b-4c9e-b7c9-84d42cc5dff4",
+    "name": "AuroraChat - API Integração",
+    "description": "<html><head></head><body><p>Bem-vindo à <strong>documentação oficial da AuroraChat API</strong>.</p>\n<p>Aqui você encontrará todos os recursos necessários para integrar sua aplicação de forma <strong>simples, rápida e segura</strong>.</p>\n<p>Com esta API você pode:</p>\n<ul>\n<li><p>📊 <strong>Gerenciar clientes, empresas e agentes</strong> em tempo real</p>\n</li>\n<li><p>💬 <strong>Enviar mensagens diretas e campanhas em massa</strong></p>\n</li>\n<li><p>🔍 <strong>Consultar status de mensagens</strong> e acompanhar entregas</p>\n</li>\n<li><p>🛠 <strong>Monitorar atendimentos e relatórios</strong> para manter o controle</p>\n</li>\n</ul>\n<hr>\n<h2 id=\"🔒-autenticação\">🔒 Autenticação</h2>\n<p>Todas as requisições da AuroraChat API exigem:</p>\n<ul>\n<li><p>✅ <strong>HTTPS</strong> obrigatório em todas as chamadas</p>\n</li>\n<li><p>🔑 <strong>Access-Token</strong> no header para autenticação</p>\n</li>\n</ul>\n<p><strong>Exemplo de Header:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\nContent-Type: application/json\n\n</code></pre>\n<hr>\n<h2 id=\"📌-boas-práticas\">📌 Boas práticas</h2>\n<ul>\n<li><p>🔄 Sempre utilize a <strong>versão mais recente</strong> da API (<code>/v3</code>)</p>\n</li>\n<li><p>⏳ Implemente <strong>tratamento de erros e timeouts</strong> na sua aplicação</p>\n</li>\n<li><p>⚡ Prefira chamadas assíncronas para grandes volumes de mensagens</p>\n</li>\n<li><p>📚 Explore cada recurso disponível nas seções ao lado 👉</p>\n</li>\n</ul>\n<hr>\n</body></html>",
+    "schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+    "toc": [],
+    "owner": "47894526",
+    "collectionId": "6a5c2cc0-b84b-4c9e-b7c9-84d42cc5dff4",
+    "publishedId": "2sB3HjLgai",
+    "public": true,
+    "customColor": {
+      "top-bar": "FFFFFF",
+      "right-sidebar": "303030",
+      "highlight": "FF6C37"
+    },
+    "publishDate": "2025-09-22T18:29:53.000Z"
+  },
+  "item": [
+    {
+      "name": "👥 Agents",
+      "item": [
+        {
+          "name": "Consultar Cadastro de Agentes",
+          "id": "c7f871fc-80db-4b3c-a0ce-110c049ac7f9",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "url": "https://api.aurorachat.com.br/v3/agents",
+            "description": "<h3 id=\"🔹-get-v3agents--consultar-cadastro-de-agentes\">🔹 GET <code>/v3/agents</code> – Consultar cadastro de agentes</h3>\n<p>Retorna a lista completa de agentes cadastrados na conta AuroraChat.<br /><strong>Autenticação:</strong> Bearer Token obrigatório</p>\n<p>O header deve conter o token de acesso da API:</p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n<p><strong>Possíveis erros:</strong></p>\n<ul>\n<li><p><code>401 Unauthorized</code> → Token inválido ou expirado</p>\n</li>\n<li><p><code>403 Forbidden</code> → Sem permissão de acesso</p>\n</li>\n<li><p><code>500 Internal Server Error</code> → Erro interno no servidor</p>\n</li>\n</ul>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "agents"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "id": "e3e1a45b-bedf-4d61-bc90-61023d4d9f42",
+              "name": "Consultar Cadastro de Agentes",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "access-token",
+                    "value": "•••••••",
+                    "description": "(O token é gerado pela equipe de suporte da NPX)",
+                    "type": "text"
+                  },
+                  {
+                    "key": "",
+                    "value": "",
+                    "type": "text",
+                    "disabled": true
+                  }
+                ],
+                "url": "https://api.aurorachat.com.br/v3/agents"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "nginx/1.29.1"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 16 Sep 2025 16:44:09 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "description": "",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "2433"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "1; mode=block"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "strict-origin-when-cross-origin"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"869758ccb2d35a55a3cf2866d62cb5da\""
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "max-age=0, private, must-revalidate"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "5dfd1770-59bb-432b-904d-9102805fe040"
+                },
+                {
+                  "key": "X-Runtime",
+                  "value": "0.083182"
+                },
+                {
+                  "key": "vary",
+                  "value": "Origin"
+                }
+              ],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "responseTime": null,
+              "body": "{\n    \"agents\": [                       // Lista (array) de agentes do sistema\n        {\n        \"id\": 6,                      // Identificador único do agente (numérico)\n        \"name\": \"Carlos Silva\",       // Nome completo do agente\n        \"email\": \"carlos.silva@example.com\", // Email do agente (geralmente usado para login/contato)\n        \"role\": \"admin\",              // Papel do usuário no sistema (aqui todos são administradores)\n        \"username\": null              // Nome de usuário (aqui está vazio/null, não foi configurado)\n        },\n        {\n        \"id\": 7,\n        \"name\": \"Mariana Oliveira\",\n        \"email\": \"mariana.oliveira@example.com\",\n        \"role\": \"admin\",\n        \"username\": null              // Ainda não definido para este agente\n        },\n        {\n        \"id\": 256,\n        \"name\": \"Tech Solutions\",     \n        \"email\": \"contato@techsolutions.com\",\n        \"role\": \"admin\",\n        \"username\": \"Tech Solutions\"  // Esse já tem um username definido (igual ao nome da empresa)\n        },\n        {\n        \"id\": 9,\n        \"name\": \"Pedro Santos\",\n        \"email\": \"pedro.santos@example.com\",\n        \"role\": \"admin\",\n        \"username\": null\n        },\n        {\n        \"id\": 10,\n        \"name\": \"Juliana Costa\",\n        \"email\": \"juliana.costa@example.com\",\n        \"role\": \"admin\",\n        \"username\": \"julianacosta\"    // Esse tem username customizado\n        }\n    ]\n}"
+            }
+          ],
+          "_postman_id": "c7f871fc-80db-4b3c-a0ce-110c049ac7f9"
+        }
+      ],
+      "id": "7819e3fc-6814-49f8-9be7-9d7297ff3f7a",
+      "description": "<p>Os <strong>Agents</strong> representam os atendentes ou usuários que interagem dentro do AuroraChat.</p>\n<p>Através deste conjunto de endpoints, você pode consultar o cadastro de agentes e gerenciar suas informações.</p>\n<p>🔐 <strong>Observação:</strong> Todos os endpoints requerem o header de autenticação:</p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n<hr />\n",
+      "_postman_id": "7819e3fc-6814-49f8-9be7-9d7297ff3f7a"
+    },
+    {
+      "name": "📂 Assets",
+      "item": [
+        {
+          "name": "Assets",
+          "id": "d46012f9-fcea-401d-b73e-98bc818f0aff",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "noauth",
+              "isInherited": false
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"asset\": {                          // \"asset\" é o objeto principal que contém informações sobre um arquivo.\r\n        \"file_key\": \"123\",              // \"file_key\" é uma chave ou identificador único do arquivo.\r\n        \"content_type\": \"1\",            // \"content_type\" indica o tipo de conteúdo do arquivo.\r\n        \"filename\": \"João\"              // \"filename\" é o nome do arquivo, neste caso, \"João\".\r\n    }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/v3/assets",
+            "description": "<h1 id=\"📤-criar-um-asset\">📤 Criar um Asset</h1>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">POST /v3/assets\n\n</code></pre>\n<p>Esse endpoint permite <strong>criar um novo asset</strong> (recurso) no AuroraChat, como documentos, imagens ou arquivos que podem ser vinculados às interações.</p>\n<hr />\n<h2 id=\"📩-exemplo-de-requisição\">📩 Exemplo de Requisição</h2>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\nContent-Type: application/json\n\n</code></pre>\n<hr />\n<h2 id=\"⚠️-possíveis-erros\">⚠️ Possíveis Erros</h2>\n<ul>\n<li><p><strong>401 Unauthorized</strong> → Token inválido ou ausente.</p>\n</li>\n<li><p><strong>400 Bad Request</strong> → Estrutura JSON inválida ou campos obrigatórios ausentes.</p>\n</li>\n<li><p><strong>415 Unsupported Media Type</strong> → Tipo de arquivo não aceito.</p>\n</li>\n</ul>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "assets"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "id": "50adbb03-031e-4208-a83d-ee48909668a9",
+              "name": "Assents",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "access-token",
+                    "value": "•••••••",
+                    "description": "(O token é gerado pela equipe de suporte da NPX)",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"asset\": {                          // \"asset\" é o objeto principal que contém informações sobre um arquivo.\r\n        \"file_key\": \"123\",              // \"file_key\" é uma chave ou identificador único do arquivo.\r\n        \"content_type\": \"1\",             // \"content_type\" indica o tipo de conteúdo do arquivo.\r\n        \"filename\": \"João\"               // \"filename\" é o nome do arquivo, neste caso, \"João\".\r\n    }\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "https://api.aurorachat.com.br/v3/assets"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "nginx/1.29.1"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 16 Sep 2025 16:47:04 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "description": "",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "526"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "1; mode=block"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "strict-origin-when-cross-origin"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"fe39279ff681d4ad6a35ec4cb5579eae\""
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "max-age=0, private, must-revalidate"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "a4f2131a-53c5-48a7-a71b-2a7aa420ca44"
+                },
+                {
+                  "key": "X-Runtime",
+                  "value": "0.140294"
+                },
+                {
+                  "key": "vary",
+                  "value": "Origin"
+                }
+              ],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "responseTime": null,
+              "body": "{\n  \"messages\": [                                         // \"messages\" é um array que contém uma ou mais mensagens a serem enviadas ou processadas.\n    {\n      \"identifier\": \"85999038578\",                     // \"identifier\" é o número de telefone do destinatário da mensagem.\n      \"internal_code\": \"4004967\",                      // \"internal_code\" é o código interno que identifica a mensagem no sistema.\n      \"name\": \"JOAO.S\",                                // \"name\" é o nome do destinatário ou usuário associado à mensagem.\n      \"parameters\": \"JOAO.S|boa tarde|4004967|22/07/2025 13:46|VELEIRO COMERCIO DE TINTAS EIRELI|PRODUÇÃO|CUSTOS COM MATERIAIS AUX. DE ESTOCAGEM\",\n                                                       // \"parameters\" é uma string com informações detalhadas da mensagem, separadas por \"|\":\n                                                       // 1. Nome do destinatário (JOAO.S)\n                                                       // 2. Saudação ou mensagem inicial (\"boa tarde\")\n                                                       // 3. Código interno da mensagem (4004967)\n                                                       // 4. Data e hora da mensagem (22/07/2025 13:46)\n                                                       // 5. Nome da empresa (VELEIRO COMERCIO DE TINTAS EIRELI)\n                                                       // 6. Departamento ou setor (PRODUÇÃO)\n                                                       // 7. Descrição do assunto ou categoria (CUSTOS COM MATERIAIS AUX. DE ESTOCAGEM)\n      \"file\": {                                        // \"file\" é um objeto que descreve um arquivo anexado à mensagem.\n        \"name\": \"teste.pdf\",                           // \"name\" é o nome do arquivo anexado.\n        \"type\": \"document\",                            // \"type\" indica que o arquivo é um documento.\n        \"body\": \"#base64\"                              // \"body\" contém o conteúdo do arquivo codificado em Base64 para transmissão segura via JSON.\n      }\n    }\n  ]\n}"
+            }
+          ],
+          "_postman_id": "d46012f9-fcea-401d-b73e-98bc818f0aff"
+        }
+      ],
+      "id": "a22d3178-263d-48c2-8588-fcecabadb984",
+      "description": "<p>Os <strong>Assets</strong> representam os recursos vinculados ao AuroraChat, como arquivos, documentos ou informações adicionais que podem ser anexadas ou associadas às interações.</p>\n<p>Com esses endpoints, você pode criar e gerenciar os assets para enriquecer a comunicação e os registros do sistema.</p>\n<p>🔐 <strong>Observação:</strong> Todos os endpoints exigem autenticação via header:</p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n<hr />\n",
+      "_postman_id": "a22d3178-263d-48c2-8588-fcecabadb984"
+    },
+    {
+      "name": "🎯 Campaigns",
+      "item": [
+        {
+          "name": "Campaings ID",
+          "id": "723d4067-006b-4165-8f4e-4204582ac708",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "noauth",
+              "isInherited": false
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"messages\": [\r\n    {\r\n      \"identifier\": \"85999038578\",                     // \"identifier\" é o número de telefone do destinatário da mensagem.\r\n      \"internal_code\": \"4004967\",                      // \"internal_code\" é o código interno que identifica a mensagem dentro do sistema.\r\n      \"name\": \"JOAO.S\",                                // \"name\" é o nome do destinatário ou usuário associado à mensagem.\r\n      \"parameters\": \"JOAO.S|boa tarde|4004967|22/07/2025 13:46|VELEIRO COMERCIO DE TINTAS EIRELI|PRODUÇÃO|CUSTOS COM MATERIAIS AUX. DE ESTOCAGEM\",\r\n                                                       // \"parameters\" é uma string com informações detalhadas separadas por \"|\":\r\n                                                       // 1. Nome do destinatário (JOAO.S)\r\n                                                       // 2. Saudação ou mensagem inicial (\"boa tarde\")\r\n                                                       // 3. Código interno da mensagem (4004967)\r\n                                                       // 4. Data e hora da mensagem (22/07/2025 13:46)\r\n                                                       // 5. Nome da empresa (VELEIRO COMERCIO DE TINTAS EIRELI)\r\n                                                       // 6. Departamento ou setor (PRODUÇÃO)\r\n                                                       // 7. Descrição do assunto ou categoria (CUSTOS COM MATERIAIS AUX. DE ESTOCAGEM)\r\n      \"file\": {\r\n        \"name\": \"teste.pdf\",                           // \"name\" �� o nome do arquivo anexado à mensagem.\r\n        \"type\": \"document\",                            // \"type\" indica que o arquivo é um documento.\r\n        \"body\": \"#base64\"                              // \"body\" contém o conteúdo do arquivo codificado em Base64 para transmissão segura via JSON.\r\n      }\r\n    }\r\n  ]\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/v3/campaigns/66ea5f19-422b-4138-8971-93456f533ecc/messages",
+            "description": "<h2 id=\"📤-enviar-campanhas\">📤 Enviar Campanhas</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">POST /v3/campaigns/:id\n\n</code></pre>\n<p>Cria ou atualiza uma campanha específica pelo seu <strong>ID</strong>.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\nContent-Type: application/json\n\n</code></pre>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "campaigns",
+                "66ea5f19-422b-4138-8971-93456f533ecc",
+                "messages"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [],
+          "_postman_id": "723d4067-006b-4165-8f4e-4204582ac708"
+        },
+        {
+          "name": "Campaings Envio SMS",
+          "id": "75a1d8b3-1ee2-490c-943e-38205a904246",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"messages\": [                                         // \"messages\" é uma lista de mensagens que serão enviadas.\r\n        {\r\n            \"number\": \"85999999999\",                      // \"number\" é o número de telefone do destinatário da mensagem.\r\n            \"message\": \"Ola\",                             // \"message\" é o conteúdo textual da mensagem que será enviada.\r\n            \"code\": \"CODIGO_INTERNO\"                      // \"code\" é o código interno que identifica a mensagem no sistema.\r\n        },\r\n        {\r\n            \"number\": \"85999999999\",                      // Outro destinatário ou mesmo número, cada objeto representa uma mensagem separada.\r\n            \"message\": \"Ola\",                             // Conteúdo textual da segunda mensagem.\r\n            \"code\": \"CODIGO_INTERNO\"                      // Código interno da segunda mensagem.\r\n        }\r\n    ]\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/campaigns/:id/sms",
+            "description": "<h2 id=\"📩-enviar-campanha-sms\">📩 Enviar Campanha SMS</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">POST /v3/campaigns/send-sms\n\n</code></pre>\n<p>Envia uma campanha de <strong>SMS</strong> para uma lista de contatos.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\nContent-Type: application/json\n\n</code></pre>\n<hr />\n<p>⚠️ <strong>Possíveis erros comuns</strong></p>\n<ul>\n<li><p><strong>401 Unauthorized</strong> → Token inválido ou ausente.</p>\n</li>\n<li><p><strong>400 Bad Request</strong> → Campos obrigatórios não enviados.</p>\n</li>\n<li><p><strong>404 Not Found</strong> → Campanha não encontrada pelo ID.</p>\n</li>\n</ul>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "campaigns",
+                ":id",
+                "sms"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "description": {
+                    "content": "<p>ID da empresa</p>\n",
+                    "type": "text/plain"
+                  },
+                  "type": "any",
+                  "value": "",
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "_postman_id": "75a1d8b3-1ee2-490c-943e-38205a904246"
+        }
+      ],
+      "id": "194c496e-d09a-4930-9130-ad03a11e4990",
+      "description": "<p>As campanhas permitem gerenciar e enviar comunicações em massa, como <strong>SMS</strong> ou <strong>interações automáticas</strong> dentro do AuroraChat.</p>\n<p>🔐 <strong>Autenticação obrigatória</strong></p>\n<p>O header deve conter o token de acesso da API:</p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+      "_postman_id": "194c496e-d09a-4930-9130-ad03a11e4990"
+    },
+    {
+      "name": "👥 Clients",
+      "item": [
+        {
+          "name": "Consultar ao Cadastro de Clients",
+          "id": "4cc77707-9fea-4493-8b56-8de5deaee4c1",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"by_id\": \"12345\",            // ID único do registro (ex: cliente ou empresa)\r\n    \"by_name\": \"NPX Telecom\",    // \"by_name\" é o critério de busca pelo nome, usado para filtrar resultados (ex:procurar clientes, empresas ou registros que contenham \"NPX Telecom\").\r\n    \"by_identifier\": \"12.345.678/0001-90\", // CNPJ, CPF ou código interno\r\n    \"by_client_channels\": \"WhatsApp\", // Canal de contato do cliente (ex.: WhatsApp, E-mail)\r\n    \"page\": \"1\",                 // (Obrigatório)\"page\" indica o número da página de resultados que será exibida (neste caso, a primeira página).\r\n    \"per_page\": \"10\"             // (Obrigatório)\"per_page\" define a quantidade de registros que devem ser exibidos por página (neste caso, 10 resultados).\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/v3/clients",
+            "description": "<h2 id=\"🔍-consultar-cadastro-de-clientes\">🔍 Consultar Cadastro de Clientes</h2>\n<p>Endpoint:</p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-json\">GET /v3/clients\n\n</code></pre>\n<p>Retorna a lista completa de clientes cadastrados.</p>\n<h3 id=\"parâmetros-obrigatórios\"><strong>Parâmetros Obrigatórios</strong></h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-json\">\"page\": \"1\",       // (Obrigatório) Número da página de resultados (ex.: 1 para a primeira página)\n\"per_page\": \"10\"   // (Obrigatório) Quantidade de registros por página (ex.: 10 resultados por página)\n\n</code></pre>\n<ul>\n<li><p><strong>page</strong>: Indica qual página de resultados você quer ver.<br />  Exemplo: Se <code>page = 2</code>, a API retorna os registros da segunda página.</p>\n</li>\n<li><p><strong>per_page</strong>: Define quantos registros aparecem em cada página.<br />  Exemplo: Se você tem 50 registros e <code>per_page = 10</code>, terá 5 páginas no total.</p>\n</li>\n</ul>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-json\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "clients"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "id": "de855ed2-fe2d-4860-8b7c-ad4435bfb32f",
+              "name": "Consultar ao Cadastro de Clients",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "access-token",
+                    "value": "•••••••",
+                    "description": "(O token é gerado pela equipe de suporte da NPX)",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"by_id\": \"12345\",            // ID único do registro (ex: cliente ou empresa)\r\n    \"by_name\": \"NPX Telecom\",    // \"by_name\" é o critério de busca pelo nome, usado para filtrar resultados (ex:procurar clientes, empresas ou registros que contenham \"NPX Telecom\").\r\n    \"by_identifier\": \"12.345.678/0001-90\", // CNPJ, CPF ou código interno\r\n    \"by_client_channels\": \"WhatsApp\", // Canal de contato do cliente (ex.: WhatsApp, E-mail)\r\n    \"page\": \"1\",                 // (Obrigatório)\"page\" indica o número da página de resultados que será exibida (neste caso, a primeira página).\r\n    \"per_page\": \"10\"             // (Obrigatório)\"per_page\" define a quantidade de registros que devem ser exibidos por página (neste caso, 10 resultados).\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "https://api.aurorachat.com.br/v3/clients"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "nginx/1.29.1"
+                },
+                {
+                  "key": "Date",
+                  "value": "Mon, 22 Sep 2025 18:00:29 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "description": "",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "2924"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "1; mode=block"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "strict-origin-when-cross-origin"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"af3a963eaa9cebaa7dbb12c7e3817549\""
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "max-age=0, private, must-revalidate"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "c2394304-8909-40f4-8020-51587124be29"
+                },
+                {
+                  "key": "X-Runtime",
+                  "value": "0.057476"
+                },
+                {
+                  "key": "vary",
+                  "value": "Origin"
+                }
+              ],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "responseTime": null,
+              "body": "{\n    \"clients\": [\n        {\n            \"id\": 100001,  // ID fictício do cliente\n            \"name\": \"Empresa Fictícia 1\",  // Nome fictício da empresa\n            \"external_code\": null,  // Código externo, se houver\n            \"responsible_user_id\": null,  // ID do usuário responsável\n            \"document\": null,  // Documento do cliente (CNPJ, CPF, etc.)\n            \"informations\": null,  // Informações adicionais\n            \"company_id\": null,  // ID da empresa associada\n            \"company_name\": null,  // Nome da empresa associada\n            \"channels\": [\n                {\n                    \"id\": 200001,  // ID do canal\n                    \"client_id\": 100001,  // ID do cliente relacionado\n                    \"channel\": \"whatsapp\",  // Tipo de canal\n                    \"identifier\": \"5599999999999\",  // Número ou identificador do canal\n                    \"created_at\": \"2025-01-01T00:00:00.000-03:00\",  // Data de criação\n                    \"updated_at\": \"2025-01-01T00:00:00.000-03:00\",  // Última atualização\n                    \"whatsapp_optin\": false,  // Opt-in do WhatsApp\n                    \"deleted_at\": null  // Data de exclusão, se houver\n                }\n            ],\n            \"phones\": \"5599999999999\",  // Telefone principal\n            \"emails\": \"\",  // E-mail do cliente\n            \"paginable\": {\n                \"current\": 1,  // Página atual\n                \"previous\": null,  // Página anterior\n                \"next\": null,  // Próxima página\n                \"limit\": 10,  // Limite de itens por página\n                \"total_pages\": 1,  // Total de páginas\n                \"total_count\": 5  // Total de registros\n            }\n        },\n        {\n            \"id\": 100002,\n            \"name\": \"Empresa Fictícia 2\",\n            \"external_code\": null,\n            \"responsible_user_id\": null,\n            \"document\": null,\n            \"informations\": \"Informação teste\",\n            \"company_id\": 100,\n            \"company_name\": \"Empresa Fictícia 2\",\n            \"channels\": [\n                {\n                    \"id\": 200002,\n                    \"client_id\": 100002,\n                    \"channel\": \"whatsapp\",\n                    \"identifier\": \"5599888777666\",\n                    \"created_at\": \"2025-01-02T00:00:00.000-03:00\",\n                    \"updated_at\": \"2025-01-02T00:00:00.000-03:00\",\n                    \"whatsapp_optin\": false,\n                    \"deleted_at\": null\n                }\n            ],\n            \"phones\": \"5599888777666\",\n            \"emails\": \"\",\n            \"paginable\": {\n                \"current\": 1,\n                \"previous\": null,\n                \"next\": null,\n                \"limit\": 10,\n                \"total_pages\": 1,\n                \"total_count\": 5\n            }\n        },\n        {\n            \"id\": 100003,\n            \"name\": \"Empresa Fictícia 3\",\n            \"external_code\": null,\n            \"responsible_user_id\": 101,\n            \"document\": null,\n            \"informations\": \"Teste de informação\",\n            \"company_id\": 101,\n            \"company_name\": \"Empresa Fictícia 3\",\n            \"channels\": [\n                {\n                    \"id\": 200003,\n                    \"client_id\": 100003,\n                    \"channel\": \"whatsapp\",\n                    \"identifier\": \"5599777666555\",\n                    \"created_at\": \"2025-01-03T00:00:00.000-03:00\",\n                    \"updated_at\": \"2025-01-03T00:00:00.000-03:00\",\n                    \"whatsapp_optin\": false,\n                    \"deleted_at\": null\n                }\n            ],\n            \"phones\": \"5599777666555\",\n            \"emails\": \"\",\n            \"paginable\": {\n                \"current\": 1,\n                \"previous\": null,\n                \"next\": null,\n                \"limit\": 10,\n                \"total_pages\": 1,\n                \"total_count\": 5\n            }\n        },\n        {\n            \"id\": 100004,\n            \"name\": \"Empresa Fictícia 4\",\n            \"external_code\": null,\n            \"responsible_user_id\": null,\n            \"document\": null,\n            \"informations\": null,\n            \"company_id\": 102,\n            \"company_name\": \"Empresa Fictícia 4\",\n            \"channels\": [\n                {\n                    \"id\": 200004,\n                    \"client_id\": 100004,\n                    \"channel\": \"whatsapp\",\n                    \"identifier\": \"5599666555444\",\n                    \"created_at\": \"2025-01-04T00:00:00.000-03:00\",\n                    \"updated_at\": \"2025-01-04T00:00:00.000-03:00\",\n                    \"whatsapp_optin\": false,\n                    \"deleted_at\": null\n                },\n                {\n                    \"id\": 200005,\n                    \"client_id\": 100004,\n                    \"channel\": \"phone\",\n                    \"identifier\": \"5599555444333\",\n                    \"created_at\": \"2025-01-05T00:00:00.000-03:00\",\n                    \"updated_at\": \"2025-01-05T00:00:00.000-03:00\",\n                    \"whatsapp_optin\": false,\n                    \"deleted_at\": null\n                }\n            ],\n            \"phones\": \"5599666555444;5599555444333\",\n            \"emails\": \"\",\n            \"paginable\": {\n                \"current\": 1,\n                \"previous\": null,\n                \"next\": null,\n                \"limit\": 10,\n                \"total_pages\": 1,\n                \"total_count\": 5\n            }\n        },\n        {\n            \"id\": 100005,\n            \"name\": \"Empresa Fictícia 5\",\n            \"external_code\": null,\n            \"responsible_user_id\": null,\n            \"document\": null,\n            \"informations\": null,\n            \"company_id\": null,\n            \"company_name\": null,\n            \"channels\": [\n                {\n                    \"id\": 200006,\n                    \"client_id\": 100005,\n                    \"channel\": \"whatsapp\",\n                    \"identifier\": \"5599444333222\",\n                    \"created_at\": \"2025-01-06T00:00:00.000-03:00\",\n                    \"updated_at\": \"2025-01-06T00:00:00.000-03:00\",\n                    \"whatsapp_optin\": false,\n                    \"deleted_at\": null\n                }\n            ],\n            \"phones\": \"5599444333222\",\n            \"emails\": \"\",\n            \"paginable\": {\n                \"current\": 1,\n                \"previous\": null,\n                \"next\": null,\n                \"limit\": 10,\n                \"total_pages\": 1,\n                \"total_count\": 5\n            }\n        }\n    ]\n}\n"
+            }
+          ],
+          "_postman_id": "4cc77707-9fea-4493-8b56-8de5deaee4c1"
+        },
+        {
+          "name": "Consultar um Cliente Pelo ID",
+          "id": "1f15f62f-8f68-4d4e-8f5e-41ba99990dfa",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "url": "https://api.aurorachat.com.br/v3/clients/ID_CLIENTE",
+            "description": "<h2 id=\"🔎-consultar-um-cliente-pelo-id\">🔎 Consultar um Cliente Pelo ID</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">GET /v3/clients/:id\n\n</code></pre>\n<p>Consulta os detalhes de um cliente específico.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "clients",
+                "ID_CLIENTE"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [],
+          "_postman_id": "1f15f62f-8f68-4d4e-8f5e-41ba99990dfa"
+        },
+        {
+          "name": "Criar um Novo Cliente",
+          "id": "8baee4fe-30c1-4a66-afc4-d9e296582cdc",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"client\": {                                                   // \"client\" é o objeto principal que contém os dados do cliente.\r\n    \"name\": \"Nome do cliente\",                                  // \"name\" é o nome completo ou razão social do cliente.\r\n    \"document\": \"CPF ou CNPJ\",                                  // \"document\" é o documento de identificação do cliente (CPF para pessoa física ou CNPJ para empresa).\r\n    \"responsible_user_id\": \"ID do agente responsável\",          // \"responsible_user_id\" é o ID do usuário (agente) que ficará responsável por esse cliente no sistema.\r\n    \"client_channels_attributes\": [                             // \"client_channels_attributes\" é a lista de canais de comunicação associados ao cliente.\r\n      { \r\n        \"identifier\": \"Número\",                                 // \"identifier\" é o número de contato (telefone, WhatsApp, e-mail, etc.).\r\n        \"channel\": \"Tipo\"                                       // \"channel\" define o tipo de canal (ex.: \"whatsapp\", \"phone\", \"email\").\r\n      }\r\n    ]\r\n  }\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/v3/clients",
+            "description": "<h2 id=\"➕-criar-um-novo-cliente\">➕ Criar um Novo Cliente</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">POST /v3/clients\n\n</code></pre>\n<p>Cadastra um novo cliente no sistema.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\nContent-Type: application/json\n\n</code></pre>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "clients"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [],
+          "_postman_id": "8baee4fe-30c1-4a66-afc4-d9e296582cdc"
+        },
+        {
+          "name": "Atualizar um Cliente",
+          "id": "46030190-949b-4edc-9066-41e04b68cbbf",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"client\": {                                                                 // \"client\" é o objeto principal que agrupa todas as informações do cliente.\r\n    \"name\": \"Nome do cliente\",                                                 // \"name\" é o nome do cliente (pessoa física ou jurídica).\r\n    \"document\": \"CPF ou CNPJ\",                                                 // \"document\" é o documento de identificação (CPF para pessoa física ou CNPJ para empresa).\r\n    \"responsible_user_id\": \"ID do agente responsável\",                         // \"responsible_user_id\" é o ID do usuário (agente) responsável por gerenciar o cliente.\r\n    \"external_code\": \"Código externo\",                                         // \"external_code\" é um código usado para integrar esse cliente a outro sistema externo.\r\n    \"client_channels_attributes\": [                                            // \"client_channels_attributes\" é a lista de canais de comunicação vinculados ao cliente.\r\n      { \r\n        \"id\": \"ID do canal\",                                                   // \"id\" é o identificador do canal (usado em atualizações ou exclusões).\r\n        \"identifier\": \"Número\",                                                // \"identifier\" é o número ou identificador do canal (telefone, WhatsApp, e-mail, etc.).\r\n        \"channel\": \"Tipo\",                                                     // \"channel\" define o tipo de canal (ex.: \"whatsapp\", \"phone\", \"email\").\r\n        \"_destroy\": \"Enviar true se for para remover\"                          // \"_destroy\" indica se o canal deve ser removido. Enviar \"true\" para deletar.\r\n      }\r\n    ]\r\n  }\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/v3/clients/ID_CLIENTE",
+            "description": "<h2 id=\"✏️-atualizar-um-cliente\">✏️ Atualizar um Cliente</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">PUT /v3/clients/:id\n\n</code></pre>\n<p>Atualiza os dados de um cliente existente.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\nContent-Type: application/json\n\n</code></pre>\n<hr />\n<p>⚠️ <strong>Possíveis erros comuns</strong></p>\n<ul>\n<li><p><strong>401 Unauthorized</strong> → Token inválido ou ausente.</p>\n</li>\n<li><p><strong>404 Not Found</strong> → Cliente não encontrado.</p>\n</li>\n<li><p><strong>400 Bad Request</strong> → Dados obrigatórios não enviados ou inválidos.</p>\n</li>\n</ul>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "clients",
+                "ID_CLIENTE"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [],
+          "_postman_id": "46030190-949b-4edc-9066-41e04b68cbbf"
+        }
+      ],
+      "id": "05960a35-f750-4842-852d-6a7e14593e06",
+      "description": "<p>O módulo de <strong>Clients</strong> gerencia os clientes cadastrados no AuroraChat, permitindo <strong>consulta, criação e atualização</strong> de dados.</p>\n<p>🔐 <strong>Autenticação obrigatória</strong></p>\n<p>O header deve conter o token de acesso da API:</p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+      "_postman_id": "05960a35-f750-4842-852d-6a7e14593e06"
+    },
+    {
+      "name": "🏢 Companies",
+      "item": [
+        {
+          "name": "Consultar o Cadastro de Empresas",
+          "id": "71a7b333-449b-47a1-a0fd-6000bd11d04b",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"by_name\": \"NPX\",        // \"by_name\" é o filtro pelo nome do cliente/empresa. Aqui está buscando por \"NPX\".\r\n  \"page\": 1,               // \"page\" indica a página da listagem de resultados que você quer consultar (paginação).\r\n  \"per_page\": 20           // \"per_page\" define quantos registros serão retornados por página (limite de itens).\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/v3/companies",
+            "description": "<h2 id=\"📋-consultar-cadastro-de-empresas\">📋 Consultar Cadastro de Empresas</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">GET /v3/companies\n\n</code></pre>\n<p>Retorna a lista de todas as empresas cadastradas.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "companies"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "id": "51b2c61d-ab9b-43fb-a1e7-001e271011e9",
+              "name": "Consultar o Cadastro de Empresas",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "access-token",
+                    "value": "•••••••",
+                    "description": "(O token é gerado pela equipe de suporte da NPX)",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"messages\": [\r\n    {\r\n      \"identifier\": \"85999038578\",\r\n      \"internal_code\": \"4004967\",\r\n      \"name\": \"JOAO.S\",\r\n      \"parameters\": \"JOAO.S|boa tarde|4004967|22/07/2025 13:46|VELEIRO COMERCIO DE TINTAS EIRELI|PRODUÇÃO|CUSTOS COM MATERIAIS AUX. DE ESTOCAGEM\",\r\n      \"file\": {\r\n        \"name\": \"teste.pdf\",\r\n        \"type\": \"document\",\r\n        \"body\": \"#base64\"\r\n      }\r\n    }\r\n  ]\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "https://api.aurorachat.com.br/v3/companies"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "nginx/1.29.1"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 19 Sep 2025 16:27:40 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "description": "",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "33982"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "1; mode=block"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "strict-origin-when-cross-origin"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"981fb6e3967044e4966938b1f374e836\""
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "max-age=0, private, must-revalidate"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "0b4ba0d8-1b50-4fb1-87ee-e2115cffbb5a"
+                },
+                {
+                  "key": "X-Runtime",
+                  "value": "0.133017"
+                },
+                {
+                  "key": "vary",
+                  "value": "Origin"
+                }
+              ],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "responseTime": null,
+              "body": "{\n  \"companies\": [                                      // \"companies\" é um array que contém a lista de empresas retornadas.\n    {\n      \"id\": 820,                                      // \"id\" é o identificador único da empresa no sistema.\n      \"name\": \"Alpha Solutions\",                      // \"name\" é o nome da empresa.\n      \"document\": \"11.111.111/0001-11\",               // \"document\" é o CNPJ da empresa.\n      \"external_code\": \"\",                            // \"external_code\" é um campo para código de integração externa (aqui está vazio).\n      \"responsible_user_id\": 0,                       // \"responsible_user_id\" indica o ID do usuário responsável pela empresa (0 = nenhum atribuído).\n      \"address\": \"Rua das Palmeiras\",                 // \"address\" é o nome da rua ou logradouro da empresa.\n      \"address_number\": \"1234\",                       // \"address_number\" é o número do endereço.\n      \"address_neighborhood\": \"Centro\",               // \"address_neighborhood\" é o bairro da empresa.\n      \"address_compl\": \"Edifício Central, Sala 201\",  // \"address_compl\" é o complemento do endereço.\n      \"address_city\": \"São Paulo\",                    // \"address_city\" é a cidade da empresa.\n      \"address_state\": \"SP\",                          // \"address_state\" é o estado (UF) da empresa.\n      \"address_zipcode\": \"01000-000\"                  // \"address_zipcode\" é o CEP do endereço.\n    },\n    {\n      \"id\": 821,\n      \"name\": \"Beta Serviços\",\n      \"document\": \"22.222.222/0001-22\",\n      \"external_code\": \"\",\n      \"responsible_user_id\": 0,\n      \"address\": \"Avenida Brasil\",\n      \"address_number\": \"567\",\n      \"address_neighborhood\": \"Jardins\",\n      \"address_compl\": \"\",\n      \"address_city\": \"Rio de Janeiro\",\n      \"address_state\": \"RJ\",\n      \"address_zipcode\": \"20000-000\"\n    },\n    {\n      \"id\": 827,\n      \"name\": \"Gamma Consultoria\",\n      \"document\": \"33.333.333/0001-33\",\n      \"external_code\": \"\",\n      \"responsible_user_id\": 0,\n      \"address\": \"Rua das Flores\",\n      \"address_number\": \"890\",\n      \"address_neighborhood\": \"Bela Vista\",\n      \"address_compl\": \"\",\n      \"address_city\": \"Curitiba\",\n      \"address_state\": \"PR\",\n      \"address_zipcode\": \"80000-000\"\n    },\n    {\n      \"id\": 838,\n      \"name\": \"Delta Diagnósticos\",\n      \"document\": \"44.444.444/0001-44\",\n      \"external_code\": \"\",\n      \"responsible_user_id\": 0,\n      \"address\": \"Avenida Principal\",\n      \"address_number\": \"1010\",\n      \"address_neighborhood\": \"Industrial\",\n      \"address_compl\": \"\",\n      \"address_city\": \"Porto Alegre\",\n      \"address_state\": \"RS\",\n      \"address_zipcode\": \"90000-000\"\n    }\n  ],\n  \"current\": 0,                                       // \"current\" é a página atual da listagem (0 significa não paginado ou não informado).\n  \"previous\": 0,                                      // \"previous\" indica a página anterior (0 significa que não existe página anterior).\n  \"next\": 0,                                          // \"next\" indica a próxima página (0 significa que não existe próxima página).\n  \"limit\": 0,                                         // \"limit\" é a quantidade máxima de registros por página (0 significa que não foi definido).\n  \"total_pages\": 0,                                   // \"total_pages\" mostra o total de páginas disponíveis (0 indica não configurado).\n  \"total_count\": 0                                    // \"total_count\" mostra a quantidade total de registros encontrados (0 = nenhum cálculo feito).\n}"
+            }
+          ],
+          "_postman_id": "71a7b333-449b-47a1-a0fd-6000bd11d04b"
+        },
+        {
+          "name": "Consultar uma Empresa pelo ID",
+          "id": "ba3a2f2c-45f1-4c32-b156-d3461be9676e",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": 123   // \"id\" é o identificador único do objeto no sistema. \r\n              // Pode representar o ID de um cliente, empresa, usuário ou outro registro, \r\n              // dependendo do contexto em que for utilizado.\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/v3/companies/:id",
+            "description": "<h2 id=\"🔎-consultar-uma-empresa-pelo-id\">🔎 Consultar uma Empresa Pelo ID</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">GET /v3/companies/:id\n\n</code></pre>\n<p>Retorna os dados de uma empresa específica.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "companies",
+                ":id"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "description": {
+                    "content": "<p>(ID da Empresa)</p>\n",
+                    "type": "text/plain"
+                  },
+                  "type": "any",
+                  "value": "",
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "_postman_id": "ba3a2f2c-45f1-4c32-b156-d3461be9676e"
+        },
+        {
+          "name": "Criar uma Nova Empresa",
+          "id": "c5ae504e-02d7-46b7-9008-0cf398c4e52d",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"company\": {                                      // \"company\" é o objeto que agrupa os dados da empresa.\r\n    \"name\": \"Nome da empresa\",                      // \"name\" é o nome da empresa.\r\n    \"document\": \"CNPJ ou CPF\",                      // \"document\" é o CNPJ (para pessoa jurídica) ou CPF (para pessoa física).\r\n    \"address\": \"Rua Exemplo\",                       // \"address\" é o nome da rua ou logradouro.\r\n    \"address_number\": \"123\",                        // \"address_number\" é o número do endereço.\r\n    \"address_neighborhood\": \"Centro\",               // \"address_neighborhood\" é o bairro da empresa.\r\n    \"address_compl\": \"Sala 101\",                    // \"address_compl\" é o complemento do endereço (sala, andar, bloco, etc.).\r\n    \"address_city\": \"São Paulo\",                    // \"address_city\" é a cidade da empresa.\r\n    \"address_state\": \"SP\",                          // \"address_state\" é o estado (UF).\r\n    \"address_zipcode\": \"01000-000\",                 // \"address_zipcode\" é o CEP do endereço.\r\n    \"external_code\": \"EXT123\",                      // \"external_code\" �� um código externo usado para integrações com outros sistemas.\r\n    \"responsible_user_id\": 10                       // \"responsible_user_id\" é o ID do usuário responsável pelo cadastro da empresa.\r\n  }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/v3/companies",
+            "description": "<h2 id=\"➕-criar-uma-nova-empresa\">➕ Criar uma Nova Empresa</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">POST /v3/companies\n\n</code></pre>\n<p>Cadastra uma nova empresa no sistema.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\nContent-Type: application/json\n\n</code></pre>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "companies"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "id": "aed28fd2-3bdb-4308-bd1e-5eba0f2826a7",
+              "name": "Criar uma Nova Empresa",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "access-token",
+                    "value": "•••••••",
+                    "description": "(O token é gerado pela equipe de suporte da NPX)",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"company\": {                                      // \"company\" é o objeto que agrupa os dados da empresa.\r\n    \"name\": \"Nome da empresa\",                      // \"name\" é o nome da empresa.\r\n    \"document\": \"CNPJ ou CPF\",                      // \"document\" é o CNPJ (para pessoa jurídica) ou CPF (para pessoa física).\r\n    \"address\": \"Rua Exemplo\",                       // \"address\" é o nome da rua ou logradouro.\r\n    \"address_number\": \"123\",                        // \"address_number\" é o número do endereço.\r\n    \"address_neighborhood\": \"Centro\",               // \"address_neighborhood\" é o bairro da empresa.\r\n    \"address_compl\": \"Sala 101\",                    // \"address_compl\" é o complemento do endereço (sala, andar, bloco, etc.).\r\n    \"address_city\": \"São Paulo\",                    // \"address_city\" é a cidade da empresa.\r\n    \"address_state\": \"SP\",                          // \"address_state\" é o estado (UF).\r\n    \"address_zipcode\": \"01000-000\",                 // \"address_zipcode\" é o CEP do endereço.\r\n    \"external_code\": \"EXT123\",                      // \"external_code\" é um código externo usado para integrações com outros sistemas.\r\n    \"responsible_user_id\": 10                       // \"responsible_user_id\" é o ID do usuário responsável pelo cadastro da empresa.\r\n  }\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "https://api.aurorachat.com.br/v3/companies"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "nginx/1.29.1"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 16 Sep 2025 18:36:31 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "description": "",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "308"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "1; mode=block"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "strict-origin-when-cross-origin"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"e0c480b0fe8b09c041ba3c68701690ae\""
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "max-age=0, private, must-revalidate"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "615a0254-b623-494e-ac42-24ee374195d6"
+                },
+                {
+                  "key": "X-Runtime",
+                  "value": "0.161306"
+                },
+                {
+                  "key": "vary",
+                  "value": "Origin"
+                }
+              ],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "responseTime": null,
+              "body": "{\n  \"company\": {                                      // \"company\" é o objeto que agrupa os dados da empresa.\n    \"id\": 7236,                                     // \"id\" é o identificador único da empresa no sistema.\n    \"name\": \"Nome da empresa\",                      // \"name\" é o nome da empresa.\n    \"document\": \"CNPJ ou CPF\",                      // \"document\" é o CNPJ (pessoa jurídica) ou CPF (pessoa física) da empresa.\n    \"external_code\": \"EXT123\",                      // \"external_code\" é um código externo usado para integração com outros sistemas.\n    \"responsible_user_id\": 10,                      // \"responsible_user_id\" é o ID do usuário responsável pelo cadastro/gestão da empresa.\n    \"address\": \"Rua Exemplo\",                       // \"address\" é o logradouro (rua/avenida) da empresa.\n    \"address_number\": \"123\",                        // \"address_number\" é o número do endereço.\n    \"address_neighborhood\": \"Centro\",               // \"address_neighborhood\" é o bairro onde a empresa está localizada.\n    \"address_compl\": \"Sala 101\",                    // \"address_compl\" é o complemento do endereço (sala, andar, bloco, etc.).\n    \"address_city\": \"São Paulo\",                    // \"address_city\" é a cidade onde a empresa está localizada.\n    \"address_state\": \"SP\",                          // \"address_state\" é a sigla do estado (UF).\n    \"address_zipcode\": \"01000-000\"                  // \"address_zipcode\" é o CEP do endereço da empresa.\n  }\n}"
+            }
+          ],
+          "_postman_id": "c5ae504e-02d7-46b7-9008-0cf398c4e52d"
+        },
+        {
+          "name": "Atualizar uma Empresa",
+          "id": "7d9e8ada-bfae-49b4-ae81-b23cd02e32f2",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"company\": {                                      // \"company\" é o objeto que agrupa os dados da empresa.\r\n    \"name\": \"Nome da empresa atualizada\",           // \"name\" é o nome atualizado da empresa.\r\n    \"document\": \"CNPJ ou CPF atualizado\",           // \"document\" é o CNPJ (para pessoa jurídica) ou CPF (para pessoa física), já atualizado.\r\n    \"address\": \"Nova Rua\",                          // \"address\" é o novo logradouro/endereço da empresa.\r\n    \"address_number\": \"456\",                        // \"address_number\" é o número atualizado do endereço.\r\n    \"address_neighborhood\": \"Bairro Novo\",          // \"address_neighborhood\" é o bairro atualizado da empresa.\r\n    \"address_compl\": \"Andar 2\",                     // \"address_compl\" é o complemento atualizado (ex: sala, andar, bloco).\r\n    \"address_city\": \"Rio de Janeiro\",               // \"address_city\" é a nova cidade onde a empresa está localizada.\r\n    \"address_state\": \"RJ\",                          // \"address_state\" é o estado (UF) atualizado.\r\n    \"address_zipcode\": \"20000-000\",                 // \"address_zipcode\" é o novo CEP do endereço.\r\n    \"external_code\": \"EXT456\",                      // \"external_code\" é o código externo atualizado, usado em integrações.\r\n    \"responsible_user_id\": 20                       // \"responsible_user_id\" é o novo ID do usuário responsável pelo cadastro da empresa.\r\n  }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/v3/companies/:id",
+            "description": "<h2 id=\"✏️-atualizar-uma-empresa\">✏️ Atualizar uma Empresa</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">PUT /v3/companies/:id\n\n</code></pre>\n<p>Atualiza os dados de uma empresa existente.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\nContent-Type: application/json\n\n</code></pre>\n<hr />\n<p>⚠️ <strong>Possíveis erros comuns</strong></p>\n<ul>\n<li><p><strong>401 Unauthorized</strong> → Token inválido ou ausente.</p>\n</li>\n<li><p><strong>404 Not Found</strong> → Empresa não encontrada.</p>\n</li>\n<li><p><strong>400 Bad Request</strong> → Dados obrigatórios ausentes ou inválidos.</p>\n</li>\n</ul>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "companies",
+                ":id"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "description": {
+                    "content": "<p>(ID da Empresa)</p>\n",
+                    "type": "text/plain"
+                  },
+                  "type": "any",
+                  "value": "",
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "_postman_id": "7d9e8ada-bfae-49b4-ae81-b23cd02e32f2"
+        }
+      ],
+      "id": "ff872b30-15ef-409e-b92e-7dfbe45b2b59",
+      "description": "<p>O módulo de <strong>Companies</strong> gerencia empresas cadastradas no AuroraChat, permitindo <strong>consulta, criação e atualização</strong>.</p>\n<p>🔐 <strong>Autenticação obrigatória</strong></p>\n<p>O header deve conter o token da API:</p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+      "_postman_id": "ff872b30-15ef-409e-b92e-7dfbe45b2b59"
+    },
+    {
+      "name": "📝 Issues",
+      "item": [
+        {
+          "name": "Issues",
+          "id": "54f3e908-d980-4023-b21c-3f2f699f28be",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"by_start_date\": \"2025-02-18 00:00:00\",         // \"by_start_date\" define a data e hora de início do filtro para pesquisa de registros.\r\n  \"by_end_date\": \"2025-02-19 23:59:59\",           // \"by_end_date\" define a data e hora final do filtro para pesquisa de registros.\r\n  \"by_id\": \"\",                                     // \"by_id\" é o filtro pelo ID do registro; vazio significa que não está sendo usado.\r\n  \"by_name\": \"\",                                   // \"by_name\" é o filtro pelo nome do cliente/empresa; vazio significa que não está sendo usado.\r\n  \"by_identifier\": \"\",                             // \"by_identifier\" é o filtro pelo identificador de contato (ex.: telefone, WhatsApp); vazio significa que não está sendo usado.\r\n  \"by_client_channels\": \"\",                        // \"by_client_channels\" filtra pelos tipos de canais do cliente (ex.: whatsapp, phone, email); vazio significa que não está sendo usado.\r\n  \"page\": \"1\",                                     // \"page\" indica o número da página de resultados a ser retornada (paginação).\r\n  \"per_page\": \"10\"                                 // \"per_page\" define a quantidade máxima de registros retornados por página.\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/v3/issues",
+            "description": "<h2 id=\"📋-listar-issues\">📋 Listar Issues</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">GET /v3/issues\n\n</code></pre>\n<p>Retorna a lista de issues (problemas/tickets) cadastrados no sistema.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "issues"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "id": "dbd770c1-3ed5-4d06-8f62-22e930eaf861",
+              "name": "Issues",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "access-token",
+                    "value": "•••••••",
+                    "description": "(O token é gerado pela equipe de suporte da NPX)",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"by_start_date\": \"2025-02-18 00:00:00\",         // \"by_start_date\" define a data e hora de início do filtro para pesquisa de registros.\r\n  \"by_end_date\": \"2025-02-19 23:59:59\",           // \"by_end_date\" define a data e hora final do filtro para pesquisa de registros.\r\n  \"by_id\": \"\",                                     // \"by_id\" é o filtro pelo ID do registro; vazio significa que não está sendo usado.\r\n  \"by_name\": \"\",                                   // \"by_name\" é o filtro pelo nome do cliente/empresa; vazio significa que não está sendo usado.\r\n  \"by_identifier\": \"\",                             // \"by_identifier\" é o filtro pelo identificador de contato (ex.: telefone, WhatsApp); vazio significa que não está sendo usado.\r\n  \"by_client_channels\": \"\",                        // \"by_client_channels\" filtra pelos tipos de canais do cliente (ex.: whatsapp, phone, email); vazio significa que não está sendo usado.\r\n  \"page\": \"1\",                                     // \"page\" indica o número da página de resultados a ser retornada (paginação).\r\n  \"per_page\": \"10\"                                 // \"per_page\" define a quantidade máxima de registros retornados por página.\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "https://api.aurorachat.com.br/v3/issues"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "nginx/1.29.1"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 19 Sep 2025 19:00:37 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "description": "",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "41228"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "1; mode=block"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "strict-origin-when-cross-origin"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"e001abf1abb29a7ad34e27cba5c5ce1a\""
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "max-age=0, private, must-revalidate"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "b09e562c-072d-44d1-a19d-5443207fd5a2"
+                },
+                {
+                  "key": "X-Runtime",
+                  "value": "0.928611"
+                },
+                {
+                  "key": "vary",
+                  "value": "Origin"
+                }
+              ],
+              "cookie": [],
+              "responseTime": null,
+              "body": "{\n    \"paginable\": {  // Informações sobre a paginação dos resultados\n        \"current\": 1,             // Página atual\n        \"previous\": null,         // Página anterior (null = não existe)\n        \"next\": 2,                // Próxima página\n        \"limit\": 10,              // Quantos itens são mostrados por página\n        \"total_pages\": 9,         // Total de páginas disponíveis\n        \"total_count\": 88         // Total de itens/records no sistema\n    },\n    \"issues\": [  // Lista de chamados ou tickets\n        {\n            \"id\": 1779979,            // Identificador único do chamado\n            \"external_code\": null,    // Código externo (se houver integração com outro sistema)\n            \"status\": \"closed\",       // Status do chamado (fechado)\n            \"client_id\": 70669,       // ID do cliente relacionado\n            \"protocol\": \"2025050203054124301\", // Número de protocolo do chamado\n            \"resume\": null,           // Resumo ou descrição do chamado (aqui está vazio)\n            \"created_at\": \"2025-02-19T17:30:54.761-03:00\", // Data de criação do chamado\n            \"pipeline_id\": 1,         // ID do pipeline (fluxo) do chamado\n            \"pipeline_name\": \"Comercial\", // Nome do pipeline\n            \"pipeline_step_id\": 2,    // ID da etapa do pipeline\n            \"pipeline_step_name\": \"Encerrado\", // Nome da etapa atual\n            \"close_date\": \"2025-02-19T17:30:55.254-03:00\", // Data de fechamento\n            \"waiting_date\": null,     // Data em que o chamado ficou aguardando (não usado aqui)\n            \"attendance_date\": null,  // Data de atendimento (não preenchido)\n            \"tag_list\": [],           // Tags ou labels associadas\n            \"department\": {           // Departamento responsável\n                \"id\": 1,\n                \"name\": \"Comercial\"\n            },\n            \"organization_channel\": { // Canal de atendimento (telefone, e-mail etc.)\n                \"id\": 5,\n                \"name\": \"8540629530\"\n            },\n            \"client\": {  // Informações do cliente\n                \"id\": 70669,\n                \"document\": null,   // Documento do cliente (CPF/CNPJ)\n                \"channel\": \"558599644462\", // Canal do cliente (telefone, WhatsApp etc.)\n                \"name\": \"Natan - C.Mendes Imóveis\"\n            },\n            \"agent\": {  // Agente responsável pelo atendimento\n                \"id\": \"\",\n                \"name\": \"\"\n            }\n        },\n        {\n            \"id\": 1779943,\n            \"external_code\": null,\n            \"status\": \"closed\",\n            \"client_id\": 464657,\n            \"protocol\": \"2025050201630740353\",\n            \"resume\": \"...html content...\", // Aqui o resumo é detalhado em HTML (corpo de e-mail ou solicitação)\n            \"created_at\": \"2025-02-19T17:16:30.703-03:00\",\n            \"pipeline_id\": 5,\n            \"pipeline_name\": \"Suporte\",\n            \"pipeline_step_id\": 158,\n            \"pipeline_step_name\": \"Encerrado\",\n            \"close_date\": \"2025-02-20T14:35:30.638-03:00\",\n            \"waiting_date\": null,\n            \"attendance_date\": \"2025-02-20T08:17:55.599-03:00\",\n            \"tag_list\": [],\n            \"department\": {\n                \"id\": 2,\n                \"name\": \"Suporte - PABX\"\n            },\n            \"organization_channel\": {\n                \"id\": 14,\n                \"name\": \"E-mail\"\n            },\n            \"issue_motive\": {  // Motivo do chamado\n                \"id\": 231,\n                \"name\": \"Solicitações\",\n                \"sla\": 1440       // SLA em minutos (tempo máximo de resposta)\n            },\n            \"client\": {\n                \"id\": 464657,\n                \"document\": null,\n                \"channel\": \"thiago.oliveira@gruposervnac.com.br\",\n                \"name\": \"Thiago Oliveira\"\n            },\n            \"agent\": {\n                \"id\": 131,\n                \"name\": \"Francisco José\"\n            }\n        }\n    ]\n}\n"
+            }
+          ],
+          "_postman_id": "54f3e908-d980-4023-b21c-3f2f699f28be"
+        },
+        {
+          "name": "Issues ID",
+          "id": "1ede0b1b-1a44-42bf-82b7-972f71df7a61",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "url": "https://api.aurorachat.com.br/v3/issues/ID",
+            "description": "<h2 id=\"🔎-consultar-issue-pelo-id\">🔎 Consultar Issue Pelo ID</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">GET /v3/issues/:id\n\n</code></pre>\n<p>Retorna os detalhes de um issue específico.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n<hr />\n<p>⚠️ <strong>Possíveis erros comuns</strong></p>\n<ul>\n<li><p><strong>401 Unauthorized</strong> → Token inválido ou ausente.</p>\n</li>\n<li><p><strong>404 Not Found</strong> → Issue não encontrada.</p>\n</li>\n<li><p><strong>400 Bad Request</strong> → Requisição inválida.</p>\n</li>\n</ul>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "issues",
+                "ID"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [],
+          "_postman_id": "1ede0b1b-1a44-42bf-82b7-972f71df7a61"
+        }
+      ],
+      "id": "a9b90a41-2d4b-48a7-83b1-b239e600f2dc",
+      "description": "<p>O módulo de <strong>Issues</strong> gerencia registros de problemas, chamados ou tickets no AuroraChat.</p>\n<p>Permite <strong>consultar a lista de issues</strong> e <strong>detalhar um issue específico pelo ID</strong>.</p>\n<p>🔐 <strong>Autenticação obrigatória</strong></p>\n<p>Sempre enviar o header:</p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+      "_postman_id": "a9b90a41-2d4b-48a7-83b1-b239e600f2dc"
+    },
+    {
+      "name": "💬 Messages",
+      "item": [
+        {
+          "name": "Messages Start",
+          "id": "b92c7ab8-d903-4295-8f38-9483912f4862",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"template_id\": 1,        // ID do modelo de mensagem que será usado\r\n  \"phone\": \"5599999999999\",// Número de telefone do cliente no formato internacional (55 = Brasil)\r\n  \"channel\": \"whatsapp\",   // Canal de envio da mensagem (ex: whatsapp, sms, etc.)\r\n  \"user_id\": \"12345\",      // ID interno do usuário ou cliente no sistema\r\n  \"name\": \"Nome do Cliente\"// Nome do cliente que será usado na mensagem\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/v3/messages/start",
+            "description": "<h2 id=\"▶️-iniciar-mensagens\">▶️ Iniciar Mensagens</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">GET /v3/messages/start\n\n</code></pre>\n<p>Inicia a sessão de mensagens para um cliente.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "messages",
+                "start"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [],
+          "_postman_id": "b92c7ab8-d903-4295-8f38-9483912f4862"
+        },
+        {
+          "name": "Messages Direct",
+          "id": "53a427d6-c949-485e-9c96-50205aa03edf",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"message\": {\r\n        \"organization_channel_id\": ,  // ID do canal da organização (ex: WhatsApp, E-mail, etc.)\r\n        \"asset_id:\": ,                // ID do recurso/mídia anexada à mensagem (ex: imagem, vídeo)\r\n        \"type\": ,                     // Tipo da mensagem (ex: \"text\", \"image\", \"video\")\r\n        \"body\": ,                     // Conteúdo da mensagem em texto\r\n        \"phone:\": ,                   // Número de telefone do destinatário (formato internacional)\r\n        \"caption\":                     // Legenda da mensagem (usada em imagens ou vídeos)\r\n    }\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/v3/messages/direct_message",
+            "description": "<h2 id=\"📤-enviar-mensagem-direta\">📤 Enviar Mensagem Direta</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">POST /v3/messages/direct\n\n</code></pre>\n<p>Envia uma mensagem direta para um cliente.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\nContent-Type: application/json\n\n</code></pre>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "messages",
+                "direct_message"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [],
+          "_postman_id": "53a427d6-c949-485e-9c96-50205aa03edf"
+        },
+        {
+          "name": "Consultar Status das Mensagens",
+          "id": "9afa78c8-2311-462b-8349-ffc484fe2179",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "url": "https://api.aurorachat.com.br/campaigns/:campaign_id/messages?date_start=YYYY-MM-DD&date_end=YYYY-MM-DD",
+            "description": "<h2 id=\"📊-consultar-status-de-mensagem\">📊 Consultar Status de Mensagem</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">GET /v3/messages/status/:id\n\n</code></pre>\n<p>Consulta o status de uma mensagem enviada pelo seu <strong>ID</strong>.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "campaigns",
+                ":campaign_id",
+                "messages"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [
+                {
+                  "description": {
+                    "content": "<p>Data inicial do período</p>\n",
+                    "type": "text/plain"
+                  },
+                  "key": "date_start",
+                  "value": "YYYY-MM-DD"
+                },
+                {
+                  "description": {
+                    "content": "<p>Data final do período</p>\n",
+                    "type": "text/plain"
+                  },
+                  "key": "date_end",
+                  "value": "YYYY-MM-DD"
+                }
+              ],
+              "variable": [
+                {
+                  "description": {
+                    "content": "<p>É o identificador único da campanha criada no AuroraChat (a campanha que agrupa os disparos de mensagens)</p>\n",
+                    "type": "text/plain"
+                  },
+                  "type": "any",
+                  "value": "",
+                  "key": "campaign_id"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "_postman_id": "9afa78c8-2311-462b-8349-ffc484fe2179"
+        },
+        {
+          "name": "Consultar Status de uma Mensagem",
+          "id": "01ac8095-1f27-4ffe-82e2-3f3647421fef",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "url": "https://api.aurorachat.com.br/campaigns/:campaign_id/message/:id",
+            "description": "<h2 id=\"📊-consultar-status-de-uma-mensagem\">📊 Consultar Status de uma Mensagem</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">GET /v3/messages/status/:id\n\n</code></pre>\n<p>Consulta o status de uma mensagem enviada pelo seu <strong>ID</strong>.</p>\n<h3 id=\"headers\">Headers</h3>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "campaigns",
+                ":campaign_id",
+                "message",
+                ":id"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "description": {
+                    "content": "<p>É o identificador único da campanha criada no AuroraChat (a campanha que agrupa os disparos de mensagens)</p>\n",
+                    "type": "text/plain"
+                  },
+                  "type": "any",
+                  "value": "",
+                  "key": "campaign_id"
+                },
+                {
+                  "description": {
+                    "content": "<p>É o identificador da mensagem dentro dessa campanha.</p>\n",
+                    "type": "text/plain"
+                  },
+                  "type": "any",
+                  "value": "",
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "_postman_id": "01ac8095-1f27-4ffe-82e2-3f3647421fef"
+        }
+      ],
+      "id": "c1408efa-2f63-422f-a722-c5c128dee31a",
+      "description": "<p>O módulo de <strong>Messages</strong> permite enviar mensagens diretas, iniciar conversas e consultar o status de envio de mensagens no AuroraChat.</p>\n<p>🔐 <strong>Autenticação obrigatória</strong></p>\n<p>Sempre enviar o header:</p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+      "_postman_id": "c1408efa-2f63-422f-a722-c5c128dee31a"
+    },
+    {
+      "name": "📊 Reports",
+      "item": [
+        {
+          "name": "Reports Issues",
+          "id": "613b73b7-a162-4a06-9b8c-8cf94c3f513a",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "access-token",
+                "value": "•••••••",
+                "description": "<p>(O token é gerado pela equipe de suporte da NPX)</p>\n",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"period\": \"today\", // Período de referência para o filtro dos dados\r\n    \"start_date\": \"2025-09-01 00:00:00\", // Data e hora de início para filtragem de dados\r\n    \"end_date\": \"2025-09-01 23:59:59\", // Data e hora de término para filtragem de dados\r\n    \"page\": 1, // Número da página atual para paginação\r\n    \"per_page\": 50 // Quantidade de registros por página\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "https://api.aurorachat.com.br/v3/reports/issues",
+            "description": "<h2 id=\"📋-listar-reports-de-issues\">📋 Listar Reports de Issues</h2>\n<p><strong>Endpoint:</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">GET /v3/reports/issues\n\n</code></pre>\n<p>Retorna a lista de relatórios de issues gerados no sistema.</p>\n<p><strong>Headers</strong></p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n<hr />\n<h2 id=\"⚠️-possíveis-erros-comuns\">⚠️ Possíveis erros comuns</h2>\n<ul>\n<li><p><strong>401 Unauthorized</strong> → Token inválido ou ausente.</p>\n</li>\n<li><p><strong>404 Not Found</strong> → Nenhum relatório encontrado.</p>\n</li>\n<li><p><strong>400 Bad Request</strong> → Requisição inválida.</p>\n</li>\n<li><p><strong>500 Internal Server Error</strong> → Erro interno do servidor.</p>\n</li>\n</ul>\n",
+            "urlObject": {
+              "protocol": "https",
+              "path": [
+                "v3",
+                "reports",
+                "issues"
+              ],
+              "host": [
+                "api",
+                "aurorachat",
+                "com",
+                "br"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "id": "e6511545-3e09-4a14-b0c9-c72f71299837",
+              "name": "Reports Issues",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "access-token",
+                    "value": "•••••••",
+                    "description": "(O token é gerado pela equipe de suporte da NPX)",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"period\": \"today\", // Período de referência para o filtro dos dados\r\n    \"start_date\": \"2025-09-01 00:00:00\", // Data e hora de início para filtragem de dados\r\n    \"end_date\": \"2025-09-01 23:59:59\", // Data e hora de término para filtragem de dados\r\n    \"page\": 1, // Número da página atual para paginação\r\n    \"per_page\": 50 // Quantidade de registros por página\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "https://api.aurorachat.com.br/v3/reports/issues"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "nginx/1.29.1"
+                },
+                {
+                  "key": "Date",
+                  "value": "Mon, 22 Sep 2025 18:05:30 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "description": "",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "38091"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "1; mode=block"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "strict-origin-when-cross-origin"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"a847d4a1034afb7f47e5840c09c16e12\""
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "max-age=0, private, must-revalidate"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "deba85ec-273c-4f78-9b78-3ef47dd58051"
+                },
+                {
+                  "key": "X-Runtime",
+                  "value": "0.049500"
+                },
+                {
+                  "key": "vary",
+                  "value": "Origin"
+                }
+              ],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "responseTime": null,
+              "body": "{\n    \"paginable\": {\n        \"current\": 1, // Página atual.\n        \"previous\": null, // Link para a página anterior (nulo se for a primeira página).\n        \"next\": null, // Link para a próxima página (nulo se for a última página).\n        \"limit\": 50, // Número máximo de itens por página.\n        \"total_pages\": 1, // Número total de páginas.\n        \"total_count\": 38 // Número total de itens em todas as páginas.\n    },\n    // Lista de chamados (issues) fictícios.\n    \"issues\": [\n        {\n            \"id\": 1804318, // Identificador único do chamado.\n            \"issue_id\": 2341592, // Identificador público do chamado.\n            \"organization_id\": 1, // ID da organização.\n            \"user_id\": 2245, // ID do usuário (atendente) responsável.\n            \"department_id\": 2, // ID do departamento.\n            \"pipeline_id\": 5, // ID do funil (pipeline) de atendimento.\n            \"pipeline_step_id\": 157, // ID da etapa atual no funil.\n            \"client_id\": 446113, // ID do cliente.\n            \"issue_motive_id\": 481, // ID do motivo do chamado.\n            \"user_name\": \"Ana Souza\", // Nome do atendente.\n            \"department_name\": \"Suporte - Vendas\", // Nome do departamento.\n            \"pipeline_name\": \"Vendas\", // Nome do funil.\n            \"pipeline_step_name\": \"Prospecção\", // Nome da etapa atual.\n            \"client_name\": \"João Silva\", // Nome do cliente.\n            \"issue_motive_name\": \"Dúvidas sobre produto\", // Motivo do chamado.\n            \"status\": \"attendance\", // Status do chamado (ex: 'attendance' para Em Atendimento).\n            \"channel\": \"email\", // Canal de origem do chamado.\n            \"issue_created_at\": \"2025-09-22T03:22:24.720-03:00\", // Data e hora de criação.\n            \"issue_created_at_year\": 2025, // Ano de criação.\n            \"issue_created_at_month\": 9, // Mês de criação.\n            \"issue_created_at_day\": 22, // Dia de criação.\n            \"issue_created_at_hour\": 6, // Hora de criação.\n            \"waiting_time\": 0, // Tempo de espera na fila (em segundos).\n            \"bot_time\": 120, // Tempo gasto no atendimento do bot (em segundos).\n            \"attendance_time\": 300, // Tempo total de atendimento humano (em segundos).\n            \"closed_by_inactivity\": false, // Indica se o chamado foi encerrado por inatividade.\n            \"resolved_by_bot\": false, // Indica se o chamado foi resolvido pelo bot.\n            \"stopped_at_bot\": false, // Indica se o chamado parou na etapa do bot.\n            \"tags\": \"Prioridade: Alta, Cliente VIP\", // Tags associadas ao chamado.\n            \"message_sent_by_client\": 3, // Número de mensagens enviadas pelo cliente.\n            \"message_sent_by_bot\": 1, // Número de mensagens enviadas pelo bot.\n            \"message_sent_by_agent\": 2, // Número de mensagens enviadas pelo atendente.\n            \"created_at\": \"2025-09-22T03:22:24.801-03:00\", // Data de criação do registro no banco.\n            \"updated_at\": \"2025-09-22T08:10:35.940-03:00\", // Data da última atualização.\n            \"average_response_time\": 150.5, // Tempo médio de resposta do atendente (em segundos).\n            \"organization_channel_id\": 14, // ID do canal da organização.\n            \"organization_channel_name\": \"E-mail de Vendas\" // Nome do canal da organização.\n        },\n        // O segundo objeto (e os seguintes) segue a mesma estrutura, mas com dados diferentes.\n        {\n            \"id\": 1804434,\n            \"issue_id\": 2341710,\n            \"organization_id\": 1,\n            \"user_id\": 2245,\n            \"department_id\": 2,\n            \"pipeline_id\": 5,\n            \"pipeline_step_id\": 157,\n            \"client_id\": 597288,\n            \"issue_motive_id\": 481,\n            \"user_name\": \"João Santos\",\n            \"department_name\": \"Suporte - Financeiro\",\n            \"pipeline_name\": \"Suporte\",\n            \"pipeline_step_name\": \"Em análise\",\n            \"client_name\": \"Maria Oliveira\",\n            \"issue_motive_name\": \"Problemas de Pagamento\",\n            \"status\": \"closed\",\n            \"channel\": \"whatsapp\",\n            \"issue_created_at\": \"2025-09-22T07:35:56.853-03:00\",\n            \"issue_created_at_year\": 2025,\n            \"issue_created_at_month\": 9,\n            \"issue_created_at_day\": 22,\n            \"issue_created_at_hour\": 10,\n            \"waiting_time\": 60,\n            \"bot_time\": 180,\n            \"attendance_time\": 240,\n            \"closed_by_inactivity\": false,\n            \"resolved_by_bot\": true,\n            \"stopped_at_bot\": false,\n            \"tags\": \"Pagamento, Prioridade: Média\",\n            \"message_sent_by_client\": 2,\n            \"message_sent_by_bot\": 2,\n            \"message_sent_by_agent\": 1,\n            \"created_at\": \"2025-09-22T07:35:56.940-03:00\",\n            \"updated_at\": \"2025-09-22T08:09:53.977-03:00\",\n            \"average_response_time\": 90.2,\n            \"organization_channel_id\": 14,\n            \"organization_channel_name\": \"Whatsapp Financeiro\"\n        },\n        {\n            \"id\": 1804535,\n            \"issue_id\": 2341809,\n            \"organization_id\": 1,\n            \"user_id\": 2244,\n            \"department_id\": 625,\n            \"pipeline_id\": 5,\n            \"pipeline_step_id\": 2,\n            \"client_id\": 184070,\n            \"issue_motive_id\": 483,\n            \"user_name\": \"Carlos Lima\",\n            \"department_name\": \"Suporte - Técnico\",\n            \"pipeline_name\": \"Suporte Técnico\",\n            \"pipeline_step_name\": \"Aguardando Resposta\",\n            \"client_name\": \"Pedro Alvares\",\n            \"issue_motive_name\": \"Configuração de Sistema\",\n            \"status\": \"open\",\n            \"channel\": \"chat\",\n            \"issue_created_at\": \"2025-09-22T08:05:07.812-03:00\",\n            \"issue_created_at_year\": 2025,\n            \"issue_created_at_month\": 9,\n            \"issue_created_at_day\": 22,\n            \"issue_created_at_hour\": 11,\n            \"waiting_time\": 15,\n            \"bot_time\": 45,\n            \"attendance_time\": null,\n            \"closed_by_inactivity\": false,\n            \"resolved_by_bot\": false,\n            \"stopped_at_bot\": true,\n            \"tags\": \"Prioridade: Baixa, Sistema: Interno\",\n            \"message_sent_by_client\": 1,\n            \"message_sent_by_bot\": 2,\n            \"message_sent_by_agent\": 0,\n            \"created_at\": \"2025-09-22T08:05:07.912-03:00\",\n            \"updated_at\": \"2025-09-22T09:58:12.515-03:00\",\n            \"average_response_time\": 0,\n            \"organization_channel_id\": 5,\n            \"organization_channel_name\": \"Chat Técnico\"\n        },\n        {\n            \"id\": 1804562,\n            \"issue_id\": 2341838,\n            \"organization_id\": 1,\n            \"user_id\": 2245,\n            \"department_id\": 2,\n            \"pipeline_id\": 5,\n            \"pipeline_step_id\": 158,\n            \"client_id\": 558659,\n            \"issue_motive_id\": 481,\n            \"user_name\": \"Fernanda Costa\",\n            \"department_name\": \"Suporte - Logística\",\n            \"pipeline_name\": \"Logística\",\n            \"pipeline_step_name\": \"Em trânsito\",\n            \"client_name\": \"Lucas Rodrigues\",\n            \"issue_motive_name\": \"Status de Entrega\",\n            \"status\": \"attendance\",\n            \"channel\": \"whatsapp\",\n            \"issue_created_at\": \"2025-09-22T08:07:52.041-03:00\",\n            \"issue_created_at_year\": 2025,\n            \"issue_created_at_month\": 9,\n            \"issue_created_at_day\": 22,\n            \"issue_created_at_hour\": 11,\n            \"waiting_time\": 79,\n            \"bot_time\": 6592,\n            \"attendance_time\": 3710,\n            \"closed_by_inactivity\": false,\n            \"resolved_by_bot\": false,\n            \"stopped_at_bot\": false,\n            \"tags\": \"Urgente, Entrega\",\n            \"message_sent_by_client\": 11,\n            \"message_sent_by_bot\": 6,\n            \"message_sent_by_agent\": 5,\n            \"created_at\": \"2025-09-22T08:07:52.163-03:00\",\n            \"updated_at\": \"2025-09-22T09:57:45.632-03:00\",\n            \"average_response_time\": 542.61,\n            \"organization_channel_id\": 171,\n            \"organization_channel_name\": \"Whatsapp Logística\"\n        },\n        {\n            \"id\": 1804575,\n            \"issue_id\": 2341852,\n            \"organization_id\": 1,\n            \"user_id\": 2244,\n            \"department_id\": 2,\n            \"pipeline_id\": 5,\n            \"pipeline_step_id\": 157,\n            \"client_id\": 163680,\n            \"issue_motive_id\": 478,\n            \"user_name\": \"Gustavo Mendes\",\n            \"department_name\": \"Suporte - Comercial\",\n            \"pipeline_name\": \"Comercial\",\n            \"pipeline_step_name\": \"Negociação\",\n            \"client_name\": \"Empresa Alfa\",\n            \"issue_motive_name\": \"Cotação de Serviços\",\n            \"status\": \"open\",\n            \"channel\": \"email\",\n            \"issue_created_at\": \"2025-09-22T08:10:41.969-03:00\",\n            \"issue_created_at_year\": 2025,\n            \"issue_created_at_month\": 9,\n            \"issue_created_at_day\": 22,\n            \"issue_created_at_hour\": 11,\n            \"waiting_time\": 351,\n            \"bot_time\": null,\n            \"attendance_time\": 149,\n            \"closed_by_inactivity\": false,\n            \"resolved_by_bot\": false,\n            \"stopped_at_bot\": false,\n            \"tags\": \"Prioridade: Alta, Cliente Novo\",\n            \"message_sent_by_client\": 1,\n            \"message_sent_by_bot\": 0,\n            \"message_sent_by_agent\": 2,\n            \"created_at\": \"2025-09-22T08:10:42.054-03:00\",\n            \"updated_at\": \"2025-09-22T08:19:23.164-03:00\",\n            \"average_response_time\": 351.82,\n            \"organization_channel_id\": 14,\n            \"organization_channel_name\": \"E-mail Comercial\"\n        },\n        {\n            \"id\": 1804581,\n            \"issue_id\": 2341857,\n            \"organization_id\": 1,\n            \"user_id\": 2244,\n            \"department_id\": 2,\n            \"pipeline_id\": 5,\n            \"pipeline_step_id\": 157,\n            \"client_id\": 597562,\n            \"issue_motive_id\": 478,\n            \"user_name\": \"Laura Dias\",\n            \"department_name\": \"Suporte - RH\",\n            \"pipeline_name\": \"Recursos Humanos\",\n            \"pipeline_step_name\": \"Triagem\",\n            \"client_name\": \"Funcionário 123\",\n            \"issue_motive_name\": \"Dúvidas sobre benefícios\",\n            \"status\": \"closed\",\n            \"channel\": \"email\",\n            \"issue_created_at\": \"2025-09-22T08:12:28.117-03:00\",\n            \"issue_created_at_year\": 2025,\n            \"issue_created_at_month\": 9,\n            \"issue_created_at_day\": 22,\n            \"issue_created_at_hour\": 11,\n            \"waiting_time\": 180,\n            \"bot_time\": 0,\n            \"attendance_time\": 90,\n            \"closed_by_inactivity\": true,\n            \"resolved_by_bot\": false,\n            \"stopped_at_bot\": false,\n            \"tags\": \"Benefícios, Urgente\",\n            \"message_sent_by_client\": 1,\n            \"message_sent_by_bot\": 0,\n            \"message_sent_by_agent\": 0,\n            \"created_at\": \"2025-09-22T08:12:28.200-03:00\",\n            \"updated_at\": \"2025-09-22T12:12:29.006-03:00\",\n            \"average_response_time\": 0,\n            \"organization_channel_id\": 14,\n            \"organization_channel_name\": \"E-mail RH\"\n        }\n    ]\n}"
+            }
+          ],
+          "_postman_id": "613b73b7-a162-4a06-9b8c-8cf94c3f513a"
+        }
+      ],
+      "id": "78f926a4-7822-4a8e-af2c-8010909fac91",
+      "description": "<p>O módulo <strong>Reports</strong> gerencia relatórios relacionados a <strong>Issues</strong> no AuroraChat.<br />Permite consultar relatórios de problemas registrados no sistema.</p>\n<hr />\n<p>🔐 <strong>Autenticação obrigatória</strong></p>\n<p>Sempre enviar o header:</p>\n<pre class=\"click-to-expand-wrapper is-snippet-wrapper\"><code class=\"language-bash\">access-token: ••••••• (O token é gerado pela equipe de suporte da NPX)\n\n</code></pre>\n",
+      "_postman_id": "78f926a4-7822-4a8e-af2c-8010909fac91"
+    }
+  ]
+}
