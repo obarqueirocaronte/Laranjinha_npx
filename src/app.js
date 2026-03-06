@@ -30,8 +30,21 @@ app.use(apiKeyCheck);
 configureGoogleStrategy();
 
 // Middleware
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'http://localhost:3000',
+    'http://localhost:5173'
+].filter(Boolean);
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: function (origin, callback) {
+        // allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            return callback(null, false); // Block other origins internally, but we can set to true to allow all in dev
+        }
+        return callback(null, true);
+    },
     credentials: true
 }));
 app.use(express.json());

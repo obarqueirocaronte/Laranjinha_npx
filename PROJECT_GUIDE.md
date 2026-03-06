@@ -1,88 +1,104 @@
-# Inside Sales Pipeline - Guia de Produção & Deploy
+# Inside Sales Pipeline - Guia de Deploy & Setup Local
 
-Este guia detalha como configurar e rodar o projeto em um ambiente de produção ou em uma nova máquina, garantindo que o Banco de Dados e a API funcionem corretamente.
+Este guia detalha como configurar e rodar o projeto em uma nova máquina (para testes locais) e como configurá-lo no ambiente final de produção.
 
-## 📍 Configuração de Ambiente (.env)
+---
 
-O arquivo `.env` na raiz do projeto deve conter as seguintes definições fundamentais (verifique os valores reais no seu terminal ou painel de controle):
+## 💻 1. Ambiente Local (Testes na sua máquina)
+
+Ao testar em uma nova máquina antes de subir para o domínio `laranjinha.npx.com.br`, você deve rodar os serviços apontando para o seu `localhost`. Siga os passos abaixo rigorosamente para evitar a "tela branca":
+
+### Passo 1: Configurar Variáveis do Backend
+Crie um arquivo `.env` na RAIZ do projeto (`inside-sales-pipeline-beta/.env`) com o conteúdo:
 
 ```env
-# Database
+# Banco de Dados
 DATABASE_URL=postgresql://laranjinha:laranjinha-npx-tech@localhost:5432/inside_sales_pipeline
 DATABASE_POOL_MIN=2
 DATABASE_POOL_MAX=10
 
-# API
+# Configurações API em Localhost
 PORT=3001
-API_BASE_URL=https://laranjinha.npx.com.br
+API_BASE_URL=http://localhost:3001
 API_VERSION=v1
-NODE_ENV=production
+NODE_ENV=development
+FRONTEND_URL=http://localhost:3000
 
-# Authentication
-JWT_SECRET=SUA_CHAVE_AQUI
+# Autenticação e Segurança
+JWT_SECRET=DEV_SECRET_KEY_AQUI
 API_KEY_HEADER=SEU_CLIENT_ID_GOOGLE_AQUI
-
-# Rate Limiting
 RATE_LIMIT_WINDOW_MS=60000
-RATE_LIMIT_MAX_REQUESTS=100
+RATE_LIMIT_MAX_REQUESTS=1000
+
+# Google OAuth (Para Testes)
+GOOGLE_CLIENT_ID=SEU_CLIENT_ID_AQUI
+GOOGLE_CLIENT_SECRET=SEU_CLIENT_SECRET_AQUI
+GOOGLE_CALLBACK_URL=http://localhost:3001/api/v1/auth/google/callback
 ```
+
+### Passo 2: Configurar Variáveis do Frontend
+Crie o arquivo `.env` dentro da pasta `frontend/` (`frontend/.env`) e deixe-o **vazio** ou com:
+```env
+# Em dev local, o Vite (porta 3000) já faz proxy automático para localhost:3001
+VITE_API_URL=/api/v1
+```
+
+### Passo 3: Inicializar o Banco e Rodar tudo
+1. Certifique-se de que o PostgreSQL está rodando.
+2. Na RAIZ do projeto, abra um terminal e inicie o Backend:
+```bash
+npm install
+npm run db:setup
+npm run dev
+```
+*(O backend ficará ativo na porta 3001)*
+
+3. Em um SEGUNDO terminal, entre na pasta `frontend` e inicie a Interface:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*(O frontend ficará ativo na porta 3000)*
+
+Acesse: **http://localhost:3000**. Como `FRONTEND_URL` e a API não estão apontando para o domínio em produção, não haverá "tela branca" nem erro de conexão (CORS).
 
 ---
 
-## 🗄️ Estrutura do Banco de Dados (Postgres)
+## 🌐 2. Ambiente de Produção (Domínio laranjinha)
 
-A versão atual foi expandida para suportar toda a operação de Inside Sales, contando com **19 tabelas** integradas via PostgreSQL:
+Quando o sistema for hospedado na máquina definitiva do domínio `laranjinha.npx.com.br`, as configurações mudam ligeiramente.
+
+### O arquivo `.env` na RAIZ do servidor ficará:
+```env
+DATABASE_URL=postgresql://laranjinha:laranjinha-npx-tech@localhost:5432/inside_sales_pipeline
+PORT=3001
+API_BASE_URL=https://laranjinha.npx.com.br
+FRONTEND_URL=https://laranjinha.npx.com.br
+NODE_ENV=production
+
+JWT_SECRET=SUA_CHAVE_FORTE
+API_KEY_HEADER=SEU_CLIENT_ID_GOOGLE_AQUI
+
+GOOGLE_CALLBACK_URL=https://laranjinha.npx.com.br/api/v1/auth/google/callback
+```
+
+### O arquivo `frontend/.env` no servidor de compilação ficará:
+```env
+VITE_API_URL=https://laranjinha.npx.com.br/api/v1
+```
+Após configurar isso na máquina final, basta rodar `npm run build` na pasta frontend.
+
+---
+
+## 🗄️ Tabelas Sincronizadas (Postgres)
+O projeto utilizará **19 tabelas**, sendo que todas são criadas ao rodar `npm run db:setup`:
 
 1.  **Core**: `leads`, `sdrs`, `teams`, `users`, `user_sessions`.
 2.  **Pipeline**: `pipeline_columns`, `lead_pipeline_history`, `workflow_triggers`.
 3.  **Operação**: `interactions_log`, `notifications`, `templates`, `schedules`.
 4.  **Config & Stats**: `sdr_stats`, `management_report_config`, `user_integrations`.
 5.  **Dados & Tags**: `lead_custom_fields`, `tags`, `lead_tags`, `invites`.
-
----
-
-## 🚀 Passo a Passo para Nova Máquina
-
-Se você clonou o projeto em uma nova máquina e está vendo uma tela branca ou erros, siga estes passos:
-
-### 1. Preparar o Banco de Dados (PostgreSQL)
-Certifique-se de que o Postgres está instalado e rodando.
-Abra um terminal na raiz e execute o comando de inicialização (isso cria as **19 tabelas** e insere dados iniciais):
-```bash
-npm run db:setup
-```
-*Atenção: Garanta que o usuário 'laranjinha' existe ou ajuste a `DATABASE_URL` no seu `.env`.*
-
-### 2. Rodar o Backend
-```bash
-npm install
-npm start
-```
-O servidor deve reportar: `🚀 API Server running on port 3001`.
-
-### 3. Build do Frontend (Opcional se já estiver no Git)
-O frontend foi compilado para falar com `https://laranjinha.npx.com.br`. Se você estiver rodando localmente na outra máquina e quiser testar via `localhost`, precisará alterar o arquivo `frontend/.env` e rodar:
-```bash
-cd frontend
-npm install
-npm run build
-```
-
----
-
-## 🛠 Solução de Problemas (FAQ)
-
-### ❓ Tela Branca ao Acessar
-*   **Causa:** O build do frontend pode estar tentando acessar `localhost:3001` de dentro de um navegador em outra máquina.
-*   **Solução:** Já atualizamos o build do Git para apontar para `https://laranjinha.npx.com.br`. Basta dar um `git pull` na outra máquina.
-
-### ❓ Erro de Conexão com Banco de Dados
-*   **Causa:** O PostgreSQL não está rodando ou as credenciais no `.env` estão incorretas.
-*   **Solução:** Verifique se consegue se conectar via `psql` ou `TablePlus` usando os dados da `DATABASE_URL`.
-
-### ❓ Login Não Funciona (Google Auth)
-*   **Causa:** As URLs de callback no Google Console precisam incluir `https://laranjinha.npx.com.br/api/v1/auth/google/callback`.
-*   **Solução:** Adicione a URL acima como "Authorized redirect URIs" no Google Cloud Console.
 
 ---
 
