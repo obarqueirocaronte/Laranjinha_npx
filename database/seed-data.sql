@@ -28,12 +28,12 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================================
 
 INSERT INTO pipeline_columns (id, name, description, position, color, is_active) VALUES
-    ('c0000001-0000-0000-0000-000000000001', 'Leads', 'New leads awaiting first contact', 1, '#94A3B8', true),
-    ('c0000002-0000-0000-0000-000000000002', 'Call', 'Leads scheduled or attempted for call', 2, '#3B82F6', true),
-    ('c0000003-0000-0000-0000-000000000003', 'WhatsApp', 'Leads contacted via WhatsApp', 3, '#10B981', true),
-    ('c0000004-0000-0000-0000-000000000004', 'Email', 'Leads in email nurture sequence', 4, '#F59E0B', true),
-    ('c0000005-0000-0000-0000-000000000005', 'Qualified', 'Qualified leads ready for sales', 5, '#8B5CF6', true),
-    ('c0000006-0000-0000-0000-000000000006', 'Lost', 'Leads that didn''t convert', 6, '#EF4444', true)
+    ('e0000001-0000-0000-0000-000000000001', 'Leads', 'New leads awaiting first contact', 1, '#94A3B8', true),
+    ('e0000002-0000-0000-0000-000000000002', 'Call', 'Leads scheduled or attempted for call', 2, '#3B82F6', true),
+    ('e0000003-0000-0000-0000-000000000003', 'WhatsApp', 'Leads contacted via WhatsApp', 3, '#10B981', true),
+    ('e0000004-0000-0000-0000-000000000004', 'Email', 'Leads in email nurture sequence', 4, '#F59E0B', true),
+    ('e0000005-0000-0000-0000-000000000005', 'Qualified', 'Qualified leads ready for sales', 5, '#8B5CF6', true),
+    ('e0000006-0000-0000-0000-000000000006', 'Lost', 'Leads that didn''t convert', 6, '#EF4444', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
@@ -42,7 +42,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Email Templates
 INSERT INTO templates (id, name, category, subject, content, language) VALUES
-    ('t0000001-0000-0000-0000-000000000001', 
+    ('f0000001-0000-0000-0000-000000000001', 
      'Primeiro Contato - Email', 
      'EMAIL',
      'Olá {{first_name}}, vamos conversar sobre {{company_name}}?',
@@ -59,7 +59,7 @@ Abraços,
 {{sdr_phone}}',
      'pt-BR'),
 
-    ('t0000002-0000-0000-0000-000000000002',
+    ('f0000002-0000-0000-0000-000000000002',
      'Follow-up - Email',
      'EMAIL',
      'Re: Conversa sobre {{company_name}}',
@@ -78,7 +78,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- WhatsApp Templates
 INSERT INTO templates (id, name, category, content, language) VALUES
-    ('t0000003-0000-0000-0000-000000000003',
+    ('f0000003-0000-0000-0000-000000000003',
      'Primeiro Contato - WhatsApp',
      'WHATSAPP',
      'Oi {{first_name}}! 👋
@@ -90,7 +90,7 @@ Podemos conversar sobre [solução]? Tenho cases bem legais de empresas similare
 Quando você tem uns 15min?',
      'pt-BR'),
 
-    ('t0000004-0000-0000-0000-000000000004',
+    ('f0000004-0000-0000-0000-000000000004',
      'Follow-up - WhatsApp',
      'WHATSAPP',
      'Oi {{first_name}}, tudo bem?
@@ -103,7 +103,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Call Scripts
 INSERT INTO templates (id, name, category, content, language) VALUES
-    ('t0000005-0000-0000-0000-000000000005',
+    ('f0000005-0000-0000-0000-000000000005',
      'Script de Discovery Call',
      'CALL_SCRIPT',
      '**ABERTURA:**
@@ -127,7 +127,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- LinkedIn Templates
 INSERT INTO templates (id, name, category, content, language) VALUES
-    ('t0000006-0000-0000-0000-000000000006',
+    ('f0000006-0000-0000-0000-000000000006',
      'Connection Request - LinkedIn',
      'LINKEDIN',
      'Oi {{first_name}}, vi seu perfil e achei interessante sua trajetória como {{job_title}}. Trabalho com soluções para {{industry}} e adoraria trocar ideias!',
@@ -140,43 +140,43 @@ ON CONFLICT (id) DO NOTHING;
 
 -- When moving from Leads → Call, send call script
 INSERT INTO workflow_triggers (id, name, from_column_id, to_column_id, action_type, template_id, config) VALUES
-    ('w0000001-0000-0000-0000-000000000001',
+    ('d0000001-0000-0000-0000-000000000001',
      'Enviar Script ao Mover para Call',
-     'c0000001-0000-0000-0000-000000000001', -- From: Leads
-     'c0000002-0000-0000-0000-000000000002', -- To: Call
+     'e0000001-0000-0000-0000-000000000001', -- From: Leads
+     'e0000002-0000-0000-0000-000000000002', -- To: Call
      'SEND_TEMPLATE',
-     't0000005-0000-0000-0000-000000000005', -- Call Script
+     'f0000005-0000-0000-0000-000000000005', -- Call Script
      '{"auto_open_modal": true, "require_confirmation": true}'::jsonb)
 ON CONFLICT (id) DO NOTHING;
 
 -- When moving from Leads → WhatsApp, send WhatsApp template
 INSERT INTO workflow_triggers (id, name, from_column_id, to_column_id, action_type, template_id, config) VALUES
-    ('w0000002-0000-0000-0000-000000000002',
+    ('d0000002-0000-0000-0000-000000000002',
      'Enviar Template ao Mover para WhatsApp',
-     'c0000001-0000-0000-0000-000000000001', -- From: Leads
-     'c0000003-0000-0000-0000-000000000003', -- To: WhatsApp
+     'e0000001-0000-0000-0000-000000000001', -- From: Leads
+     'e0000003-0000-0000-0000-000000000003', -- To: WhatsApp
      'SEND_TEMPLATE',
-     't0000003-0000-0000-0000-000000000003', -- WhatsApp First Contact
+     'f0000003-0000-0000-0000-000000000003', -- WhatsApp First Contact
      '{"auto_open_modal": true, "require_confirmation": true}'::jsonb)
 ON CONFLICT (id) DO NOTHING;
 
 -- When moving from Leads → Email, send email template
 INSERT INTO workflow_triggers (id, name, from_column_id, to_column_id, action_type, template_id, config) VALUES
-    ('w0000003-0000-0000-0000-000000000003',
+    ('d0000003-0000-0000-0000-000000000003',
      'Enviar Email ao Mover para Email',
-     'c0000001-0000-0000-0000-000000000001', -- From: Leads
-     'c0000004-0000-0000-0000-000000000004', -- To: Email
+     'e0000001-0000-0000-0000-000000000001', -- From: Leads
+     'e0000004-0000-0000-0000-000000000004', -- To: Email
      'SEND_TEMPLATE',
-     't0000001-0000-0000-0000-000000000001', -- Email First Contact
+     'f0000001-0000-0000-0000-000000000001', -- Email First Contact
      '{"auto_open_modal": true, "require_confirmation": true}'::jsonb)
 ON CONFLICT (id) DO NOTHING;
 
 -- When moving to Qualified, trigger webhook to CRM
 INSERT INTO workflow_triggers (id, name, from_column_id, to_column_id, action_type, config) VALUES
-    ('w0000004-0000-0000-0000-000000000004',
+    ('d0000004-0000-0000-0000-000000000004',
      'Notificar CRM - Lead Qualificado',
-     'c0000004-0000-0000-0000-000000000004', -- From: Email
-     'c0000005-0000-0000-0000-000000000005', -- To: Qualified
+     'e0000004-0000-0000-0000-000000000004', -- From: Email
+     'e0000005-0000-0000-0000-000000000005', -- To: Qualified
      'WEBHOOK',
      '{"webhook_url": "https://api.crm.com/leads/qualified", "method": "POST"}'::jsonb)
 ON CONFLICT (id) DO NOTHING;
@@ -200,7 +200,7 @@ INSERT INTO leads (
     metadata
 ) VALUES
     -- High-quality leads
-    ('l0000001-0000-0000-0000-000000000001',
+    ('b0000001-0000-0000-0000-000000000001',
      'FORM_2024_001',
      'João Pedro Santos',
      'TechCorp Brasil',
@@ -208,12 +208,12 @@ INSERT INTO leads (
      'joao.santos@techcorp.com.br',
      '+5511987654321',
      'https://linkedin.com/in/joaosantos',
-     'c0000001-0000-0000-0000-000000000001', -- Leads column
+     'e0000001-0000-0000-0000-000000000001', -- Leads column
      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', -- Assigned to Ana
      95,
      '{"utm_source": "linkedin", "utm_campaign": "saas_cto_2024", "company_size": "50-200", "industry": "SaaS", "pain_point": "Escalabilidade"}'::jsonb),
 
-    ('l0000002-0000-0000-0000-000000000002',
+    ('b0000002-0000-0000-0000-000000000002',
      'FORM_2024_002',
      'Maria Fernanda Lima',
      'Startup Inovadora',
@@ -221,13 +221,13 @@ INSERT INTO leads (
      'maria.lima@startupinovadora.com',
      '+5521987654322',
      'https://linkedin.com/in/marialima',
-     'c0000001-0000-0000-0000-000000000001',
+     'e0000001-0000-0000-0000-000000000001',
      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', -- Assigned to Bruno
      88,
      '{"utm_source": "google", "utm_campaign": "growth_marketing", "company_size": "10-50", "industry": "Fintech", "budget": "high"}'::jsonb),
 
     -- Medium-quality leads
-    ('l0000003-0000-0000-0000-000000000003',
+    ('b0000003-0000-0000-0000-000000000003',
      'WEBINAR_2024_045',
      'Carlos Eduardo Rocha',
      'Consultoria ABC',
@@ -235,12 +235,12 @@ INSERT INTO leads (
      'carlos.rocha@consultoriaabc.com',
      '+5511987654323',
      NULL,
-     'c0000002-0000-0000-0000-000000000002', -- Call column
+     'e0000002-0000-0000-0000-000000000002', -- Call column
      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
      72,
      '{"utm_source": "webinar", "utm_campaign": "tech_trends_2024", "company_size": "200-500", "attended_webinar": true}'::jsonb),
 
-    ('l0000004-0000-0000-0000-000000000004',
+    ('b0000004-0000-0000-0000-000000000004',
      'LINKEDIN_2024_089',
      'Patrícia Alves',
      'E-commerce Fashion',
@@ -248,13 +248,13 @@ INSERT INTO leads (
      'patricia.alves@fashionecommerce.com',
      '+5511987654324',
      'https://linkedin.com/in/patriciaalves',
-     'c0000003-0000-0000-0000-000000000003', -- WhatsApp column
+     'e0000003-0000-0000-0000-000000000003', -- WhatsApp column
      'cccccccc-cccc-cccc-cccc-cccccccccccc', -- Assigned to Carla
      65,
      '{"utm_source": "linkedin", "utm_campaign": "ecommerce_outreach", "company_size": "50-200", "industry": "Retail"}'::jsonb),
 
     -- Lower-quality leads (for testing)
-    ('l0000005-0000-0000-0000-000000000005',
+    ('b0000005-0000-0000-0000-000000000005',
      'COLD_2024_234',
      'Roberto Silva',
      'Empresa Tradicional Ltda',
@@ -262,7 +262,7 @@ INSERT INTO leads (
      'roberto.silva@tradicional.com.br',
      '+5511987654325',
      NULL,
-     'c0000001-0000-0000-0000-000000000001',
+     'e0000001-0000-0000-0000-000000000001',
      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
      45,
      '{"utm_source": "cold_list", "company_size": "500+", "industry": "Manufacturing", "decision_maker": false}'::jsonb)
@@ -281,26 +281,26 @@ INSERT INTO interactions_log (
     was_opened,
     was_replied
 ) VALUES
-    ('l0000001-0000-0000-0000-000000000001',
+    ('b0000001-0000-0000-0000-000000000001',
      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
      'EMAIL_SENT',
-     't0000001-0000-0000-0000-000000000001',
+     'f0000001-0000-0000-0000-000000000001',
      'Olá João Pedro, meu nome é Ana Silva...',
      true,
      false),
 
-    ('l0000003-0000-0000-0000-000000000003',
+    ('b0000003-0000-0000-0000-000000000003',
      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
      'CALL_MADE',
-     't0000005-0000-0000-0000-000000000005',
+     'f0000005-0000-0000-0000-000000000005',
      'Ligação realizada - Duração: 8min. Carlos demonstrou interesse mas pediu para retornar em 2 semanas.',
      NULL,
      NULL),
 
-    ('l0000004-0000-0000-0000-000000000004',
+    ('b0000004-0000-0000-0000-000000000004',
      'cccccccc-cccc-cccc-cccc-cccccccccccc',
      'WHATSAPP_SENT',
-     't0000003-0000-0000-0000-000000000003',
+     'f0000003-0000-0000-0000-000000000003',
      'Oi Patrícia! 👋 Sou Carla da [Empresa]...',
      true,
      true)
@@ -318,9 +318,9 @@ INSERT INTO lead_pipeline_history (
     time_in_previous_column_seconds,
     notes
 ) VALUES
-    ('l0000001-0000-0000-0000-000000000001',
+    ('b0000001-0000-0000-0000-000000000001',
      NULL,
-     'c0000001-0000-0000-0000-000000000001',
+     'e0000001-0000-0000-0000-000000000001',
      NULL,
      'Lead criado via formulário')
 ON CONFLICT (id) DO NOTHING;
@@ -333,9 +333,9 @@ INSERT INTO lead_pipeline_history (
     time_in_previous_column_seconds,
     notes
 ) VALUES
-    ('l0000003-0000-0000-0000-000000000003',
-     'c0000001-0000-0000-0000-000000000001',
-     'c0000002-0000-0000-0000-000000000002',
+    ('b0000003-0000-0000-0000-000000000003',
+     'e0000001-0000-0000-0000-000000000001',
+     'e0000002-0000-0000-0000-000000000002',
      3600, -- 1 hour in Leads column
      'Movido para call após qualificação inicial')
 ON CONFLICT (id) DO NOTHING;

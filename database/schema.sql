@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm"; -- For fuzzy text search
 -- 1. TEAM & USER MANAGEMENT
 -- ============================================================================
 
-CREATE TABLE teams (
+CREATE TABLE IF NOT EXISTS teams (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     description TEXT,
@@ -19,7 +19,7 @@ CREATE TABLE teams (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE sdrs (
+CREATE TABLE IF NOT EXISTS sdrs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
     user_id UUID, -- Will be linked to users table after it's created
@@ -38,7 +38,7 @@ CREATE TABLE sdrs (
 -- AUTHENTICATION SYSTEM
 -- ============================================================================
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
@@ -53,7 +53,7 @@ CREATE TABLE users (
     CONSTRAINT email_domain_check CHECK (email LIKE '%@npx.com.br')
 );
 
-CREATE TABLE user_sessions (
+CREATE TABLE IF NOT EXISTS user_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token VARCHAR(500) NOT NULL UNIQUE,
@@ -61,17 +61,19 @@ CREATE TABLE user_sessions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Link SDRs to users
-ALTER TABLE sdrs 
-    ADD CONSTRAINT fk_sdr_user 
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+-- Link SDRs to users (using DO/EXCEPTION to ignore if constraint exists)
+DO $$ BEGIN
+    ALTER TABLE sdrs ADD CONSTRAINT fk_sdr_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 
 -- ============================================================================
 -- 2. PIPELINE STRUCTURE (Dynamic Columns)
 -- ============================================================================
 
-CREATE TABLE pipeline_columns (
+CREATE TABLE IF NOT EXISTS pipeline_columns (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(100) NOT NULL,
     description TEXT,
@@ -87,7 +89,7 @@ CREATE TABLE pipeline_columns (
 -- 3. LEAD ENTITY (Core)
 -- ============================================================================
 
-CREATE TABLE leads (
+CREATE TABLE IF NOT EXISTS leads (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     external_id VARCHAR(255),
     
@@ -128,7 +130,7 @@ CREATE TABLE leads (
 -- 4. LEAD PIPELINE HISTORY (Audit Trail)
 -- ============================================================================
 
-CREATE TABLE lead_pipeline_history (
+CREATE TABLE IF NOT EXISTS lead_pipeline_history (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
     from_column_id UUID REFERENCES pipeline_columns(id) ON DELETE SET NULL,
@@ -143,7 +145,7 @@ CREATE TABLE lead_pipeline_history (
 -- 5. WORKFLOW AUTOMATION (Drag-and-Drop Triggers)
 -- ============================================================================
 
-CREATE TABLE workflow_triggers (
+CREATE TABLE IF NOT EXISTS workflow_triggers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     description TEXT,
@@ -166,7 +168,7 @@ CREATE TABLE workflow_triggers (
 -- 6. TEMPLATES & MESSAGING
 -- ============================================================================
 
-CREATE TABLE templates (
+CREATE TABLE IF NOT EXISTS templates (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     category VARCHAR(50) NOT NULL, -- EMAIL, WHATSAPP, CALL_SCRIPT, LINKEDIN
@@ -183,15 +185,17 @@ CREATE TABLE templates (
 );
 
 -- Add foreign key to workflow_triggers now that templates table exists
-ALTER TABLE workflow_triggers 
-    ADD CONSTRAINT fk_workflow_template 
-    FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE SET NULL;
+DO $$ BEGIN
+    ALTER TABLE workflow_triggers ADD CONSTRAINT fk_workflow_template FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE SET NULL;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- ============================================================================
 -- 7. INTERACTIONS LOG (Complete History)
 -- ============================================================================
 
-CREATE TABLE interactions_log (
+CREATE TABLE IF NOT EXISTS interactions_log (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
     sdr_id UUID REFERENCES sdrs(id) ON DELETE SET NULL,
@@ -218,19 +222,19 @@ CREATE TABLE interactions_log (
 -- ============================================================================
 
 -- Lead search and filtering
-CREATE INDEX idx_leads_email ON leads(email);
-CREATE INDEX idx_leads_external_id ON leads(external_id);
-CREATE INDEX idx_leads_current_column ON leads(current_column_id);
-CREATE INDEX idx_leads_assigned_sdr ON leads(assigned_sdr_id);
-CREATE INDEX idx_leads_status ON leads(status);
-CREATE INDEX idx_leads_created_at ON leads(created_at DESC);
-CREATE INDEX idx_leads_last_interaction ON leads(last_interaction_at DESC);
+CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
+CREATE INDEX IF NOT EXISTS idx_leads_external_id ON leads(external_id);
+CREATE INDEX IF NOT EXISTS idx_leads_current_column ON leads(current_column_id);
+CREATE INDEX IF NOT EXISTS idx_leads_assigned_sdr ON leads(assigned_sdr_id);
+CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
+CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_leads_last_interaction ON leads(last_interaction_at DESC);
 
 -- JSONB metadata search (GIN index for flexible queries)
-CREATE INDEX idx_leads_metadata ON leads USING GIN(metadata);
+CREATE INDEX IF NOT EXISTS idx_leads_metadata ON leads USING GIN(metadata);
 
 -- Full-text search on lead details
-CREATE INDEX idx_leads_fulltext ON leads USING GIN(
+CREATE INDEX IF NOT EXISTS idx_leads_fulltext ON leads USING GIN(
     to_tsvector('portuguese', 
         COALESCE(full_name, '') || ' ' || 
         COALESCE(company_name, '') || ' ' || 
@@ -239,27 +243,27 @@ CREATE INDEX idx_leads_fulltext ON leads USING GIN(
 );
 
 -- Pipeline history analytics
-CREATE INDEX idx_pipeline_history_lead ON lead_pipeline_history(lead_id, moved_at DESC);
-CREATE INDEX idx_pipeline_history_column ON lead_pipeline_history(to_column_id, moved_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pipeline_history_lead ON lead_pipeline_history(lead_id, moved_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pipeline_history_column ON lead_pipeline_history(to_column_id, moved_at DESC);
 
 -- Interactions log
-CREATE INDEX idx_interactions_lead ON interactions_log(lead_id, created_at DESC);
-CREATE INDEX idx_interactions_sdr ON interactions_log(sdr_id, created_at DESC);
-CREATE INDEX idx_interactions_action_type ON interactions_log(action_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_interactions_lead ON interactions_log(lead_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_interactions_sdr ON interactions_log(sdr_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_interactions_action_type ON interactions_log(action_type, created_at DESC);
 
 -- Workflow triggers
-CREATE INDEX idx_workflow_triggers_columns ON workflow_triggers(from_column_id, to_column_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_triggers_columns ON workflow_triggers(from_column_id, to_column_id);
 
 -- SDR performance queries
-CREATE INDEX idx_sdrs_team ON sdrs(team_id);
-CREATE INDEX idx_sdrs_active ON sdrs(is_active);
+CREATE INDEX IF NOT EXISTS idx_sdrs_team ON sdrs(team_id);
+CREATE INDEX IF NOT EXISTS idx_sdrs_active ON sdrs(is_active);
 
 -- Authentication indexes
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_verification_token ON users(verification_token);
-CREATE INDEX idx_users_reset_token ON users(reset_password_token);
-CREATE INDEX idx_user_sessions_token ON user_sessions(token);
-CREATE INDEX idx_user_sessions_user ON user_sessions(user_id, expires_at DESC);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
+CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_password_token);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(token);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id, expires_at DESC);
 
 
 -- ============================================================================
@@ -276,24 +280,31 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply to all tables with updated_at
+DROP TRIGGER IF EXISTS update_teams_updated_at ON teams;
 CREATE TRIGGER update_teams_updated_at BEFORE UPDATE ON teams
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_sdrs_updated_at ON sdrs;
 CREATE TRIGGER update_sdrs_updated_at BEFORE UPDATE ON sdrs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_pipeline_columns_updated_at ON pipeline_columns;
 CREATE TRIGGER update_pipeline_columns_updated_at BEFORE UPDATE ON pipeline_columns
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_leads_updated_at ON leads;
 CREATE TRIGGER update_leads_updated_at BEFORE UPDATE ON leads
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_workflow_triggers_updated_at ON workflow_triggers;
 CREATE TRIGGER update_workflow_triggers_updated_at BEFORE UPDATE ON workflow_triggers
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_templates_updated_at ON templates;
 CREATE TRIGGER update_templates_updated_at BEFORE UPDATE ON templates
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -331,6 +342,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS track_pipeline_movement ON leads;
 CREATE TRIGGER track_pipeline_movement BEFORE UPDATE ON leads
     FOR EACH ROW EXECUTE FUNCTION log_pipeline_movement();
 
