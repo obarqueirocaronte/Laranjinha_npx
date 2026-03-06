@@ -42,20 +42,33 @@ inside-sales-pipeline/
 - Node.js 18+ or Python 3.9+ (for API implementation)
 - Basic SQL knowledge
 
-### 1. Create Database
+### 1. Create Database & Environment
 
 ```bash
-# Create database
-createdb inside_sales_pipeline
+# Clone the repository
+git clone https://github.com/obarqueirocaronte/Laranjinha_npx.git
+cd Laranjinha_npx
 
-# Run schema
-psql -d inside_sales_pipeline -f database/schema.sql
+# Install dependencies
+npm install
 
-# Load sample data (optional)
-psql -d inside_sales_pipeline -f database/seed-data.sql
+# Setup your environment variables (Copy example)
+cp .env.example .env
+
+# -> CRITICAL: Edit your .env file and insert your PostgreSQL URL <-
+# DATABASE_URL=postgresql://user:pass@host:port/dbname
 ```
 
-### 2. Verify Installation
+### 2. Run Migrations & Setup
+
+We created an automated setup script that creates the core schema from scratch and runs all subsequent migrations correctly.
+
+```bash
+# Run complete database setup and migrations
+npm run db:setup
+```
+
+### 3. Verify Installation
 
 ```sql
 -- Connect to database
