@@ -8,9 +8,7 @@ frontend/node_modules/
 .env.*.local
 
 # Build
-frontend/dist/
 frontend/build/
-dist/
 build/
 
 # Logs
