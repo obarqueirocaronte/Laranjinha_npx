@@ -18,7 +18,13 @@ const { configureGoogleStrategy } = require('./services/google_auth.service');
 const notificationScheduler = require('./services/notification_scheduler.service');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const rateLimiter = require('./middleware/rate_limit.middleware');
+const apiKeyCheck = require('./middleware/api_key.middleware');
+const port = process.env.PORT || 3001;
+
+// Global Middleware
+app.use(rateLimiter);
+app.use(apiKeyCheck);
 
 // Configure Google OAuth Strategy
 configureGoogleStrategy();

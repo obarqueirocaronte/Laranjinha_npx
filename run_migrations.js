@@ -21,15 +21,18 @@ async function runMigration(filePath) {
 
 async function main() {
     try {
-        await runMigration(path.join(__dirname, 'database/migrations/20260304_create_sdr_stats_table.sql'));
-        await runMigration(path.join(__dirname, 'database/migrations/20260304_add_goals_to_sdrs.sql'));
-        await runMigration(path.join(__dirname, 'database/migrations/20260304_add_management_report_config.sql'));
-        await runMigration(path.join(__dirname, 'database/migrations/20260305_add_schedules_table.sql'));
-        await runMigration(path.join(__dirname, 'database/migrations/20260306_add_google_oauth.sql'));
-        await runMigration(path.join(__dirname, 'database/migrations/20260306_add_invites.sql'));
-        console.log('🎉 All migrations applied!');
+        const migrationsDir = path.join(__dirname, 'database/migrations');
+        const files = fs.readdirSync(migrationsDir)
+            .filter(f => f.endsWith('.sql'))
+            .sort(); // Sort to ensure chronological order if prefixed with date
+
+        for (const file of files) {
+            await runMigration(path.join(migrationsDir, file));
+        }
+
+        console.log('🎉 All migrations applied successfully!');
     } catch (error) {
-        console.error('💥 Migration failed!');
+        console.error('💥 Migration process failed:', error.message);
     } finally {
         process.exit(0);
     }

@@ -1,75 +1,89 @@
-# Inside Sales Pipeline - Guia Beta
+# Inside Sales Pipeline - Guia de Produção & Deploy
 
-Este guia descreve como executar o projeto **Inside Sales Pipeline (Beta)** em diferentes ambientes e portas.
+Este guia detalha como configurar e rodar o projeto em um ambiente de produção ou em uma nova máquina, garantindo que o Banco de Dados e a API funcionem corretamente.
 
-## 📍 Localização do Projeto e Portas
+## 📍 Configuração de Ambiente (.env)
 
-O Inside Sales Pipeline é dividido em duas partes que devem rodar simultaneamente:
+O arquivo `.env` na raiz do projeto deve conter as seguintes definições fundamentais (verifique os valores reais no seu terminal ou painel de controle):
 
-1. **Backend (API + Banco de Dados)**
-   - **Diretório:** Raiz do projeto (`inside-sales-pipeline-beta/`)
-   - **Comando:** `npm run dev` (ou `node src/app.js`)
-   - **Porta:** **3001** (`http://localhost:3001`)
-2. **Frontend (Interface React/Vite)**
-   - **Diretório:** `inside-sales-pipeline-beta/frontend/`
-   - **Comando:** `npm run dev`
-   - **Porta:** **3000** (`http://localhost:3000`) - *O Vite está configurado explicitamente no arquivo `vite.config.ts` para iniciar na porta 3000, fazendo ponte/proxy das APIs com o backend na porta 3001.*
+```env
+# Database
+DATABASE_URL=postgresql://laranjinha:laranjinha-npx-tech@localhost:5432/inside_sales_pipeline
+DATABASE_POOL_MIN=2
+DATABASE_POOL_MAX=10
+
+# API
+PORT=3001
+API_BASE_URL=https://laranjinha.npx.com.br
+API_VERSION=v1
+NODE_ENV=production
+
+# Authentication
+JWT_SECRET=SUA_CHAVE_AQUI
+API_KEY_HEADER=SEU_CLIENT_ID_GOOGLE_AQUI
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX_REQUESTS=100
+```
 
 ---
 
-## 🚀 Como Executar Passo a Passo
+## 🗄️ Estrutura do Banco de Dados (Postgres)
 
-### 1. Iniciar o Backend (API)
-Abra um terminal, vá para a **raiz do projeto** e execute:
+A versão atual foi expandida para suportar toda a operação de Inside Sales, contando com **19 tabelas** integradas via PostgreSQL:
+
+1.  **Core**: `leads`, `sdrs`, `teams`, `users`, `user_sessions`.
+2.  **Pipeline**: `pipeline_columns`, `lead_pipeline_history`, `workflow_triggers`.
+3.  **Operação**: `interactions_log`, `notifications`, `templates`, `schedules`.
+4.  **Config & Stats**: `sdr_stats`, `management_report_config`, `user_integrations`.
+5.  **Dados & Tags**: `lead_custom_fields`, `tags`, `lead_tags`, `invites`.
+
+---
+
+## 🚀 Passo a Passo para Nova Máquina
+
+Se você clonou o projeto em uma nova máquina e está vendo uma tela branca ou erros, siga estes passos:
+
+### 1. Preparar o Banco de Dados (PostgreSQL)
+Certifique-se de que o Postgres está instalado e rodando.
+Abra um terminal na raiz e execute o comando de inicialização (isso cria as **19 tabelas** e insere dados iniciais):
 ```bash
-npm install     # Caso não tenha instalado antes
-npm run dev     # Inicia o servidor na porta 3001
+npm run db:setup
 ```
-*(Se for a sua primeira vez, ou se o banco de dados estiver zerado, você pode rodar `npm run db:init` para recriar as tabelas mockadas)*
+*Atenção: Garanta que o usuário 'laranjinha' existe ou ajuste a `DATABASE_URL` no seu `.env`.*
 
-### 2. Iniciar o Frontend (Interface React)
-Abra um **novo terminal**, vá para a pasta **`frontend`** e execute:
+### 2. Rodar o Backend
+```bash
+npm install
+npm start
+```
+O servidor deve reportar: `🚀 API Server running on port 3001`.
+
+### 3. Build do Frontend (Opcional se já estiver no Git)
+O frontend foi compilado para falar com `https://laranjinha.npx.com.br`. Se você estiver rodando localmente na outra máquina e quiser testar via `localhost`, precisará alterar o arquivo `frontend/.env` e rodar:
 ```bash
 cd frontend
-npm install     # Caso não tenha instalado antes
-npm run dev     # Inicia a interface na porta 3000
+npm install
+npm run build
 ```
 
-### 👉 Acessando a Aplicação
-Após iniciar ambos os terminais, clique no link abaixo no seu navegador:
-**[http://localhost:3000](http://localhost:3000)**
+---
+
+## 🛠 Solução de Problemas (FAQ)
+
+### ❓ Tela Branca ao Acessar
+*   **Causa:** O build do frontend pode estar tentando acessar `localhost:3001` de dentro de um navegador em outra máquina.
+*   **Solução:** Já atualizamos o build do Git para apontar para `https://laranjinha.npx.com.br`. Basta dar um `git pull` na outra máquina.
+
+### ❓ Erro de Conexão com Banco de Dados
+*   **Causa:** O PostgreSQL não está rodando ou as credenciais no `.env` estão incorretas.
+*   **Solução:** Verifique se consegue se conectar via `psql` ou `TablePlus` usando os dados da `DATABASE_URL`.
+
+### ❓ Login Não Funciona (Google Auth)
+*   **Causa:** As URLs de callback no Google Console precisam incluir `https://laranjinha.npx.com.br/api/v1/auth/google/callback`.
+*   **Solução:** Adicione a URL acima como "Authorized redirect URIs" no Google Cloud Console.
 
 ---
 
-## 🛡️ Funcionalidades Beta Disponíveis
-
-Esta versão foca na simplicidade e na operação principal de vendas.
-
-### 1. Kanban Sales
-- Visualização de pipeline padrão.
-- Gestão de leads por colunas de status.
-
-### 2. Administração (Acesso Manager)
-Acesse via o ícone de engrenagem no **Control Hub**:
-
--   **Lead Zone (Cadastro):** Importação e higienização de leads.
--   **Regras de Cadência (Desenho):** Configuração de protocolos e sequências de vendas.
-
----
-
-## 🛠 Status de Desenvolvimento (Março 2026)
-
--   **Backend:** Rodando na porta **3001**.
--   **Frontend:** Rodando na porta **3000** (com proxy para o backend).
--   **Integração Aurora Chat:** Checklist disponível em `docs/aurora_checklist.md`. Variáveis de ambiente configuradas no `.env`.
--   **Correções Recentes:** Estabilização de rotas de Administração e Kanban.
-
-> [!TIP]
-> Sempre verifique se ambos os terminais estão ativos para garantir que o fluxo de dados entre Frontend e Backend funcione corretamente.
-
----
-
-## 🛠 Configuração de Testes e Futuro
-
--   **Backend:** Certifique-se de que a `DATABASE_URL` no `.env` da raiz está apontando para o banco de dados correto.
--   **Portas:** Você pode rodar múltiplas instâncias (Beta, Dev, Staging) mudando apenas a porta no comando de inicialização.
+**Equipe Advanced Agentic Coding - Antigravity**
