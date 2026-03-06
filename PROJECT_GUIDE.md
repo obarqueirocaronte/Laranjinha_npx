@@ -1,104 +1,142 @@
 # Inside Sales Pipeline - Guia de Deploy & Setup Local
 
-Este guia detalha como configurar e rodar o projeto em uma nova máquina (para testes locais) e como configurá-lo no ambiente final de produção.
+Este guia detalha como configurar e rodar o projeto do zero, utilizando o repositório oficial no GitHub.
 
 ---
 
-## 💻 1. Ambiente Local (Testes na sua máquina)
+## � 1. Primeiro Passo: Clonar o Repositório
 
-Ao testar em uma nova máquina antes de subir para o domínio `laranjinha.npx.com.br`, você deve rodar os serviços apontando para o seu `localhost`. Siga os passos abaixo rigorosamente para evitar a "tela branca":
+Abra o terminal na pasta onde deseja salvar o projeto e execute:
+
+```bash
+git clone https://github.com/obarqueirocaronte/Laranjinha_npx.git
+cd Laranjinha_npx
+```
+
+---
+
+## 💻 2. Ambiente Local (Testes na sua máquina)
+
+Siga os passos abaixo rigorosamente para configurar o ambiente de desenvolvimento:
 
 ### Passo 1: Configurar Variáveis do Backend
-Crie um arquivo `.env` na RAIZ do projeto (`inside-sales-pipeline-beta/.env`) com o conteúdo:
+Crie um arquivo `.env` na RAIZ do projeto (`Laranjinha_npx/.env`) com o conteúdo:
 
 ```env
-# Banco de Dados
-DATABASE_URL=postgresql://laranjinha:laranjinha-npx-tech@localhost:5432/inside_sales_pipeline
+# Banco de Dados (PostgreSQL)
+# Altere 'usuario' e 'senha' conforme sua configuração local
+DATABASE_URL=postgresql://usuario:senha@localhost:5432/inside_sales_pipeline
 DATABASE_POOL_MIN=2
 DATABASE_POOL_MAX=10
 
-# Configurações API em Localhost
+# Configurações API
 PORT=3001
 API_BASE_URL=http://localhost:3001
 API_VERSION=v1
 NODE_ENV=development
 FRONTEND_URL=http://localhost:3000
 
-# Autenticação e Segurança
+# Segurança
 JWT_SECRET=DEV_SECRET_KEY_AQUI
-API_KEY_HEADER=SEU_CLIENT_ID_GOOGLE_AQUI
-RATE_LIMIT_WINDOW_MS=60000
-RATE_LIMIT_MAX_REQUESTS=1000
+SESSION_SECRET=UMA_CHAVE_FORTE_PARA_SESSAO
+API_KEY_HEADER=QUALQUER_STRING_PARA_VALIDACAO
 
-# Google OAuth (Para Testes)
+# Google OAuth (Obtenha no Google Cloud Console)
 GOOGLE_CLIENT_ID=SEU_CLIENT_ID_AQUI
 GOOGLE_CLIENT_SECRET=SEU_CLIENT_SECRET_AQUI
 GOOGLE_CALLBACK_URL=http://localhost:3001/api/v1/auth/google/callback
 ```
 
 ### Passo 2: Configurar Variáveis do Frontend
-Crie o arquivo `.env` dentro da pasta `frontend/` (`frontend/.env`) e deixe-o **vazio** ou com:
+Crie o arquivo `.env` dentro da pasta `frontend/`:
 ```env
-# Em dev local, o Vite (porta 3000) já faz proxy automático para localhost:3001
+# O Vite (porta 3000) fará o proxy para o backend na porta 3001
 VITE_API_URL=/api/v1
 ```
 
-### Passo 3: Inicializar o Banco e Rodar tudo
-1. Certifique-se de que o PostgreSQL está rodando.
-2. Na RAIZ do projeto, abra um terminal e inicie o Backend:
+### Passo 3: Configurar Google Cloud Console (OAuth)
+Para que o login funcione, configure seu Client ID no Google Console com:
+
+**Origens JavaScript autorizadas:**
+- `http://localhost:3000`
+- `http://localhost:3001`
+
+**URIs de redirecionamento autorizados:**
+- `http://localhost:3001/api/v1/auth/google/callback`
+
+---
+
+## 🗄️ 3. Inicializar o Banco de Dados (Postgres)
+
+1. Certifique-se de que o PostgreSQL está rodando e que você criou o banco `inside_sales_pipeline`.
+2. Na RAIZ do projeto, execute:
+
 ```bash
 npm install
 npm run db:setup
+```
+*Este comando cria as 19 tabelas, insere dados de teste (seed) e aplica todas as migrações.*
+
+---
+
+## 🏃 4. Rodar o Sistema
+
+Você precisará de **dois terminais** abertos:
+
+**Terminal 1 (Backend):**
+```bash
 npm run dev
 ```
-*(O backend ficará ativo na porta 3001)*
 
-3. Em um SEGUNDO terminal, entre na pasta `frontend` e inicie a Interface:
+**Terminal 2 (Frontend):**
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-*(O frontend ficará ativo na porta 3000)*
 
-Acesse: **http://localhost:3000**. Como `FRONTEND_URL` e a API não estão apontando para o domínio em produção, não haverá "tela branca" nem erro de conexão (CORS).
-
----
-
-## 🌐 2. Ambiente de Produção (Domínio laranjinha)
-
-Quando o sistema for hospedado na máquina definitiva do domínio `laranjinha.npx.com.br`, as configurações mudam ligeiramente.
-
-### O arquivo `.env` na RAIZ do servidor ficará:
-```env
-DATABASE_URL=postgresql://laranjinha:laranjinha-npx-tech@localhost:5432/inside_sales_pipeline
-PORT=3001
-API_BASE_URL=https://laranjinha.npx.com.br
-FRONTEND_URL=https://laranjinha.npx.com.br
-NODE_ENV=production
-
-JWT_SECRET=SUA_CHAVE_FORTE
-API_KEY_HEADER=SEU_CLIENT_ID_GOOGLE_AQUI
-
-GOOGLE_CALLBACK_URL=https://laranjinha.npx.com.br/api/v1/auth/google/callback
-```
-
-### O arquivo `frontend/.env` no servidor de compilação ficará:
-```env
-VITE_API_URL=https://laranjinha.npx.com.br/api/v1
-```
-Após configurar isso na máquina final, basta rodar `npm run build` na pasta frontend.
+Acesse: **http://localhost:3000**
 
 ---
 
-## 🗄️ Tabelas Sincronizadas (Postgres)
-O projeto utilizará **19 tabelas**, sendo que todas são criadas ao rodar `npm run db:setup`:
+## 🔄 5. Fazendo Update do Sistema (MVP Seguro)
 
-1.  **Core**: `leads`, `sdrs`, `teams`, `users`, `user_sessions`.
-2.  **Pipeline**: `pipeline_columns`, `lead_pipeline_history`, `workflow_triggers`.
-3.  **Operação**: `interactions_log`, `notifications`, `templates`, `schedules`.
-4.  **Config & Stats**: `sdr_stats`, `management_report_config`, `user_integrations`.
-5.  **Dados & Tags**: `lead_custom_fields`, `tags`, `lead_tags`, `invites`.
+Se você já fez o setup inicial e apenas quer **atualizar o código** com o que está no GitHub (sem crashar o site ou perder dados atuais no banco), siga estes passos rápidos:
+
+**1. No servidor (ou na máquina onde está rodando), puxe as alterações:**
+```bash
+git pull origin main
+```
+
+**2. Atualize dependências do Backend e rode novas Migrations (sem apagar o banco!):**
+```bash
+npm install
+npm run db:migrate
+```
+*(Usamos `db:migrate` no lugar de `db:setup` para garantir que apenas as alterações novas na estrutura do banco sejam aplicadas, mantendo todos os seus leads a salvo).*
+
+**3. Atualize o Frontend e crie a nova build (Se for Produção):**
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+**4. Reinicie os serviços:**
+Dependendo de como você roda o sistema (se no terminal com `npm run dev` ou usando um gerenciador como `pm2`), reinicie o aplicativo do backend e recarregue o servidor do frontend.
+
+---
+
+## 🌐 6. Ambiente de Produção (Domínio laranjinha)
+
+Quando subir para o servidor real (`laranjinha.npx.com.br`), lembre-se de:
+
+1. Alterar o `DATABASE_URL` para o banco de produção.
+2. Alterar as URLs no `.env` para `https://laranjinha.npx.com.br`.
+3. Adicionar as URLs de produção no Google Cloud Console:
+   - **Origem JS**: `https://laranjinha.npx.com.br`
+   - **Redirect URI**: `https://laranjinha.npx.com.br/api/v1/auth/google/callback`
+4. Rodar `cd frontend && npm run build` para gerar a versão otimizada.
 
 ---
 

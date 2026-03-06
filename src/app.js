@@ -38,12 +38,17 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: function (origin, callback) {
-        // allow requests with no origin (like mobile apps or curl requests)
+        // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-            return callback(null, false); // Block other origins internally, but we can set to true to allow all in dev
+
+        const isLocalhost = origin.startsWith('http://localhost:') || origin === 'http://localhost';
+        const isAllowedDomain = allowedOrigins.indexOf(origin) !== -1;
+
+        if (isLocalhost || isAllowedDomain || process.env.NODE_ENV === 'development') {
+            return callback(null, true);
         }
-        return callback(null, true);
+
+        return callback(null, false);
     },
     credentials: true
 }));

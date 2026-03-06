@@ -9,7 +9,8 @@
 
 INSERT INTO teams (id, name, description) VALUES
     ('11111111-1111-1111-1111-111111111111', 'Outbound Team A', 'Focused on SaaS prospects'),
-    ('22222222-2222-2222-2222-222222222222', 'Outbound Team B', 'Focused on Enterprise accounts');
+    ('22222222-2222-2222-2222-222222222222', 'Outbound Team B', 'Focused on Enterprise accounts')
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- 2. SDRs (Sales Development Representatives)
@@ -19,7 +20,8 @@ INSERT INTO sdrs (id, team_id, full_name, email, phone, is_active) VALUES
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'Ana Silva', 'ana.silva@company.com', '+5511999999001', true),
     ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '11111111-1111-1111-1111-111111111111', 'Bruno Costa', 'bruno.costa@company.com', '+5511999999002', true),
     ('cccccccc-cccc-cccc-cccc-cccccccccccc', '22222222-2222-2222-2222-222222222222', 'Carla Mendes', 'carla.mendes@company.com', '+5511999999003', true),
-    ('dddddddd-dddd-dddd-dddd-dddddddddddd', '22222222-2222-2222-2222-222222222222', 'Daniel Oliveira', 'daniel.oliveira@company.com', '+5511999999004', false);
+    ('dddddddd-dddd-dddd-dddd-dddddddddddd', '22222222-2222-2222-2222-222222222222', 'Daniel Oliveira', 'daniel.oliveira@company.com', '+5511999999004', false)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- 3. PIPELINE COLUMNS (Standard Inside Sales Flow)
@@ -31,7 +33,8 @@ INSERT INTO pipeline_columns (id, name, description, position, color, is_active)
     ('c0000003-0000-0000-0000-000000000003', 'WhatsApp', 'Leads contacted via WhatsApp', 3, '#10B981', true),
     ('c0000004-0000-0000-0000-000000000004', 'Email', 'Leads in email nurture sequence', 4, '#F59E0B', true),
     ('c0000005-0000-0000-0000-000000000005', 'Qualified', 'Qualified leads ready for sales', 5, '#8B5CF6', true),
-    ('c0000006-0000-0000-0000-000000000006', 'Lost', 'Leads that didn\'t convert', 6, '#EF4444', true);
+    ('c0000006-0000-0000-0000-000000000006', 'Lost', 'Leads that didn''t convert', 6, '#EF4444', true)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- 4. TEMPLATES
@@ -70,7 +73,8 @@ Se preferir, podemos marcar uma call rápida pelo calendário: {{calendar_link}}
 
 Abraços,
 {{sdr_name}}',
-     'pt-BR');
+     'pt-BR')
+ON CONFLICT (id) DO NOTHING;
 
 -- WhatsApp Templates
 INSERT INTO templates (id, name, category, content, language) VALUES
@@ -78,7 +82,7 @@ INSERT INTO templates (id, name, category, content, language) VALUES
      'Primeiro Contato - WhatsApp',
      'WHATSAPP',
      'Oi {{first_name}}! 👋
-
+     
 Sou {{sdr_name}} da [Empresa]. Vi que você é {{job_title}} na {{company_name}}.
 
 Podemos conversar sobre [solução]? Tenho cases bem legais de empresas similares.
@@ -94,7 +98,8 @@ Quando você tem uns 15min?',
 Conseguiu dar uma olhada na minha mensagem anterior?
 
 Sem pressão! Se não fizer sentido agora, me avisa que retomo em outro momento. 😊',
-     'pt-BR');
+     'pt-BR')
+ON CONFLICT (id) DO NOTHING;
 
 -- Call Scripts
 INSERT INTO templates (id, name, category, content, language) VALUES
@@ -117,7 +122,8 @@ Vocês já utilizam alguma solução para [área]? Como está funcionando?
 **OBJEÇÕES COMUNS:**
 - "Não tenho tempo agora" → Quando seria melhor? Posso te mandar um calendário?
 - "Já temos fornecedor" → Entendo! Como está a experiência? Vale a pena conhecer alternativas?',
-     'pt-BR');
+     'pt-BR')
+ON CONFLICT (id) DO NOTHING;
 
 -- LinkedIn Templates
 INSERT INTO templates (id, name, category, content, language) VALUES
@@ -125,7 +131,8 @@ INSERT INTO templates (id, name, category, content, language) VALUES
      'Connection Request - LinkedIn',
      'LINKEDIN',
      'Oi {{first_name}}, vi seu perfil e achei interessante sua trajetória como {{job_title}}. Trabalho com soluções para {{industry}} e adoraria trocar ideias!',
-     'pt-BR');
+     'pt-BR')
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- 5. WORKFLOW TRIGGERS (Automation Rules)
@@ -139,7 +146,8 @@ INSERT INTO workflow_triggers (id, name, from_column_id, to_column_id, action_ty
      'c0000002-0000-0000-0000-000000000002', -- To: Call
      'SEND_TEMPLATE',
      't0000005-0000-0000-0000-000000000005', -- Call Script
-     '{"auto_open_modal": true, "require_confirmation": true}'::jsonb);
+     '{"auto_open_modal": true, "require_confirmation": true}'::jsonb)
+ON CONFLICT (id) DO NOTHING;
 
 -- When moving from Leads → WhatsApp, send WhatsApp template
 INSERT INTO workflow_triggers (id, name, from_column_id, to_column_id, action_type, template_id, config) VALUES
@@ -149,7 +157,8 @@ INSERT INTO workflow_triggers (id, name, from_column_id, to_column_id, action_ty
      'c0000003-0000-0000-0000-000000000003', -- To: WhatsApp
      'SEND_TEMPLATE',
      't0000003-0000-0000-0000-000000000003', -- WhatsApp First Contact
-     '{"auto_open_modal": true, "require_confirmation": true}'::jsonb);
+     '{"auto_open_modal": true, "require_confirmation": true}'::jsonb)
+ON CONFLICT (id) DO NOTHING;
 
 -- When moving from Leads → Email, send email template
 INSERT INTO workflow_triggers (id, name, from_column_id, to_column_id, action_type, template_id, config) VALUES
@@ -159,7 +168,8 @@ INSERT INTO workflow_triggers (id, name, from_column_id, to_column_id, action_ty
      'c0000004-0000-0000-0000-000000000004', -- To: Email
      'SEND_TEMPLATE',
      't0000001-0000-0000-0000-000000000001', -- Email First Contact
-     '{"auto_open_modal": true, "require_confirmation": true}'::jsonb);
+     '{"auto_open_modal": true, "require_confirmation": true}'::jsonb)
+ON CONFLICT (id) DO NOTHING;
 
 -- When moving to Qualified, trigger webhook to CRM
 INSERT INTO workflow_triggers (id, name, from_column_id, to_column_id, action_type, config) VALUES
@@ -168,7 +178,8 @@ INSERT INTO workflow_triggers (id, name, from_column_id, to_column_id, action_ty
      'c0000004-0000-0000-0000-000000000004', -- From: Email
      'c0000005-0000-0000-0000-000000000005', -- To: Qualified
      'WEBHOOK',
-     '{"webhook_url": "https://api.crm.com/leads/qualified", "method": "POST"}'::jsonb);
+     '{"webhook_url": "https://api.crm.com/leads/qualified", "method": "POST"}'::jsonb)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- 6. SAMPLE LEADS
@@ -254,7 +265,8 @@ INSERT INTO leads (
      'c0000001-0000-0000-0000-000000000001',
      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
      45,
-     '{"utm_source": "cold_list", "company_size": "500+", "industry": "Manufacturing", "decision_maker": false}'::jsonb);
+     '{"utm_source": "cold_list", "company_size": "500+", "industry": "Manufacturing", "decision_maker": false}'::jsonb)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- 7. SAMPLE INTERACTIONS LOG
@@ -291,7 +303,8 @@ INSERT INTO interactions_log (
      't0000003-0000-0000-0000-000000000003',
      'Oi Patrícia! 👋 Sou Carla da [Empresa]...',
      true,
-     true);
+     true)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- 8. SAMPLE PIPELINE HISTORY
@@ -309,7 +322,8 @@ INSERT INTO lead_pipeline_history (
      NULL,
      'c0000001-0000-0000-0000-000000000001',
      NULL,
-     'Lead criado via formulário');
+     'Lead criado via formulário')
+ON CONFLICT (id) DO NOTHING;
 
 -- Simulate Carlos moving to Call column
 INSERT INTO lead_pipeline_history (
@@ -323,7 +337,8 @@ INSERT INTO lead_pipeline_history (
      'c0000001-0000-0000-0000-000000000001',
      'c0000002-0000-0000-0000-000000000002',
      3600, -- 1 hour in Leads column
-     'Movido para call após qualificação inicial');
+     'Movido para call após qualificação inicial')
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- VERIFICATION QUERIES
