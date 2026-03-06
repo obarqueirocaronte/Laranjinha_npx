@@ -9,7 +9,9 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "node src/app.js",
-    "db:init": "node scripts/init-db.js"
+    "db:init": "node scripts/init-db.js",
+    "db:migrate": "node run_migrations.js",
+    "db:setup": "npm run db:init && npm run db:migrate"
   },
   "keywords": [],
   "author": "",
