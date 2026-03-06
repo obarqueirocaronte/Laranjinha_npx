@@ -1,14 +1,90 @@
+const nodemailer = require('nodemailer');
+
 /**
- * Email Integration Stub Service
- * Prepara o terreno para no futuro conectarmos SMTP/SendGrid.
+ * Email Service — Integração real via Nodemailer.
+ * Utiliza variáveis de ambiente para configuração SMTP.
  */
 class EmailService {
-    async sendEmail(to, subject, body, options = {}) {
-        console.log(`[EmailService] Simulando envio de email para ${to}`);
-        console.log(`Assunto: ${subject}`);
+    constructor() {
+        this.transporter = null;
+        this.fromEmail = process.env.EMAIL_USER;
+        this.fromName = process.env.EMAIL_FROM_NAME || 'Laranjinha System';
+    }
 
-        // TODO: Implementar integração com Nodemailer, AWS SES ou SendGrid aqui.
-        return { success: true, messageId: `msg-${Date.now()}` };
+    /**
+     * Inicializa o transportador apenas se as credenciais existirem.
+     */
+    getTransporter() {
+        if (!this.transporter) {
+            if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+                console.warn('⚠️  Email Service não configurado (EMAIL_USER/EMAIL_PASS faltando no .env).');
+                return null;
+            }
+
+            this.transporter = nodemailer.createTransport({
+                host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+                port: parseInt(process.env.EMAIL_PORT) || 587,
+                secure: process.env.EMAIL_PORT === '465',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS,
+                },
+            });
+        }
+        return this.transporter;
+    }
+
+    async sendEmail(to, subject, html, text = '') {
+        const transporter = this.getTransporter();
+
+        if (!transporter) {
+            console.log(`[Email Mock] Enviando para: ${to} | Assunto: ${subject}`);
+            return { success: false, mock: true };
+        }
+
+        try {
+            const info = await transporter.sendMail({
+                from: `"${this.fromName}" <${this.fromEmail}>`,
+                to,
+                subject,
+                text: text || html.replace(/<[^>]*>?/gm, ''), // Fallback text
+                html,
+            });
+
+            console.log(`[EmailService] Email enviado: ${info.messageId}`);
+            return { success: true, messageId: info.messageId };
+        } catch (error) {
+            console.error('[EmailService] Erro ao enviar email:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Envia o template específico de convite para novos colaboradores.
+     */
+    async sendInviteEmail(to, name, role, token) {
+        const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/accept-invite?token=${token}`;
+
+        const subject = `Convite: Junte-se ao time da Laranjinha como ${role.toUpperCase()}`;
+
+        const html = `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+                <h2 style="color: #ff8c00;">Olá, ${name}!</h2>
+                <p>Você foi convidado para participar do nosso sistema de Inside Sales <strong>Laranjinha</strong> como <strong>${role}</strong>.</p>
+                <p>Para configurar seu acesso e começar a usar a plataforma, clique no botão abaixo:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${url}" style="background-color: #ff8c00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
+                        Aceitar Convite e Entrar
+                    </a>
+                </div>
+                <p style="font-size: 0.9em; color: #666;">Se o botão não funcionar, copie este link:</p>
+                <p style="font-size: 0.8em; color: #666; word-break: break-all;">${url}</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin-top: 30px;" />
+                <p style="font-size: 0.8em; color: #999;">Este convite expira em 7 dias.</p>
+            </div>
+        `;
+
+        return this.sendEmail(to, subject, html);
     }
 }
 
