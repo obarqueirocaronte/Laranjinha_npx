@@ -1,10 +1,8 @@
 const jwt = require('jsonwebtoken');
-const { Pool } = require('pg');
+const db = require('../config/db');
 require('dotenv').config();
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-});
+const pool = db;
 
 /**
  * Authentication middleware

@@ -1,10 +1,10 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const jwt = require('jsonwebtoken');
-const { Pool } = require('pg');
+const db = require('../config/db');
 require('dotenv').config();
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = db;
 const ALLOWED_DOMAIN = process.env.ALLOWED_DOMAIN || 'npx.com.br';
 
 /**
