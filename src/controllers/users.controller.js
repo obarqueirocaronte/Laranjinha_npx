@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const voiceService = require('../services/voice.service');
+const inviteService = require('../services/invite.service');
 
 exports.getUsers = async (req, res) => {
     try {
@@ -106,5 +107,77 @@ exports.getUserVoiceConfig = async (req, res) => {
     } catch (error) {
         console.error('Error fetching voice config:', error);
         res.status(500).json({ error: 'Erro ao buscar configuração de voz.' });
+    }
+};
+
+// ==========================================
+// INVITE MANAGEMENT (Manager-only)
+// ==========================================
+
+exports.createInvite = async (req, res) => {
+    try {
+        const { email, name, role } = req.body;
+        // invitedBy comes from auth middleware (req.userId)
+        const invitedBy = req.userId || null;
+
+        if (!email) return res.status(400).json({ error: 'Email é obrigatório.' });
+        if (!['sdr', 'manager'].includes(role)) return res.status(400).json({ error: 'Role deve ser sdr ou manager.' });
+
+        const invite = await inviteService.createInvite({ email, name, role, invitedBy });
+        res.json({ success: true, data: invite });
+    } catch (error) {
+        const messages = {
+            INVITE_ALREADY_EXISTS: 'Já existe um convite pendente para este email.',
+            USER_ALREADY_EXISTS: 'Já existe um usuário com este email.',
+        };
+        console.error('Create invite error:', error);
+        res.status(400).json({ error: messages[error.message] || error.message });
+    }
+};
+
+exports.listInvites = async (req, res) => {
+    try {
+        const invites = await inviteService.listInvites();
+        res.json({ success: true, data: invites });
+    } catch (error) {
+        console.error('List invites error:', error);
+        res.status(500).json({ error: 'Erro ao listar convites.' });
+    }
+};
+
+exports.revokeInvite = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await inviteService.revokeInvite(id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Revoke invite error:', error);
+        res.status(500).json({ error: 'Erro ao revogar convite.' });
+    }
+};
+
+exports.deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db.query('DELETE FROM user_integrations WHERE user_id = $1', [id]);
+        await db.query('DELETE FROM user_sessions WHERE user_id = $1', [id]);
+        await db.query('DELETE FROM users WHERE id = $1', [id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Delete user error:', error);
+        res.status(500).json({ error: 'Erro ao remover usuário.' });
+    }
+};
+
+exports.updateUserRole = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role } = req.body;
+        const isAdmin = role === 'manager';
+        await db.query('UPDATE users SET role = $1, is_admin = $2 WHERE id = $3', [role, isAdmin, id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Update role error:', error);
+        res.status(500).json({ error: 'Erro ao atualizar role.' });
     }
 };

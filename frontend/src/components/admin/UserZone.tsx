@@ -5,7 +5,7 @@ import {
     Crown, Search, Filter, Briefcase, Zap, Settings, Phone, MessageSquare, Save, Loader2
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import api from '../../lib/api';
+import api, { usersAPI } from '../../lib/api';
 
 interface UserZoneProps {
     onClose: () => void;
@@ -78,19 +78,42 @@ export const UserZone: React.FC<UserZoneProps> = ({ onClose }) => {
         fetchUsers();
     }, []);
 
-    const handleInvite = () => {
-        // Mock invitation logic
-        setTimeout(() => {
-            const newUser: User = {
-                id: Math.random().toString(),
-                name: newItem.name || 'Novo Usuário',
-                email: newItem.email || 'novo.usuario@npx.com',
+    const [inviteError, setInviteError] = useState('');
+    const [inviteLoading, setInviteLoading] = useState(false);
+
+    const handleInvite = async () => {
+        setInviteError('');
+        setInviteLoading(true);
+        try {
+            if (!newItem.email || !newItem.name) {
+                setInviteError('Nome e email são obrigatórios.');
+                setInviteLoading(false);
+                return;
+            }
+
+            const res = await usersAPI.createInvite({
+                email: newItem.email,
+                name: newItem.name,
                 role: newItem.role,
-                status: 'invited'
-            };
-            setUsers([...users, newUser]);
-            setView('success');
-        }, 1000);
+            });
+
+            if (res.success) {
+                // Add to local user list as invited
+                const newUser: User = {
+                    id: res.data.id,
+                    name: newItem.name,
+                    email: newItem.email,
+                    role: newItem.role,
+                    status: 'invited'
+                };
+                setUsers([...users, newUser]);
+                setView('success');
+            }
+        } catch (err: any) {
+            setInviteError(err.response?.data?.error || 'Erro ao criar convite.');
+        } finally {
+            setInviteLoading(false);
+        }
     };
 
     const InviteView = () => (
@@ -124,10 +147,15 @@ export const UserZone: React.FC<UserZoneProps> = ({ onClose }) => {
                     </div>
                 </div>
 
+                {inviteError && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">{inviteError}</div>
+                )}
+
                 <div className="mt-8 flex items-center justify-between pt-6 border-t border-orange-100/60">
                     <button onClick={() => setView('list')} className="text-slate-600 font-bold hover:text-slate-800">Cancelar</button>
-                    <button onClick={handleInvite} className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-bold shadow-lg hover:bg-slate-800 transition-all flex items-center gap-2">
-                        <Mail size={18} /> Enviar Convite
+                    <button onClick={handleInvite} disabled={inviteLoading} className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-bold shadow-lg hover:bg-slate-800 transition-all flex items-center gap-2 disabled:opacity-50">
+                        {inviteLoading ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />}
+                        {inviteLoading ? 'Enviando...' : 'Enviar Convite'}
                     </button>
                 </div>
             </div>

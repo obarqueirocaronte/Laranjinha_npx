@@ -25,6 +25,8 @@ async function main() {
         await runMigration(path.join(__dirname, 'database/migrations/20260304_add_goals_to_sdrs.sql'));
         await runMigration(path.join(__dirname, 'database/migrations/20260304_add_management_report_config.sql'));
         await runMigration(path.join(__dirname, 'database/migrations/20260305_add_schedules_table.sql'));
+        await runMigration(path.join(__dirname, 'database/migrations/20260306_add_google_oauth.sql'));
+        await runMigration(path.join(__dirname, 'database/migrations/20260306_add_invites.sql'));
         console.log('🎉 All migrations applied!');
     } catch (error) {
         console.error('💥 Migration failed!');

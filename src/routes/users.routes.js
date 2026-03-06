@@ -11,4 +11,17 @@ router.get('/:id/voice-config', usersController.getUserVoiceConfig);
 // Save user integration config
 router.post('/:id/integrations', usersController.saveUserIntegration);
 
+// Update user role
+router.put('/:id/role', usersController.updateUserRole);
+
+// Delete user
+router.delete('/:id', usersController.deleteUser);
+
+// ==========================================
+// INVITE MANAGEMENT
+// ==========================================
+router.post('/invites', usersController.createInvite);
+router.get('/invites', usersController.listInvites);
+router.delete('/invites/:id', usersController.revokeInvite);
+
 module.exports = router;

@@ -220,5 +220,17 @@ export const aiAPI = {
         api.post('/ai/normalize-phone', { phone }).then(res => res.data),
 };
 
+// Users & Invites API
+export const usersAPI = {
+    getUsers: () => api.get('/users').then(res => res.data),
+    createInvite: (data: { email: string; name: string; role: string }) =>
+        api.post('/users/invites', data).then(res => res.data),
+    listInvites: () => api.get('/users/invites').then(res => res.data),
+    revokeInvite: (id: string) => api.delete(`/users/invites/${id}`).then(res => res.data),
+    deleteUser: (id: string) => api.delete(`/users/${id}`).then(res => res.data),
+    updateUserRole: (id: string, role: string) => api.put(`/users/${id}/role`, { role }).then(res => res.data),
+    saveIntegrations: (id: string, integrations: any) => api.post(`/users/${id}/integrations`, integrations).then(res => res.data),
+};
+
 export default api;
 

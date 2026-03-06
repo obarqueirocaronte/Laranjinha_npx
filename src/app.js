@@ -10,18 +10,33 @@
  */
 const express = require('express');
 const cors = require('cors');
+const session = require('express-session');
+const passport = require('passport');
 require('dotenv').config();
 
-const authRoutes = require('./routes/auth.routes');
-const statsRoutes = require('./routes/stats.routes');
+const { configureGoogleStrategy } = require('./services/google_auth.service');
 const notificationScheduler = require('./services/notification_scheduler.service');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Configure Google OAuth Strategy
+configureGoogleStrategy();
+
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true
+}));
 app.use(express.json());
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'fallback-session-secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 // ==========================================
 // REGISTRO DE ROTAS

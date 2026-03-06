@@ -1,10 +1,10 @@
 /**
  * Contexto de Autenticação (AuthContext.tsx)
  * 
- * Este arquivo usa a Context API do React para criar um "estado global"
- * de Autenticação. Isso permite que qualquer componente do sistema
- * saiba rapidamente se o usuário está logado, quem é ele e seu cargo (role).
- * Também disponibiliza as funções para fazer Login, Registro e Logout.
+ * Fluxo real de autenticação.
+ * - Bypass mantido APENAS para o manager rodrigo.sergio@npx.com.br
+ * - Todo o resto autentica via banco de dados real (JWT)
+ * - Suporte a login via Google OAuth
  */
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { authAPI } from '../lib/api';
@@ -13,6 +13,7 @@ interface User {
     id: string;
     email: string;
     role?: 'manager' | 'sdr';
+    isAdmin?: boolean;
 }
 
 interface AuthContextType {
@@ -23,24 +24,48 @@ interface AuthContextType {
     register: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     verifyEmail: (token: string) => Promise<void>;
+    loginWithGoogle: () => void;
     clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Manager bypass — SOMENTE este usuário tem acesso sem banco
+const MANAGER_BYPASS = { email: 'rodrigo.sergio@npx.com.br', password: '505050' };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // useEffect roda apenas uma vez quando a aplicação começa (Montagem do componente).
-    // Ele checa se já existe um usuário salvo localmente (localStorage) 
-    // ou valida o token de acesso com o backend.
+    // Verifica autenticação ao carregar (token salvo ou retorno do Google)
     useEffect(() => {
         const checkAuth = async () => {
+            // Verificar parâmetros na URL (retorno do Google OAuth)
+            const params = new URLSearchParams(window.location.search);
+            const tokenFromGoogle = params.get('token');
+            const emailFromGoogle = params.get('email');
+            const isAdminFromGoogle = params.get('isAdmin') === 'true';
+
+            if (tokenFromGoogle && emailFromGoogle) {
+                const googleUser: User = {
+                    id: 'google-auth',
+                    email: emailFromGoogle,
+                    role: isAdminFromGoogle ? 'manager' : 'sdr',
+                    isAdmin: isAdminFromGoogle
+                };
+                localStorage.setItem('auth_token', tokenFromGoogle);
+                localStorage.setItem('user', JSON.stringify(googleUser));
+                setUser(googleUser);
+                // Limpar parâmetros da URL
+                window.history.replaceState({}, '', '/');
+                setLoading(false);
+                return;
+            }
+
             const token = localStorage.getItem('auth_token');
             if (token) {
-                // If it's our bypass token, restore session immediately
+                // Bypass token do manager
                 if (token === 'bypass-token') {
                     const savedUser = localStorage.getItem('user');
                     if (savedUser) {
@@ -50,10 +75,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     return;
                 }
 
+                // Token JWT real — validar com o backend
                 try {
                     const response = await authAPI.getCurrentUser();
                     if (response.success) {
-                        setUser(response.data.user);
+                        const u = response.data.user;
+                        setUser({
+                            id: u.id,
+                            email: u.email,
+                            role: u.is_admin ? 'manager' : 'sdr',
+                            isAdmin: u.is_admin
+                        });
                     }
                 } catch (err) {
                     console.error('Auth check failed:', err);
@@ -72,27 +104,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setLoading(true);
             setError(null);
 
-            // Bypass logic for Beta
-            const role = email.toLowerCase().includes('admin') || email.toLowerCase().includes('manager') ? 'manager' : 'sdr';
-            const mockUser: User = { id: role === 'manager' ? 'admin-bypass' : 'sdr-bypass', email, role };
-            setUser(mockUser);
-            localStorage.setItem('auth_token', 'bypass-token');
-            localStorage.setItem('user', JSON.stringify(mockUser));
-
-            // Optional: try real login silently
-            try {
-                await authAPI.login(email, password);
-            } catch (e) {
-                // Ignore real login failure
+            // Bypass SOMENTE para o manager
+            if (email === MANAGER_BYPASS.email && password === MANAGER_BYPASS.password) {
+                const managerUser: User = { id: 'admin-bypass', email, role: 'manager', isAdmin: true };
+                setUser(managerUser);
+                localStorage.setItem('auth_token', 'bypass-token');
+                localStorage.setItem('user', JSON.stringify(managerUser));
+                return;
             }
+
+            // Autenticação REAL via banco de dados para todos os outros
+            const response = await authAPI.login(email, password);
+
+            if (!response.success) {
+                throw new Error(response.error?.message || 'Login failed');
+            }
+
+            const { token, user: apiUser } = response.data;
+            const loggedUser: User = {
+                id: apiUser.id,
+                email: apiUser.email,
+                role: apiUser.isAdmin ? 'manager' : 'sdr',
+                isAdmin: apiUser.isAdmin
+            };
+
+            localStorage.setItem('auth_token', token);
+            localStorage.setItem('user', JSON.stringify(loggedUser));
+            setUser(loggedUser);
+
         } catch (err: any) {
-            // Fallback if something purely local fails
-            const errorMessage = err.message || 'Login failed';
+            const errorMessages: Record<string, string> = {
+                INVALID_CREDENTIALS: 'Email ou senha incorretos.',
+                EMAIL_NOT_VERIFIED: 'Email não verificado. Verifique sua caixa de entrada.',
+                EMAIL_DOMAIN_INVALID: 'Use seu email @npx.com.br.',
+            };
+            const code = err.response?.data?.error?.code || err.message;
+            const errorMessage = errorMessages[code] || 'Erro ao fazer login. Tente novamente.';
             setError(errorMessage);
             throw new Error(errorMessage);
         } finally {
             setLoading(false);
         }
+    };
+
+    // Login com Google — redireciona para o backend OAuth
+    const loginWithGoogle = () => {
+        const backendUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:3001';
+        window.location.href = `${backendUrl}/api/v1/auth/google`;
     };
 
     const register = async (email: string, password: string) => {
@@ -116,11 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const logout = async () => {
         try {
             setLoading(true);
-            try {
-                await authAPI.logout();
-            } catch (e) {
-                // Ignore API failure in bypass mode
-            }
+            try { await authAPI.logout(); } catch (e) { /* ignore */ }
             setUser(null);
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user');
@@ -136,10 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setLoading(true);
             setError(null);
             const response = await authAPI.verifyEmail(token);
-
-            if (!response.success) {
-                throw new Error(response.error?.message || 'Verification failed');
-            }
+            if (!response.success) throw new Error(response.error?.message || 'Verification failed');
         } catch (err: any) {
             const errorMessage = err.response?.data?.error?.message || err.message || 'Verification failed';
             setError(errorMessage);
@@ -151,18 +202,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const clearError = () => setError(null);
 
-    const value = {
-        user,
-        loading,
-        error,
-        login,
-        register,
-        logout,
-        verifyEmail,
-        clearError,
-    };
-
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    return (
+        <AuthContext.Provider value={{ user, loading, error, login, register, logout, verifyEmail, loginWithGoogle, clearError }}>
+            {children}
+        </AuthContext.Provider>
+    );
 }
 
 export function useAuth() {
