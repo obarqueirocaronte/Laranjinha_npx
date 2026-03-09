@@ -17,8 +17,7 @@ class EmailService {
     getTransporter() {
         if (!this.transporter) {
             if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-                console.warn('⚠️  Email Service não configurado (EMAIL_USER/EMAIL_PASS faltando no .env).');
-                return null;
+                throw new Error('Email Service não configurado (EMAIL_USER/EMAIL_PASS faltando no .env).');
             }
 
             this.transporter = nodemailer.createTransport({
@@ -29,8 +28,8 @@ class EmailService {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASS,
                 },
-                connectionTimeout: 5000, // Fail fast if SMTP is unreachable (5s)
-                socketTimeout: 5000,
+                connectionTimeout: 10000, // Timeout de conexão
+                socketTimeout: 10000,
             });
         }
         return this.transporter;
@@ -38,11 +37,6 @@ class EmailService {
 
     async sendEmail(to, subject, html, text = '') {
         const transporter = this.getTransporter();
-
-        if (!transporter) {
-            console.log(`[Email Mock] Enviando para: ${to} | Assunto: ${subject}`);
-            return { success: false, mock: true };
-        }
 
         try {
             const info = await transporter.sendMail({
@@ -83,6 +77,60 @@ class EmailService {
                 <p style="font-size: 0.8em; color: #666; word-break: break-all;">${url}</p>
                 <hr style="border: 0; border-top: 1px solid #eee; margin-top: 30px;" />
                 <p style="font-size: 0.8em; color: #999;">Este convite expira em 7 dias.</p>
+            </div>
+        `;
+
+        return this.sendEmail(to, subject, html);
+    }
+
+    /**
+     * Envia email de verificação de conta.
+     */
+    async sendVerificationEmail(to, token) {
+        const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`;
+        const subject = `Verifique seu Email - Laranjinha`;
+
+        const html = `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+                <h2 style="color: #ff8c00;">Bem-vindo à Laranjinha!</h2>
+                <p>Por favor, confirme seu endereço de email clicando no botão abaixo:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${url}" style="background-color: #ff8c00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
+                        Verificar Email
+                    </a>
+                </div>
+                <p style="font-size: 0.9em; color: #666;">Se o botão não funcionar, copie este link:</p>
+                <p style="font-size: 0.8em; color: #666; word-break: break-all;">${url}</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin-top: 30px;" />
+                <p style="font-size: 0.8em; color: #999;">Gratos,<br>Equipe Laranjinha</p>
+            </div>
+        `;
+
+        return this.sendEmail(to, subject, html);
+    }
+
+    /**
+     * Envia email de redefinição de senha.
+     */
+    async sendPasswordResetEmail(to, token) {
+        const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+        const subject = `Redefinição de Senha - Laranjinha`;
+
+        const html = `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+                <h2 style="color: #ff8c00;">Redefinição de Senha</h2>
+                <p>Recebemos uma solicitação para redefinir a senha da sua conta.</p>
+                <p>Se você não fez essa solicitação, pode ignorar este email.</p>
+                <p>Para redefinir sua senha, clique no botão abaixo:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${url}" style="background-color: #ff8c00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
+                        Redefinir Senha
+                    </a>
+                </div>
+                <p style="font-size: 0.9em; color: #666;">Se o botão não funcionar, copie este link:</p>
+                <p style="font-size: 0.8em; color: #666; word-break: break-all;">${url}</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin-top: 30px;" />
+                <p style="font-size: 0.8em; color: #999;">Este link expira em 1 hora.</p>
             </div>
         `;
 

@@ -40,6 +40,19 @@ const resetPasswordSchema = Joi.object({
         }),
 });
 
+const acceptInviteSchema = Joi.object({
+    token: Joi.string().required(),
+    password: Joi.string()
+        .min(8)
+        .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+        .required()
+        .messages({
+            'string.min': 'Password must be at least 8 characters long',
+            'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+            'any.required': 'Password is required',
+        }),
+});
+
 /**
  * Register a new user
  * POST /api/v1/auth/register
@@ -335,6 +348,89 @@ async function resetPassword(req, res) {
 }
 
 /**
+ * Validate Invite Token
+ * GET /api/v1/auth/invites/:token
+ */
+async function validateInvite(req, res) {
+    try {
+        const { token } = req.params;
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'VALIDATION_ERROR', message: 'Invite token is required' }
+            });
+        }
+
+        const invite = await authService.validateInviteToken(token);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                email: invite.email,
+                name: invite.name,
+                role: invite.role,
+            }
+        });
+    } catch (error) {
+        console.error('Validate invite error:', error);
+        return res.status(400).json({
+            success: false,
+            error: {
+                code: 'INVALID_INVITE',
+                message: error.message === 'INVALID_OR_EXPIRED_INVITE' || error.message === 'INVITE_EXPIRED'
+                    ? 'O convite é inválido ou já expirou.'
+                    : 'Erro ao validar convite.',
+            }
+        });
+    }
+}
+
+/**
+ * Accept invite and register user
+ * POST /api/v1/auth/accept-invite
+ */
+async function acceptInvite(req, res) {
+    try {
+        const { error, value } = acceptInviteSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'VALIDATION_ERROR', message: error.details[0].message }
+            });
+        }
+
+        const { token, password } = value;
+        const result = await authService.acceptInviteRegistration(token, password);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                message: 'Registration and invite acceptance successful.',
+                token: result.token,
+                user: result.user,
+            }
+        });
+    } catch (error) {
+        console.error('Accept invite error:', error);
+
+        if (error.message === 'USER_ALREADY_EXISTS') {
+            return res.status(409).json({
+                success: false,
+                error: { code: 'USER_ALREADY_EXISTS', message: 'Este e-mail já está cadastrado no sistema.' }
+            });
+        }
+
+        return res.status(400).json({
+            success: false,
+            error: {
+                code: 'ACCEPT_INVITE_ERROR',
+                message: 'Não foi possível aceitar o convite. Ele pode ser inválido ou já ter expirado.',
+            }
+        });
+    }
+}
+
+/**
  * Get current user
  * GET /api/v1/auth/me
  * Requires authentication
@@ -404,4 +500,6 @@ module.exports = {
     resetPassword,
     getCurrentUser,
     logout,
+    validateInvite,
+    acceptInvite,
 };

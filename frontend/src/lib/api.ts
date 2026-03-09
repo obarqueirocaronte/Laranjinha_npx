@@ -80,6 +80,20 @@ export const authAPI = {
         const response = await api.post('/auth/reset-password', { token, newPassword });
         return response.data;
     },
+
+    validateInvite: async (token: string) => {
+        const response = await api.get(`/auth/invites/${token}`);
+        return response.data;
+    },
+
+    acceptInvite: async (token: string, password: string) => {
+        const response = await api.post('/auth/accept-invite', { token, password });
+        if (response.data.success && response.data.data.token) {
+            localStorage.setItem('auth_token', response.data.data.token);
+            localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        }
+        return response.data;
+    },
 };
 
 // Leads API

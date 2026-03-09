@@ -37,7 +37,9 @@ class InviteService {
             const inviteToken = crypto.randomBytes(32).toString('hex');
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
 
-            // Criar convite
+            // Mandar e-mail ANTES do commit. Se falhar no SMTP, rollback e o front exibe erro!
+            await emailService.sendInviteEmail(email, name, role, inviteToken);
+
             const result = await client.query(
                 `INSERT INTO invites (email, name, role, invite_token, invited_by, expires_at)
                  VALUES ($1, $2, $3, $4, $5, $6)
@@ -47,16 +49,7 @@ class InviteService {
 
             await client.query('COMMIT');
 
-            const invite = result.rows[0];
-
-            // Enviar email de convite (não-crítico)
-            try {
-                await emailService.sendInviteEmail(email, name, role, inviteToken);
-            } catch (err) {
-                console.warn('Failed to send invite email:', err.message);
-            }
-
-            return invite;
+            return result.rows[0];
         } catch (err) {
             await client.query('ROLLBACK');
             throw err;

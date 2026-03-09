@@ -12,6 +12,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
 import { VerifyEmailPage } from './components/auth/VerifyEmailPage';
+import { AcceptInvitePage } from './components/auth/AcceptInvitePage';
 import { Dashboard } from './components/layout/Dashboard';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+          <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
           {/* Rotas Protegidas (Requer login e autenticação) 
               Envolvemos nosso Dashboard principal na <ProtectedRoute>

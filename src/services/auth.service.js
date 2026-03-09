@@ -4,6 +4,7 @@ const db = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const emailService = require('./email.service');
+const inviteService = require('./invite.service');
 require('dotenv').config();
 
 const pool = {
@@ -61,6 +62,92 @@ async function register(email, password) {
         id: user.id,
         email: user.email,
         createdAt: user.created_at,
+    };
+}
+
+/**
+ * Validates an invite token and returns its data
+ */
+async function validateInviteToken(token) {
+    return await inviteService.validateInvite(token);
+}
+
+/**
+ * Register a user via invite token
+ */
+async function acceptInviteRegistration(token, password) {
+    // 1. Validate invite
+    const invite = await inviteService.validateInvite(token);
+
+    // 2. Hash password
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    const client = await pool.query('SELECT 1'); // Just to get a client to begin tx? No, we'll just rely on inviteService atomic logic for the invite side. Or run a local tx here.
+    // Better: use direct pool.query since inviteService handles its own tx, but we need users + sdrs synced.
+
+    const dbClient = await db.getClient();
+    let user;
+    try {
+        await dbClient.query('BEGIN');
+
+        // Check again if user exists
+        const existingUser = await dbClient.query('SELECT id FROM users WHERE email = $1', [invite.email]);
+        if (existingUser.rows.length > 0) {
+            throw new Error('USER_ALREADY_EXISTS');
+        }
+
+        const isAdmin = invite.role === 'manager';
+
+        // 3. Create user
+        const result = await dbClient.query(
+            `INSERT INTO users (email, password_hash, full_name, name, role, is_admin, is_verified, invited_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING id, email, role, is_admin`,
+            [invite.email, passwordHash, invite.name, invite.name, invite.role, isAdmin, true, invite.invited_by]
+        );
+
+        user = result.rows[0];
+
+        // 4. Accept invite (mark as accepted)
+        await dbClient.query(
+            "UPDATE invites SET status = 'accepted', accepted_at = CURRENT_TIMESTAMP WHERE id = $1",
+            [invite.id]
+        );
+
+        // 5. Create SDR record if needed
+        if (invite.role === 'sdr') {
+            await dbClient.query(
+                `INSERT INTO sdrs (user_id, full_name, email) 
+                 VALUES ($1, $2, $3) 
+                 ON CONFLICT (email) DO UPDATE SET user_id = $1, full_name = $2`,
+                [user.id, invite.name, invite.email]
+            );
+        }
+
+        await dbClient.query('COMMIT');
+    } catch (err) {
+        await dbClient.query('ROLLBACK');
+        throw err;
+    } finally {
+        dbClient.release();
+    }
+
+    // 6. Generate token
+    const authToken = jwt.sign(
+        { userId: user.id, email: user.email, isAdmin: user.is_admin },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+
+    return {
+        token: authToken,
+        user: {
+            id: user.id,
+            email: user.email,
+            isAdmin: user.is_admin,
+            role: user.role
+        },
     };
 }
 
@@ -329,4 +416,6 @@ module.exports = {
     requestPasswordReset,
     resetPassword,
     getUserById,
+    validateInviteToken,
+    acceptInviteRegistration,
 };

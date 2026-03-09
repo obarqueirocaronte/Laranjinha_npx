@@ -16,6 +16,10 @@ router.post('/login', authController.login);
 router.post('/request-password-reset', authController.requestPasswordReset);
 router.post('/reset-password', authController.resetPassword);
 
+// Invite routes
+router.get('/invites/:token', authController.validateInvite);
+router.post('/accept-invite', authController.acceptInvite);
+
 // Protected routes (require authentication)
 router.get('/me', authenticate, authController.getCurrentUser);
 router.post('/logout', authenticate, authController.logout);
