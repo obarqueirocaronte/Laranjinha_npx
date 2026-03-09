@@ -59,7 +59,7 @@ class EmailService {
      * Envia o template específico de convite para novos colaboradores.
      */
     async sendInviteEmail(to, name, role, token) {
-        const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/accept-invite?token=${token}`;
+        const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
 
         const subject = `Convite: Junte-se ao time da Laranjinha como ${role.toUpperCase()}`;
 
@@ -67,10 +67,10 @@ class EmailService {
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
                 <h2 style="color: #ff8c00;">Olá, ${name}!</h2>
                 <p>Você foi convidado para participar do nosso sistema de Inside Sales <strong>Laranjinha</strong> como <strong>${role}</strong>.</p>
-                <p>Para configurar seu acesso e começar a usar a plataforma, clique no botão abaixo:</p>
+                <p>Para configurar seu acesso e começar a usar a plataforma, faça o login utilizando a sua conta Google corporativa vinculada a este e-mail:</p>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="${url}" style="background-color: #ff8c00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
-                        Aceitar Convite e Entrar
+                        Entrar com Google
                     </a>
                 </div>
                 <p style="font-size: 0.9em; color: #666;">Se o botão não funcionar, copie este link:</p>

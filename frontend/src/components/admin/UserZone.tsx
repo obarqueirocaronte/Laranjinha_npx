@@ -136,18 +136,16 @@ const InviteView = ({ newItem, setNewItem, handleInvite, inviteLoading, inviteEr
                     <p>Olá <strong>{newItem.name || 'Futuro SDR'}</strong>,</p>
                     <p>Você foi convidado para o workspace do <strong>Pipeline de Vendas</strong> como {ROLES[newItem.role as Role].label}.</p>
                     <div className="my-6 p-4 bg-orange-50 border border-orange-100 rounded-xl">
-                        <h5 className="font-bold text-orange-900 mb-2 flex items-center gap-2"><Shield size={16} /> Importante: Acesso ao Chat</h5>
-                        <p className="text-xs text-orange-800 mb-3">Para ativar o chat integrado (Mattermost), você precisa gerar um Token de Acesso Pessoal.</p>
+                        <h5 className="font-bold text-orange-900 mb-2 flex items-center gap-2"><Shield size={16} /> Acesso ao Laranjinha</h5>
+                        <p className="text-xs text-orange-800 mb-3">O acesso ao sistema agora é feito diretamente com a sua conta Google corporativa.</p>
                         <ol className="list-decimal pl-4 space-y-2 text-xs text-orange-800 font-medium">
-                            <li>Faça login em <strong>chat.npx.com.br</strong></li>
-                            <li>Vá em <strong>Configurações de Conta {'>'} Segurança {'>'} Tokens de Acesso Pessoal</strong></li>
-                            <li>Crie um novo token chamado "Sales Pipeline"</li>
-                            <li>Copie o token e cole-o nas Configurações do App (Ícone de Engrenagem)</li>
+                            <li>Acesse a página de login do sistema.</li>
+                            <li>Clique em <strong>Entrar com Google (@npx.com.br)</strong>.</li>
+                            <li>Seu convite e permissões serão vinculados automaticamente!</li>
                         </ol>
                     </div>
-                    <p>Clique no botão abaixo para definir sua senha de acesso.</p>
                     <div className="py-4">
-                        <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold mx-auto block cursor-default">Completar Cadastro</button>
+                        <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold mx-auto block cursor-default">Acessar o Sistema</button>
                     </div>
                 </div>
             </div>
