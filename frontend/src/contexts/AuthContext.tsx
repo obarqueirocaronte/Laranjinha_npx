@@ -149,7 +149,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Login com Google — redireciona para o backend OAuth
     const loginWithGoogle = () => {
-        const backendUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:3001';
+        const apiUrl = import.meta.env.VITE_API_URL || '/api/v1';
+        // Se a URL for absoluta (começar com http), extraímos a base.
+        // Se for relativa (ex: /api/v1), deixamos vazio para o browser resolver contra a origem atual.
+        const backendUrl = apiUrl.startsWith('http') ? apiUrl.replace('/api/v1', '') : '';
         window.location.href = `${backendUrl}/api/v1/auth/google`;
     };
 
