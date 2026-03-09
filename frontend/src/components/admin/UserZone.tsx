@@ -419,9 +419,17 @@ export const UserZone: React.FC<UserZoneProps> = ({ onClose }) => {
         const fetchUsers = async () => {
             try {
                 const res = await api.get('/users');
-                setUsers(res.data);
+                if (Array.isArray(res.data)) {
+                    setUsers(res.data);
+                } else if (res.data && Array.isArray(res.data.data)) {
+                    setUsers(res.data.data);
+                } else {
+                    console.error('Unexpected API response format for /users:', res.data);
+                    setUsers([]);
+                }
             } catch (err) {
                 console.error('Failed to fetch users', err);
+                setUsers([]);
             } finally {
                 setIsLoading(false);
             }
