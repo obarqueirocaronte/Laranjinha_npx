@@ -29,6 +29,8 @@ class EmailService {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASS,
                 },
+                connectionTimeout: 5000, // Fail fast if SMTP is unreachable (5s)
+                socketTimeout: 5000,
             });
         }
         return this.transporter;
