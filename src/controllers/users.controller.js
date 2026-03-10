@@ -10,7 +10,22 @@ exports.getUsers = async (req, res) => {
             ORDER BY name ASC
         `);
 
+        // Also fetch pending invites
+        const invitesResult = await db.query(`
+            SELECT id, email, name, role, status
+            FROM invites
+            WHERE status = 'pending'
+            ORDER BY created_at DESC
+        `);
+
         let users = usersResult.rows;
+        let invites = invitesResult.rows.map(inv => ({
+            id: inv.id,
+            name: inv.name || 'Convidado',
+            email: inv.email,
+            role: inv.role || 'sdr',
+            status: 'invited' // Standardize status for UI
+        }));
 
         // Fetch integrations for all users
         const integrationsResult = await db.query(`
@@ -28,8 +43,8 @@ exports.getUsers = async (req, res) => {
             return acc;
         }, {});
 
-        // Combine user and integration
-        const resultPayload = users.map(u => ({
+        // Combine user/invites and integration
+        const activeUsersPayload = users.map(u => ({
             id: u.id,
             name: u.name || 'Sem Nome',
             email: u.email,
@@ -41,6 +56,9 @@ exports.getUsers = async (req, res) => {
                 aurora: { enabled: false, auroraUserId: '', phoneNumber: '' }
             }
         }));
+
+        // Final merged list
+        const resultPayload = [...activeUsersPayload, ...invites];
 
         res.json(resultPayload);
     } catch (error) {
@@ -174,9 +192,32 @@ exports.updateUserRole = async (req, res) => {
         const { id } = req.params;
         const { role } = req.body;
         const isAdmin = role === 'manager';
-        await db.query('UPDATE users SET role = $1, is_admin = $2 WHERE id = $3', [role, isAdmin, id]);
+
+        await db.query('BEGIN');
+
+        // 1. Update user role
+        const userRes = await db.query(
+            'UPDATE users SET role = $1, is_admin = $2 WHERE id = $3 RETURNING email, name, role',
+            [role, isAdmin, id]
+        );
+
+        if (userRes.rows.length > 0) {
+            const user = userRes.rows[0];
+            // 2. If promoted to SDR, ensure record exists in sdrs table
+            if (user.role === 'sdr') {
+                await db.query(`
+                    INSERT INTO sdrs (user_id, full_name, email, is_active)
+                    VALUES ($1, $2, $3, true)
+                    ON CONFLICT (email) DO UPDATE 
+                    SET user_id = $1, full_name = $2, updated_at = CURRENT_TIMESTAMP
+                `, [id, user.name, user.email]);
+            }
+        }
+
+        await db.query('COMMIT');
         res.json({ success: true });
     } catch (error) {
+        await db.query('ROLLBACK');
         console.error('Update role error:', error);
         res.status(500).json({ error: 'Erro ao atualizar role.' });
     }

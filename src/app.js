@@ -98,6 +98,9 @@ app.use((err, req, res, next) => {
     });
 });
 
+// Start Management Report Scheduler
+notificationScheduler.start();
+
 app.listen(port, () => {
     console.log(`🚀 API Server running on port ${port}`);
 });

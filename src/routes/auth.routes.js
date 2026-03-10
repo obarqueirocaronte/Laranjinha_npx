@@ -45,8 +45,8 @@ router.get('/google/callback',
 
             const token = generateTokenForUser(user);
 
-            // Redirect to frontend with token in URL fragment (handled by frontend)
-            res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&email=${encodeURIComponent(user.email)}&isAdmin=${user.is_admin || false}`);
+            // Redirect to frontend root with token in query params (handled by AuthContext)
+            res.redirect(`${FRONTEND_URL}/?token=${token}&email=${encodeURIComponent(user.email)}&isAdmin=${user.is_admin || false}`);
         } catch (err) {
             console.error('Google callback error:', err);
             res.redirect(`${FRONTEND_URL}/login?error=server_error`);

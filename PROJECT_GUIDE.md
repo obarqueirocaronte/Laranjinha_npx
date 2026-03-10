@@ -127,16 +127,19 @@ Dependendo de como você roda o sistema (se no terminal com `npm run dev` ou usa
 
 ---
 
-## 🌐 6. Ambiente de Produção (Domínio laranjinha)
+---
 
-Quando subir para o servidor real (`laranjinha.npx.com.br`), lembre-se de:
+## 🌐 6. Ambiente de Produção vs. Teste
 
-1. Alterar o `DATABASE_URL` para o banco de produção.
-2. Alterar as URLs no `.env` para `https://laranjinha.npx.com.br`.
-3. Adicionar as URLs de produção no Google Cloud Console:
-   - **Origem JS**: `https://laranjinha.npx.com.br`
-   - **Redirect URI**: `https://laranjinha.npx.com.br/api/v1/auth/google/callback`
-4. Rodar `cd frontend && npm run build` para gerar a versão otimizada.
+Para garantir a estabilidade do sistema, separamos rigorosamente o que é **Teste** do que é **Produção**.
+
+- **Consulte o guia completo em**: [docs/ENVIRONMENT_GUIDE.md](file:///Users/rodrigodantas/Antigravity - Projetos/inside-sales-pipeline-beta/docs/ENVIRONMENT_GUIDE.md)
+
+### Resumo de Fluxo:
+1. Altere o código localmente.
+2. Teste no Mac (`localhost:3000`).
+3. Suba para o GitHub (`git push`).
+4. Execute o deploy no servidor de produção (`git pull`).
 
 ---
 

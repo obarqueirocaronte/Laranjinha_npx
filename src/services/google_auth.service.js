@@ -48,7 +48,7 @@ function configureGoogleStrategy() {
             const invite = inviteRes.rows[0];
 
             // 2. Start transaction for atomic user/invite sync
-            const client = await pool.connect();
+            const client = await pool.getClient();
             let user;
 
             try {

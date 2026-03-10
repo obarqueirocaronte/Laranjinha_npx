@@ -25,6 +25,12 @@ interface SDR {
     id: string;
     email: string;
     role?: string;
+    calls?: number;
+    emails?: number;
+    whatsapp?: number;
+    completed_leads?: number;
+    pending_leads?: number;
+    pipeline_movements?: number;
 }
 
 interface TabItem {
@@ -75,30 +81,53 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                 leadsAPI.getActiveLeads(),
                 leadsAPI.getSegments('status', 'Novo'),
                 leadsAPI.getColumns(),
-                statsAPI.getStats(),
+                statsAPI.getGlobalStats(),
             ]);
 
-            if (sdrsRes.status === 'fulfilled' && sdrsRes.value?.success) {
-                const fetchedSdrs = sdrsRes.value.data || [];
-                const isUserInSdrs = fetchedSdrs.some((s: SDR) => s.id === user?.id || s.email === user?.email);
+            if (statsRes.status === 'fulfilled' && statsRes.value?.success) {
+                const globalData = statsRes.value.data;
+                setStats(globalData.summary || stats);
 
-                if (user && !isUserInSdrs) {
-                    fetchedSdrs.push({
-                        id: user.id || 'sdr-bypass',
-                        email: user.email || 'Visitante/Manager',
-                        role: user.role || 'manager'
+                // If we also got SDR breakdown from global stats, we'll merge it later
+                const sdrStatsMap = new Map();
+                if (globalData.sdrs) {
+                    globalData.sdrs.forEach((s: any) => {
+                        sdrStatsMap.set(s.email || s.full_name, s);
                     });
                 }
-                setSdrs(fetchedSdrs);
+
+                if (sdrsRes.status === 'fulfilled' && sdrsRes.value?.success) {
+                    let fetchedSdrs = sdrsRes.value.data || [];
+
+                    // Merge stats into SDR objects
+                    fetchedSdrs = fetchedSdrs.map((s: SDR) => {
+                        const sStats = sdrStatsMap.get(s.email);
+                        if (sStats) {
+                            return { ...s, ...sStats };
+                        }
+                        return s;
+                    });
+
+                    const isUserInSdrs = fetchedSdrs.some((s: SDR) => s.id === user?.id || s.email === user?.email);
+
+                    if (user && !isUserInSdrs) {
+                        fetchedSdrs.push({
+                            id: user.id || 'sdr-bypass',
+                            email: user.email || 'Visitante/Manager',
+                            role: user.role || 'manager'
+                        });
+                    }
+                    setSdrs(fetchedSdrs);
+                }
             }
+
             if (activeRes.status === 'fulfilled' && activeRes.value?.success) setActiveLeads(activeRes.value.data || []);
             if (pendingRes.status === 'fulfilled' && pendingRes.value?.success) setAllLeads(pendingRes.value.data || []);
             if (colsRes.status === 'fulfilled' && colsRes.value?.success) setColumns(colsRes.value.data || []);
-            if (statsRes.status === 'fulfilled' && statsRes.value?.success) setStats(statsRes.value.data || stats);
         } catch (e) {
             console.error('ManagerDashboard fetch error:', e);
         }
-    }, [user]);
+    }, [user, stats]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -479,16 +508,16 @@ const AcompanhamentoTab: React.FC<{
                                     </div>
                                 </td>
                                 <td className="px-4 py-4 text-center">
-                                    <span className="text-lg font-black text-slate-700" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdrLeads.length}</span>
+                                    <span className="text-lg font-black text-slate-700" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.pending_leads ?? sdrLeads.length}</span>
                                 </td>
                                 <td className="px-4 py-4 text-center">
-                                    <span className="text-lg font-black text-blue-600" style={{ fontFamily: 'Comfortaa, cursive' }}>{Math.floor(stats.calls / Math.max(sdrs.length, 1))}</span>
+                                    <span className="text-lg font-black text-blue-600" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.calls ?? 0}</span>
                                 </td>
                                 <td className="px-4 py-4 text-center">
-                                    <span className="text-lg font-black text-purple-600" style={{ fontFamily: 'Comfortaa, cursive' }}>{Math.floor(stats.emails / Math.max(sdrs.length, 1))}</span>
+                                    <span className="text-lg font-black text-purple-600" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.emails ?? 0}</span>
                                 </td>
                                 <td className="px-4 py-4 text-center">
-                                    <span className="text-lg font-black text-emerald-600" style={{ fontFamily: 'Comfortaa, cursive' }}>{Math.floor(stats.whatsapp / Math.max(sdrs.length, 1))}</span>
+                                    <span className="text-lg font-black text-emerald-600" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.whatsapp ?? 0}</span>
                                 </td>
                                 <td className="px-4 py-4 text-center">
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-600 border border-emerald-100">

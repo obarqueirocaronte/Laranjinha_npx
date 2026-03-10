@@ -46,31 +46,54 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ type, select
                             key={template.id}
                             onClick={() => onSelect(template)}
                             className={clsx(
-                                "w-full text-left rounded-xl border transition-all duration-300 flex items-center gap-3 group relative overflow-hidden",
-                                compact ? "p-2.5" : "p-4 rounded-2xl",
+                                "w-full text-left rounded-xl border transition-all duration-300 group relative overflow-hidden",
+                                compact ? "p-2.5 flex items-center gap-3 h-auto" : "p-5 flex flex-col justify-between h-[184px] rounded-[24px]",
                                 isSelected
                                     ? "bg-white border-orange-200 shadow-[0_4px_12px_rgba(255,140,0,0.08)] ring-2 ring-orange-100/50"
                                     : "bg-white/40 border-transparent hover:bg-white/60 hover:border-orange-100"
                             )}
                         >
-                            {/* Checkbox */}
-                            <div className={clsx(
-                                "rounded-lg border-2 flex items-center justify-center transition-all duration-300 shrink-0",
-                                compact ? "w-5 h-5 border-1.5" : "w-6 h-6",
-                                isSelected
-                                    ? "bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-500/20"
-                                    : "border-orange-100 bg-white group-hover:border-orange-200"
-                            )}>
-                                {isSelected && <Check size={compact ? 12 : 14} strokeWidth={4} />}
-                            </div>
+                            {!compact ? (
+                                <>
+                                    <div className="flex items-start justify-between w-full mb-3">
+                                        <span className="font-bold text-sm text-slate-700 group-hover:text-slate-900 line-clamp-2 pr-2" style={{ fontFamily: 'Quicksand, sans-serif' }}>
+                                            {template.name}
+                                        </span>
+                                        <div className={clsx(
+                                            "rounded-xl border-2 flex items-center justify-center transition-all duration-300 shrink-0 w-6 h-6",
+                                            isSelected
+                                                ? "bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-500/20"
+                                                : "border-orange-100 bg-white group-hover:border-orange-200"
+                                        )}>
+                                            {isSelected && <Check size={14} strokeWidth={4} />}
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 overflow-hidden w-full relative text-left">
+                                        <p className="text-[11px] text-slate-500 leading-relaxed font-medium whitespace-pre-wrap break-words" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                            {template.content}
+                                        </p>
+                                        <div className={clsx("absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t to-transparent pointer-events-none", isSelected ? "from-white" : "from-white/40 group-hover:from-white/60")} />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className={clsx(
+                                        "rounded-lg border-2 flex items-center justify-center transition-all duration-300 shrink-0 w-5 h-5 border-1.5",
+                                        isSelected
+                                            ? "bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-500/20"
+                                            : "border-orange-100 bg-white group-hover:border-orange-200"
+                                    )}>
+                                        {isSelected && <Check size={12} strokeWidth={4} />}
+                                    </div>
 
-                            <span className={clsx(
-                                "font-bold truncate transition-colors",
-                                compact ? "text-[12px]" : "text-sm",
-                                isSelected ? "text-slate-800" : "text-slate-500 group-hover:text-slate-700"
-                            )} style={{ fontFamily: 'Quicksand, sans-serif' }}>
-                                {template.name}
-                            </span>
+                                    <span className={clsx(
+                                        "font-bold truncate transition-colors text-[12px]",
+                                        isSelected ? "text-slate-800" : "text-slate-500 group-hover:text-slate-700"
+                                    )} style={{ fontFamily: 'Quicksand, sans-serif' }}>
+                                        {template.name}
+                                    </span>
+                                </>
+                            )}
 
                             {/* Subtle Hover Glow */}
                             {!isSelected && (
