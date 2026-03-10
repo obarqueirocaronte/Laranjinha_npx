@@ -138,7 +138,11 @@ Número pré-processado localmente: "${localNormalized}"
      * 3. Se o DDD (2 primeiros dígitos) não começa com 0, adiciona 0
      */
     _normalizePhoneBR(phone) {
-        let digits = phone.replace(/\D/g, '');
+        if (!phone) return '';
+
+        // Ensure phone is a string
+        const phoneStr = String(phone);
+        let digits = phoneStr.replace(/\D/g, '');
 
         // Remove +55 or 55 country code prefix
         if (digits.startsWith('55') && digits.length >= 12) {
@@ -262,7 +266,7 @@ ${JSON.stringify(phonesToProcess)}
             console.error('[AI Batch Convert] Falha na conversão com GPT. Causando fallback local.', err.message);
             return leadsData.map(lead => ({
                 ...lead,
-                phone: lead.phone ? this._normalizePhoneBR(lead.phone) : lead.phone
+                phone: lead.phone ? this._normalizePhoneBR(lead.phone) : (lead.phone || '')
             }));
         }
     }
