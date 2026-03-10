@@ -60,9 +60,10 @@ const springPop = { type: 'spring' as const, stiffness: 400, damping: 28 };
 interface ManagerSalesDashboardProps {
     onAdminClick: () => void;
     onLogout: () => void;
+    onNavigateBack?: () => void;
 }
 
-export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ onAdminClick, onLogout }) => {
+export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ onAdminClick, onLogout, onNavigateBack }) => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<TabId>('resumo');
     const [showProfile, setShowProfile] = useState(false);
@@ -221,6 +222,19 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
 
                 {/* Bottom actions */}
                 <div className="space-y-1 pt-6 border-t border-white/10 mt-auto">
+                    {onNavigateBack && (
+                        <motion.button
+                            whileTap={{ scale: 0.96 }}
+                            onClick={onNavigateBack}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-orange-600 hover:bg-orange-50 transition-all border border-transparent hover:shadow-lg hover:shadow-orange-200/20 group mb-2"
+                            style={{ fontFamily: 'Comfortaa, cursive' }}
+                        >
+                            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-sm group-hover:scale-110 transition-transform">
+                                <LayoutDashboard size={14} strokeWidth={2.5} />
+                            </div>
+                            <span className="text-[12px] font-black">Voltar ao Kanban</span>
+                        </motion.button>
+                    )}
                     <motion.button
                         whileTap={{ scale: 0.96 }}
                         onClick={onAdminClick}

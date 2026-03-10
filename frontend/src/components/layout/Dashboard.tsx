@@ -21,7 +21,7 @@ import { motion } from 'framer-motion';
 import { ProfileZone } from '../profile/ProfileZone';
 
 export function Dashboard() {
-    const [view, setView] = useState<'pipeline' | 'admin'>('pipeline');
+    const [view, setView] = useState<'pipeline' | 'admin' | 'manager-dashboard'>('pipeline');
     const { user, logout } = useAuth();
     const [showProfile, setShowProfile] = useState(false);
     const [showSchedulePreview, setShowSchedulePreview] = useState(false);
@@ -58,20 +58,16 @@ export function Dashboard() {
             await statsAPI.incrementCompleted();
             setCompletedCount(prev => prev + 1);
         } catch (error) {
-            console.error('Error updating completion:', error);
+            console.error('Error incrementing completed leads:', error);
         }
     };
 
-    const handleActivity = async (type: 'call' | 'email' | 'whatsapp') => {
-        try {
-            await statsAPI.updateActivity(type);
-            setActivityStats(prev => ({
-                ...prev,
-                [type === 'call' ? 'calls' : type === 'email' ? 'emails' : 'whatsapp']: prev[type === 'call' ? 'calls' : type === 'email' ? 'emails' : 'whatsapp'] + 1
-            }));
-        } catch (error) {
-            console.error('Error updating activity:', error);
-        }
+    const handleActivity = (type: 'call' | 'email' | 'whatsapp') => {
+        const key = type === 'call' ? 'calls' : type === 'email' ? 'emails' : 'whatsapp';
+        setActivityStats(prev => ({
+            ...prev,
+            [key]: prev[key] + 1
+        }));
     };
 
     const handleReset = async () => {
@@ -89,11 +85,12 @@ export function Dashboard() {
             <Layout>
                 {view === 'admin' && user?.role === 'manager' ? (
                     <AdminDashboard onNavigateBack={() => setView('pipeline')} />
-                ) : user?.role === 'manager' ? (
+                ) : view === 'manager-dashboard' && user?.role === 'manager' ? (
                     <div className="absolute inset-0 z-20 flex flex-col h-full bg-transparent">
                         <ManagerSalesDashboard
                             onAdminClick={() => setView('admin')}
                             onLogout={logout}
+                            onNavigateBack={() => setView('pipeline')}
                         />
                     </div>
                 ) : showProfile ? (
@@ -106,7 +103,7 @@ export function Dashboard() {
                         <ActiveCallBanner />
 
                         <ControlHub
-                            onAdminClick={() => setView('admin')}
+                            onAdminClick={() => setView(user?.role === 'manager' ? 'manager-dashboard' : 'admin')}
                             completedCount={completedCount}
                             activityStats={activityStats}
                             onReset={handleReset}
@@ -129,6 +126,19 @@ export function Dashboard() {
                                 </h1>
 
                                 <div className="flex items-center gap-4">
+                                    {/* Link for Manager to Dashboard */}
+                                    {user?.role === 'manager' && (
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => setView('manager-dashboard')}
+                                            className="px-6 py-2.5 rounded-full bg-orange-600 text-white font-black text-sm shadow-lg shadow-orange-200"
+                                            style={{ fontFamily: 'Comfortaa, cursive' }}
+                                        >
+                                            Dashboard de Gestão
+                                        </motion.button>
+                                    )}
+
                                     {/* Botão de Agendamentos de Retorno (Glassmorphism minimalista) */}
                                     <motion.button
                                         whileHover={{ scale: 1.05 }}

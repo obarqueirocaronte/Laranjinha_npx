@@ -303,45 +303,16 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
         return;
       }
 
-      // ── Normalize phone numbers via GPT before sending to DB ──
-      // This ensures all leads enter the Kanban with correctly formatted numbers (e.g. 085987662628)
-      try {
-        const leadsWithPhones = mappedLeads.filter(l => l.phone);
-        if (leadsWithPhones.length > 0) {
-          // Show progress
-          const toastEl = document.getElementById('import-toast');
-          if (toastEl) toastEl.textContent = `🔄 Normalizando ${leadsWithPhones.length} telefone(s) via IA...`;
-
-          const normalized = await Promise.allSettled(
-            mappedLeads.map(async (lead) => {
-              if (!lead.phone) return lead;
-              try {
-                const res = await aiAPI.normalizePhone(lead.phone);
-                if (res?.success && res?.normalized) {
-                  return { ...lead, phone: res.normalized };
-                }
-              } catch (_) { /* use raw on error */ }
-              return lead;
-            })
-          );
-
-          normalized.forEach((result, idx) => {
-            if (result.status === 'fulfilled') {
-              mappedLeads[idx] = result.value;
-            }
-          });
-          console.log('[Import] Phone normalization complete.');
-        }
-      } catch (normErr) {
-        console.warn('[Import] Phone normalization step failed, proceeding with raw numbers:', normErr);
-      }
-
+      // ── Batch Import ──
+      // Note: Phone normalization and AI structuring is now handled more efficiently 
+      // by the backend leadsService.createLeadsBatch.
       const response = await leadsAPI.batchCreateLeads(mappedLeads);
-      if (response && response.data) {
+
+      if (response && response.success) {
         setImportResult(response.data);
         setCurrentStep("summary");
       } else {
-        throw new Error("Invalid API response format");
+        throw new Error(response?.message || "Invalid API response");
       }
     } catch (error) {
       console.error("Import error:", error);

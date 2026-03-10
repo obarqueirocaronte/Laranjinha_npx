@@ -446,6 +446,9 @@ async function getCurrentUser(req, res) {
                 user: {
                     id: user.id,
                     email: user.email,
+                    name: user.name || user.full_name,
+                    role: user.role || (user.is_admin ? 'manager' : 'sdr'),
+                    isAdmin: user.is_admin,
                     isVerified: user.is_verified,
                     createdAt: user.created_at,
                 },

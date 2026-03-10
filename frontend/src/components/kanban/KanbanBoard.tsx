@@ -72,7 +72,6 @@ export const KanbanBoard = ({
 
     useEffect(() => {
         const fetchBoardData = async () => {
-            // ── Fallback columns for offline/dev mode ──
             const MOCK_COLUMNS: PipelineColumn[] = [
                 { id: 'mock-col-1', name: 'Leads', position: 1, color: '#F97316' },
                 { id: 'mock-col-2', name: 'Chamada', position: 2, color: '#3B82F6' },
@@ -87,143 +86,26 @@ export const KanbanBoard = ({
                     leadsAPI.getSegments('qualification_status', 'qualified')
                 ]);
 
-                let realCols: PipelineColumn[] = [];
-                let realLeads: Lead[] = [];
                 if (colsRes.success && colsRes.data?.length > 0) {
                     setColumns(colsRes.data);
-                    realCols = colsRes.data;
                 } else {
                     setColumns(MOCK_COLUMNS);
-                    realCols = MOCK_COLUMNS;
                 }
-                if (leadsRes.success) { realLeads = leadsRes.data; }
 
-                // ── MOCK DATA: 4 card variants for visual preview ──
-                const firstColId = realCols.find(c => c.position === 1)?.id ?? MOCK_COLUMNS[0].id;
-                const MOCK_LEADS: Lead[] = [
-                    {
-                        id: 'mock-A', full_name: 'Ana Rodrigues', company_name: 'TechBrasil LTDA',
-                        job_title: 'Diretora Comercial', email: 'ana@techbrasil.com.br', phone: '(11) 98765-4321',
-                        current_column_id: firstColId, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 92, cadence_progress: 25, created_at: new Date().toISOString(),
-                        tags: ['Enterprise', 'SaaS', 'B2B', 'SP Capital'],
-                        metadata: { cnpj: '12.345.678/0001-90', estado: 'SP', cidade: 'São Paulo', telefone_empresa: '(11) 3456-0001', email_empresa: 'contato@techbrasil.com.br', linkedin_url: 'https://linkedin.com/in/anarodrigues' }
-                    },
-                    {
-                        id: 'mock-B', full_name: 'Carlos Mendes', company_name: 'Distribuidora Norte',
-                        job_title: 'Sócio', email: 'sem_email_carlos@placeholder', phone: '(85) 3456-7890',
-                        current_column_id: firstColId, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 60, cadence_progress: 60, created_at: new Date().toISOString(),
-                        tags: ['Distribuição'],
-                        metadata: { cnpj: '98.765.432/0001-10', estado: 'CE', cidade: 'Fortaleza', telefone_empresa: '(85) 3333-0001' }
-                    },
-                    {
-                        id: 'mock-C', full_name: 'Beatriz Faria', company_name: 'Agência Criativa Co.',
-                        job_title: 'CEO', email: 'bfaria@agenciacriativa.com', phone: undefined,
-                        current_column_id: firstColId, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 78, cadence_progress: 95, created_at: new Date().toISOString(),
-                        tags: ['Marketing', 'Agência'],
-                        metadata: { estado: 'RJ', email_empresa: 'atendimento@agcriativa.com', linkedin_url: 'https://linkedin.com/in/beatrizfaria' }
-                    },
-                    {
-                        id: 'mock-D', full_name: 'Roberto Lima', company_name: 'Construtora Lima S/A',
-                        job_title: undefined, email: 'sem_email_roberto@placeholder', phone: undefined,
-                        current_column_id: firstColId, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 45, cadence_progress: 100, created_at: new Date().toISOString(),
-                        tags: ['Construção Civil', 'Obras']
-                    },
-                    {
-                        id: 'import-1', full_name: 'Ricardo Oliveira', company_name: 'Logística Nacional',
-                        job_title: 'Gerente de Operações', email: 'ricardo@logistica.com.br', phone: '(11) 91234-5678',
-                        current_column_id: firstColId, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 85, cadence_progress: 0, created_at: new Date().toISOString(),
-                        tags: ['Importado', 'Logística'],
-                        metadata: { cnpj: '45.678.901/0001-23', estado: 'SP', cidade: 'Santos', telefone_empresa: '(13) 3211-4000' }
-                    },
-                    {
-                        id: 'import-2', full_name: 'Juliana Santos', company_name: 'Varejo Plus',
-                        job_title: 'Compradora', email: 'juliana@varejoplus.com.br', phone: '(21) 99888-7766',
-                        current_column_id: firstColId, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 70, cadence_progress: 0, created_at: new Date().toISOString(),
-                        tags: ['Importado', 'Varejo'],
-                        metadata: { estado: 'RJ', telefone_empresa: '(21) 2244-5566' }
-                    },
-                    {
-                        id: 'import-3', full_name: 'Marcos Silveira', company_name: 'Construtora Horizonte',
-                        job_title: 'Engenheiro', email: 'marcos@horizonte.com.br', phone: undefined,
-                        current_column_id: firstColId, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 65, cadence_progress: 0, created_at: new Date().toISOString(),
-                        tags: ['Importado', 'Engenharia'],
-                        metadata: { estado: 'MG', email_empresa: 'contato@horizonte.com.br' }
-                    }
-                ];
-
-                setLeads([...MOCK_LEADS, ...realLeads]);
+                if (leadsRes && leadsRes.success) {
+                    setLeads(leadsRes.data || []);
+                } else {
+                    setLeads([]);
+                }
             } catch (err) {
                 console.error("Failed to fetch Kanban data:", err);
                 setColumns(MOCK_COLUMNS);
-                const MOCK_LEADS_FALLBACK: Lead[] = [
-                    {
-                        id: 'mock-A', full_name: 'Ana Rodrigues', company_name: 'TechBrasil LTDA',
-                        job_title: 'Diretora Comercial', email: 'ana@techbrasil.com.br', phone: '(11) 98765-4321',
-                        current_column_id: MOCK_COLUMNS[0].id, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 92, cadence_progress: 25, created_at: new Date().toISOString(),
-                        tags: ['Enterprise', 'SaaS', 'B2B', 'SP Capital'],
-                        metadata: { cnpj: '12.345.678/0001-90', estado: 'SP', cidade: 'São Paulo', telefone_empresa: '(11) 3456-0001', email_empresa: 'contato@techbrasil.com.br', linkedin_url: 'https://linkedin.com/in/anarodrigues' }
-                    },
-                    {
-                        id: 'mock-B', full_name: 'Carlos Mendes', company_name: 'Distribuidora Norte',
-                        job_title: 'Sócio', email: 'sem_email_carlos@placeholder', phone: '(85) 3456-7890',
-                        current_column_id: MOCK_COLUMNS[0].id, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 60, cadence_progress: 60, created_at: new Date().toISOString(),
-                        tags: ['Distribuição'],
-                        metadata: { cnpj: '98.765.432/0001-10', estado: 'CE', cidade: 'Fortaleza', telefone_empresa: '(85) 3333-0001' }
-                    },
-                    {
-                        id: 'mock-C', full_name: 'Beatriz Faria', company_name: 'Agência Criativa Co.',
-                        job_title: 'CEO', email: 'bfaria@agenciacriativa.com', phone: undefined,
-                        current_column_id: MOCK_COLUMNS[0].id, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 78, cadence_progress: 95, created_at: new Date().toISOString(),
-                        tags: ['Marketing', 'Agência'],
-                        metadata: { estado: 'RJ', email_empresa: 'atendimento@agcriativa.com', linkedin_url: 'https://linkedin.com/in/beatrizfaria' }
-                    },
-                    {
-                        id: 'mock-D', full_name: 'Roberto Lima', company_name: 'Construtora Lima S/A',
-                        job_title: undefined, email: 'sem_email_roberto@placeholder', phone: undefined,
-                        current_column_id: MOCK_COLUMNS[0].id, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 45, cadence_progress: 100, created_at: new Date().toISOString(),
-                        tags: ['Construção Civil', 'Obras']
-                    },
-                    {
-                        id: 'import-1', full_name: 'Ricardo Oliveira', company_name: 'Logística Nacional',
-                        job_title: 'Gerente de Operações', email: 'ricardo@logistica.com.br', phone: '(11) 91234-5678',
-                        current_column_id: MOCK_COLUMNS[0].id, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 85, cadence_progress: 0, created_at: new Date().toISOString(),
-                        tags: ['Importado', 'Logística'],
-                        metadata: { cnpj: '45.678.901/0001-23', estado: 'SP', cidade: 'Santos', telefone_empresa: '(13) 3211-4000' }
-                    },
-                    {
-                        id: 'import-2', full_name: 'Juliana Santos', company_name: 'Varejo Plus',
-                        job_title: 'Compradora', email: 'juliana@varejoplus.com.br', phone: '(21) 99888-7766',
-                        current_column_id: MOCK_COLUMNS[0].id, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 70, cadence_progress: 0, created_at: new Date().toISOString(),
-                        tags: ['Importado', 'Varejo'],
-                        metadata: { estado: 'RJ', telefone_empresa: '(21) 2244-5566' }
-                    },
-                    {
-                        id: 'import-3', full_name: 'Marcos Silveira', company_name: 'Construtora Horizonte',
-                        job_title: 'Engenheiro', email: 'marcos@horizonte.com.br', phone: undefined,
-                        current_column_id: MOCK_COLUMNS[0].id, assigned_sdr_id: 'sdr-bypass',
-                        quality_score: 65, cadence_progress: 0, created_at: new Date().toISOString(),
-                        tags: ['Importado', 'Engenharia'],
-                        metadata: { estado: 'MG', email_empresa: 'contato@horizonte.com.br' }
-                    }
-                ];
-                setLeads(MOCK_LEADS_FALLBACK);
+                setLeads([]);
             } finally {
                 setIsLoading(false);
             }
         };
+
         fetchBoardData();
     }, []);
 

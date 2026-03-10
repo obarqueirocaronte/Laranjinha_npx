@@ -31,21 +31,26 @@ function configureGoogleStrategy() {
                 return done(null, false, { message: 'EMAIL_NOT_PROVIDED' });
             }
 
-            // Validar domínio
-            if (!email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+            // 1. Check for a pending invite with this email first
+            // This allows invited users from external domains to login
+            const inviteRes = await pool.query(
+                "SELECT id, role, name, invited_by FROM invites WHERE email = $1 AND status = 'pending' AND expires_at > CURRENT_TIMESTAMP",
+                [email]
+            );
+            const invite = inviteRes.rows[0];
+
+            // 2. Validate domain IF no invite is found
+            const allowedDomain = process.env.ALLOWED_DOMAIN || 'npx.com.br';
+            const isNpxEmail = email.endsWith(`@${allowedDomain}`);
+
+            if (!isNpxEmail && !invite) {
+                console.warn(`[OAuth Bypass Blocked] ${email} - Not @${allowedDomain} and no invite.`);
                 return done(null, false, { message: 'EMAIL_DOMAIN_INVALID' });
             }
 
             const googleId = profile.id;
             const fullName = profile.displayName;
             const avatarUrl = profile.photos?.[0]?.value;
-
-            // 1. Check for a pending invite with this email
-            const inviteRes = await pool.query(
-                "SELECT id, role, name, invited_by FROM invites WHERE email = $1 AND status = 'pending' AND expires_at > CURRENT_TIMESTAMP",
-                [email]
-            );
-            const invite = inviteRes.rows[0];
 
             // 2. Start transaction for atomic user/invite sync
             const client = await pool.getClient();

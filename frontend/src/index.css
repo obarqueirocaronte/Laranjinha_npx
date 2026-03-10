@@ -92,8 +92,8 @@
 }
 
 body {
-  /* Shell.tsx handles the full gradient — body is a transparent canvas */
-  background: transparent;
+  /* Shell.tsx handles the full gradient — body is white by default to avoid black flashes */
+  background: white;
   min-height: 100vh;
   color: #3f3f46;
   margin: 0;
