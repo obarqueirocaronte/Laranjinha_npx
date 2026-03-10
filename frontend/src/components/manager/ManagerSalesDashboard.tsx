@@ -287,7 +287,7 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                     <ResumoTab stats={stats} activeLeads={activeLeads} allLeads={allLeads} sdrs={sdrs} />
                                 )}
                                 {activeTab === 'acompanhamento' && (
-                                    <AcompanhamentoTab sdrs={sdrs} activeLeads={activeLeads} stats={stats} />
+                                    <AcompanhamentoTab sdrs={sdrs} activeLeads={activeLeads} />
                                 )}
                                 {activeTab === 'leads' && (
                                     <LeadsTab allLeads={allLeads} activeLeads={activeLeads} />
@@ -470,8 +470,7 @@ const ResumoTab: React.FC<{
 const AcompanhamentoTab: React.FC<{
     sdrs: SDR[];
     activeLeads: Lead[];
-    stats: any;
-}> = ({ sdrs, activeLeads, stats }) => (
+}> = ({ sdrs, activeLeads }) => (
     <GlassCard>
         <div className="overflow-x-auto">
             <table className="w-full text-left">
