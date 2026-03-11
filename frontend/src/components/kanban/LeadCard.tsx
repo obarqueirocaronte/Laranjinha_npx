@@ -114,6 +114,15 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, columnPosition, onClic
                     cadenceProgress > 0 ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
                         'bg-slate-100 text-slate-600 border-slate-200';
 
+    const cardModel = lead.metadata?.card_model || 'FULL';
+
+    // compute card height based on model
+    const computeCardHeight = () => {
+        if (cardModel === 'EMAIL_ONLY' || cardModel === 'PHONE_ONLY') return 'h-[140px]';
+        if (cardModel === 'COMPACT') return 'h-[155px]';
+        return 'h-[184px]';
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -128,16 +137,16 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, columnPosition, onClic
             onClick={handleClick}
             className={clsx(
                 'relative rounded-2xl border-2 outline-none flex flex-col p-4',
-                'h-[184px]',
-                'transition-[border-color,box-shadow] duration-200 shadow-sm hover:shadow-xl',
+                computeCardHeight(),
+                'transition-[border-color,box-shadow,height] duration-200 shadow-sm hover:shadow-xl',
                 isCadenceColumn ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
-                tok.card,
-                isDragging && 'opacity-0 invisible pointer-events-none'
-            )}
-        >
-            {/* ── ROW 1: Company name + expand chips (top-right) ── */}
-            <div className="flex justify-between items-start gap-2 mb-1.5">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
+        tok.card,
+        isDragging && 'opacity-0 invisible pointer-events-none'
+    )}
+>
+    {/* ── ROW 1: Company name + expand chips (top-right) ── */}
+    <div className="flex justify-between items-start gap-2 mb-1.5 shrink-0">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
                     <Building2 size={16} className={clsx('shrink-0', tok.accent)} {...ICON} />
                     <h4
                         className="font-black text-slate-800 text-[14px] leading-tight truncate"
@@ -199,10 +208,11 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, columnPosition, onClic
                         />
                     )}
                 </div>
-            </div>
+        </div>
 
-            {/* ── ROW 2: CNPJ badge ── */}
-            <div className="mb-3">
+        {/* ── Optional ROW 2: CNPJ badge (Omitted in PHONE_ONLY and EMAIL_ONLY) ── */}
+        {cardModel === 'FULL' || cardModel === 'COMPACT' ? (
+            <div className="mb-2 shrink-0 h-4">
                 {cnpj && (
                     <span
                         className="text-[9px] font-bold px-2 py-[2px] rounded-md bg-white/60 border border-slate-200/60 text-slate-600 tracking-widest shadow-sm"
@@ -212,9 +222,10 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, columnPosition, onClic
                     </span>
                 )}
             </div>
+        ) : null}
 
-            {/* ── ROW 3: Contact pill (static, no hover popup) ── */}
-            <div className="relative mt-auto mb-2">
+        {/* ── ROW 3: Contact pill ── */}
+        <div className="relative mt-auto mb-2 shrink-0">
                 <div className={clsx(
                     "flex items-center gap-2.5 rounded-xl py-2 px-3 border transition-all duration-200 select-none",
                     'bg-white/60 border-slate-200/60 shadow-sm hover:shadow-md hover:bg-white/80'
@@ -253,12 +264,12 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, columnPosition, onClic
                                     <Phone size={9} className="text-emerald-600" strokeWidth={2} />
                                 </span>
                             )}
-                            {hasContactEmail && (
+                            {hasContactEmail && cardModel !== 'PHONE_ONLY' && (
                                 <span className="w-5 h-5 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center" title="Email">
                                     <Mail size={9} className="text-blue-600" strokeWidth={2} />
                                 </span>
                             )}
-                            {hasLinkedin && (
+                            {hasLinkedin && cardModel !== 'PHONE_ONLY' && (
                                 <span className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black" style={{ background: '#E8F0FA', border: '1px solid #BFDBFE', color: '#0A66C2' }} title="LinkedIn">
                                     in
                                 </span>
@@ -281,57 +292,62 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, columnPosition, onClic
             </div>
 
             {/* ── ROW 4: Tags (static, first tag + count) + Cadence badge ── */}
-            <div className="flex justify-between items-end mt-auto gap-2">
-                <div className="flex-1 min-w-0">
-                    {hasTags && (
-                        <div className="relative group flex items-center gap-1.5">
-                            <span
-                                className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full bg-orange-100/80 border border-orange-200/70 text-orange-700 cursor-default shadow-sm whitespace-nowrap hover:scale-105 hover:shadow-md transition-all duration-200"
-                                style={{ fontFamily: 'Comfortaa, cursive' }}
-                            >
-                                <Tag size={10} className="text-orange-500 shrink-0" {...ICON} />
-                                {lead.tags![0]}
-                            </span>
-                            {lead.tags!.length > 1 && (
+            <div className="flex justify-between items-end mt-auto gap-2 w-full">
+                {cardModel === 'FULL' ? (
+                    <div className="flex-1 min-w-0">
+                        {hasTags && (
+                            <div className="relative group flex items-center gap-1.5">
                                 <span
-                                    className="text-[10px] font-black text-slate-600 cursor-default"
+                                    className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full bg-orange-100/80 border border-orange-200/70 text-orange-700 cursor-default shadow-sm whitespace-nowrap hover:scale-105 hover:shadow-md transition-all duration-200"
                                     style={{ fontFamily: 'Comfortaa, cursive' }}
                                 >
-                                    +{lead.tags!.length - 1}
+                                    <Tag size={10} className="text-orange-500 shrink-0" {...ICON} />
+                                    {lead.tags![0]}
                                 </span>
-                            )}
+                                {lead.tags!.length > 1 && (
+                                    <span
+                                        className="text-[10px] font-black text-slate-600 cursor-default"
+                                        style={{ fontFamily: 'Comfortaa, cursive' }}
+                                    >
+                                        +{lead.tags!.length - 1}
+                                    </span>
+                                )}
 
-                            {/* Tooltip showing all tags on hover - Orange Liquid Glass & surget animation */}
-                            <div className="absolute bottom-full left-0 mb-3 pointer-events-none opacity-0 scale-0 group-hover:opacity-100 group-hover:scale-100 transition-all duration-500 origin-bottom-left z-[100] min-w-[160px]">
-                                <div className="bg-orange-50/80 backdrop-blur-xl p-3 rounded-2xl shadow-2xl border border-orange-200/50 flex flex-wrap gap-2">
-                                    {lead.tags!.map((t, idx) => (
-                                        <span
-                                            key={idx}
-                                            className="inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-lg bg-red-50 border border-red-200/60 text-red-600 shadow-sm"
-                                            style={{ fontFamily: 'Comfortaa, cursive' }}
-                                        >
-                                            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                                            {t}
-                                        </span>
-                                    ))}
+                                {/* Tooltip showing all tags on hover */}
+                                <div className="absolute bottom-full left-0 mb-3 pointer-events-none opacity-0 scale-0 group-hover:opacity-100 group-hover:scale-100 transition-all duration-500 origin-bottom-left z-[100] min-w-[160px]">
+                                    <div className="bg-orange-50/80 backdrop-blur-xl p-3 rounded-2xl shadow-2xl border border-orange-200/50 flex flex-wrap gap-2">
+                                        {lead.tags!.map((t, idx) => (
+                                            <span
+                                                key={idx}
+                                                className="inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-lg bg-red-50 border border-red-200/60 text-red-600 shadow-sm"
+                                                style={{ fontFamily: 'Comfortaa, cursive' }}
+                                            >
+                                                <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                                {t}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div className="absolute -bottom-1.5 left-4 w-3 h-3 bg-orange-50/80 border-r border-b border-orange-200/50 rotate-45" />
                                 </div>
-                                {/* Triangle pointer */}
-                                <div className="absolute -bottom-1.5 left-4 w-3 h-3 bg-orange-50/80 border-r border-b border-orange-200/50 rotate-45" />
                             </div>
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="flex-1 min-w-0" />
+                )}
 
-                {/* Cadence badge */}
-                <div
-                    className={clsx(
-                        "shrink-0 flex items-center justify-center min-w-[38px] h-6 px-2 rounded-full border text-[10px] font-bold tracking-wide transition-all duration-300 shadow-sm",
-                        cadenceColor
-                    )}
-                    style={{ fontFamily: 'Comfortaa, cursive' }}
-                >
-                    {cadenceProgress}%
-                </div>
+                {/* Cadence badge (Visible on FULL and COMPACT) */}
+                {(cardModel === 'FULL' || cardModel === 'COMPACT') && (
+                    <div
+                        className={clsx(
+                            "shrink-0 flex items-center justify-center min-w-[38px] h-6 px-2 rounded-full border text-[10px] font-bold tracking-wide transition-all duration-300 shadow-sm",
+                            cadenceColor
+                        )}
+                        style={{ fontFamily: 'Comfortaa, cursive' }}
+                    >
+                        {cadenceProgress}%
+                    </div>
+                )}
             </div>
 
             {/* ── Cadence column controls ── */}

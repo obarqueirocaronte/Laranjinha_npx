@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Phone, Edit3, Send, Layout, Linkedin, CalendarClock } from 'lucide-react';
+import { X, Mail, Phone, Edit3, Send, Layout, Linkedin, CalendarClock, Database, ShieldCheck } from 'lucide-react';
 import clsx from 'clsx';
 import { TemplateSelector } from './TemplateSelector';
 import type { Template } from './TemplateSelector';
@@ -18,7 +18,7 @@ interface LeadDetailsModalProps {
     columnColor?: string;
 }
 
-type TabType = 'email' | 'whatsapp';
+type TabType = 'email' | 'whatsapp' | 'logs';
 
 export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
     lead,
@@ -57,12 +57,50 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
         onClose();
     };
 
-    const currentTemplate = activeTab === 'email' ? selectedEmailTemplate : selectedWhatsAppTemplate;
+    const currentTemplate = activeTab === 'email' ? selectedEmailTemplate : activeTab === 'whatsapp' ? selectedWhatsAppTemplate : null;
     const accentColor = columnColor;
     const accentGlass = `${accentColor}10`;
     const accentBorder = `${accentColor}25`;
 
     const renderPreviewContent = () => {
+        if (activeTab === 'logs') {
+            return (
+                <motion.div
+                    key="logs-preview"
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col h-full bg-white/40 border border-white/60 shadow-glass rounded-[32px] overflow-hidden p-6"
+                >
+                    <div className="flex-1 overflow-auto custom-scrollbar flex flex-col gap-4">
+                        <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 shadow-sm">
+                            <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <Database size={14} className="text-slate-400" /> Histórico de Score
+                            </h4>
+                            <div className="text-[10px] font-bold text-slate-500">
+                                O score atual do lead é calculado como <span className="text-emerald-500 font-black">{lead.quality_score || 0}%</span>. Este valor é consumido internamente para a ordenação dinâmica nas cadências.
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 shadow-sm flex-1">
+                            <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <ShieldCheck size={14} className="text-slate-400" /> System Metrics
+                            </h4>
+                            <div className="grid grid-cols-2 gap-3 mt-3">
+                                <div>
+                                    <span className="text-[9px] font-black text-slate-400 uppercase">Tags Processadas</span>
+                                    <div className="text-[11px] font-bold text-slate-600 mt-0.5">{lead.tags?.length || 0} identificadas</div>
+                                </div>
+                                <div>
+                                    <span className="text-[9px] font-black text-slate-400 uppercase">Cadence ID</span>
+                                    <div className="text-[11px] font-bold text-slate-600 mt-0.5">{lead.metadata?.cadence_selected || 'Nenhuma'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+            );
+        }
+
         if (!currentTemplate) {
             return (
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4 bg-white/20 border-2 border-dashed rounded-[32px]"
@@ -243,30 +281,53 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
                                 {/* ── Selection Area ── */}
                                 <div className="bg-white border border-slate-100 shadow-glass rounded-[28px] p-2 flex flex-col min-h-0 flex-1">
                                     <div className="flex p-1 bg-slate-50 rounded-[16px] mb-2">
-                                        {(['email', 'whatsapp'] as TabType[]).map((tab) => (
+                                        {(['email', 'whatsapp', 'logs'] as TabType[]).map((tab) => (
                                             <button
                                                 key={tab}
                                                 onClick={() => setActiveTab(tab)}
                                                 className={clsx(
-                                                    "flex-1 py-2 rounded-[14px] text-[9px] font-black uppercase tracking-widest transition-all",
+                                                    "flex-1 py-1.5 rounded-[14px] text-[9px] font-black uppercase tracking-widest transition-all",
                                                     activeTab === tab
                                                         ? "bg-white text-slate-900 shadow-glass border border-slate-100"
                                                         : "text-slate-400 hover:text-slate-600"
                                                 )}
                                                 style={{ fontFamily: 'Quicksand, sans-serif' }}
                                             >
-                                                {tab}
+                                                {tab === 'logs' ? 'Logs & Data' : tab}
                                             </button>
                                         ))}
                                     </div>
 
                                     <div className="px-1 overflow-y-auto custom-scrollbar flex-1">
-                                        <TemplateSelector
-                                            type={activeTab}
-                                            selectedId={activeTab === 'email' ? selectedEmailTemplate?.id || null : selectedWhatsAppTemplate?.id || null}
-                                            onSelect={(t) => activeTab === 'email' ? setSelectedEmailTemplate(t) : setSelectedWhatsAppTemplate(t)}
-                                            compact={true}
-                                        />
+                                        {activeTab === 'logs' ? (
+                                            <div className="flex flex-col gap-2 p-2">
+                                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col gap-1">
+                                                    <span className="text-[8px] font-black text-slate-400 uppercase">System ID</span>
+                                                    <span className="text-[10px] font-mono font-bold text-slate-600 break-all">{lead.id}</span>
+                                                </div>
+                                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col gap-1">
+                                                    <span className="text-[8px] font-black text-slate-400 uppercase">Registered At</span>
+                                                    <span className="text-[10px] font-medium text-slate-600">{new Date(lead.created_at || Date.now()).toLocaleString('pt-BR')}</span>
+                                                </div>
+                                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col gap-1">
+                                                    <span className="text-[8px] font-black text-slate-400 uppercase">Card Model</span>
+                                                    <span className="text-[10px] font-black text-slate-600">{lead.metadata?.card_model || 'FULL'}</span>
+                                                </div>
+                                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col gap-1">
+                                                    <span className="text-[8px] font-black text-slate-400 uppercase">Raw Metadata</span>
+                                                    <pre className="text-[9px] font-mono text-slate-500 whitespace-pre-wrap mt-1 overflow-hidden">
+                                                        {JSON.stringify(lead.metadata || {}, null, 2)}
+                                                    </pre>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <TemplateSelector
+                                                type={activeTab as 'email' | 'whatsapp'}
+                                                selectedId={activeTab === 'email' ? selectedEmailTemplate?.id || null : selectedWhatsAppTemplate?.id || null}
+                                                onSelect={(t) => activeTab === 'email' ? setSelectedEmailTemplate(t) : setSelectedWhatsAppTemplate(t)}
+                                                compact={true}
+                                            />
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -304,23 +365,35 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
                         {/* Footer Action */}
                         <div className="px-10 py-6 flex items-center justify-between relative z-10 border-t border-slate-100 bg-white/30 backdrop-blur-md">
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">Ação Recomendada</span>
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                                    {activeTab === 'logs' ? 'Informação do Sistema' : 'Ação Recomendada'}
+                                </span>
                                 <div className="text-xs font-bold text-slate-700" style={{ fontFamily: 'Quicksand, sans-serif' }}>
-                                    Enviar {activeTab === 'email' ? 'E-mail Inicial' : 'WhatsApp de Follow-up'}.
+                                    {activeTab === 'logs' ? 'Os identificadores e logs são utilizados apenas internamente.' : `Enviar ${activeTab === 'email' ? 'E-mail Inicial' : 'WhatsApp de Follow-up'}.`}
                                 </div>
                             </div>
-                            <button
-                                className="px-8 py-3.5 text-white rounded-[20px] text-[13px] font-black shadow-lg transition-all active:scale-95 flex items-center gap-3 hover:-translate-y-0.5"
-                                onClick={handleSave}
-                                style={{
-                                    fontFamily: 'Quicksand, sans-serif',
-                                    background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}EE 100%)`,
-                                    boxShadow: `0 8px 20px -4px ${accentColor}40`
-                                }}
-                            >
-                                <Send size={16} {...ICON} />
-                                Enviar {activeTab === 'email' ? 'E-mail' : 'WhatsApp'}
-                            </button>
+                            {activeTab !== 'logs' ? (
+                                <button
+                                    className="px-8 py-3.5 text-white rounded-[20px] text-[13px] font-black shadow-lg transition-all active:scale-95 flex items-center gap-3 hover:-translate-y-0.5"
+                                    onClick={handleSave}
+                                    style={{
+                                        fontFamily: 'Quicksand, sans-serif',
+                                        background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}EE 100%)`,
+                                        boxShadow: `0 8px 20px -4px ${accentColor}40`
+                                    }}
+                                >
+                                    <Send size={16} {...ICON} />
+                                    Enviar {activeTab === 'email' ? 'E-mail' : 'WhatsApp'}
+                                </button>
+                            ) : (
+                                <button
+                                    className="px-8 py-3.5 bg-white border border-slate-200 text-slate-600 rounded-[20px] text-[13px] font-black shadow-sm transition-all active:scale-95 flex items-center gap-3 hover:-translate-y-0.5"
+                                    onClick={onClose}
+                                    style={{ fontFamily: 'Quicksand, sans-serif' }}
+                                >
+                                    Fechar
+                                </button>
+                            )}
                         </div>
                     </motion.div>
                 </div>
