@@ -102,8 +102,15 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
     setFileName(file.name);
 
     const processData = (data: any[]) => {
+      if (!data || data.length === 0) {
+        alert("O arquivo parece estar vazio ou não foi lido corretamente.");
+        setFileName(null);
+        return;
+      }
+
+      const firstRow = data[0] || {};
       // max 7 cols
-      const headers = Object.keys(data[0] || {}).slice(0, 7);
+      const headers = Object.keys(firstRow).slice(0, 7);
       const mapping: Record<string, string> = {};
 
       headers.forEach((h) => {
@@ -169,7 +176,8 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
       setCurrentStep("mapping");
     };
 
-    if (file.name.endsWith(".csv")) {
+    const ext = file.name.toLowerCase();
+    if (ext.endsWith(".csv")) {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
@@ -179,7 +187,7 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
           alert("Erro ao processar o arquivo CSV.");
         },
       });
-    } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+    } else if (ext.endsWith(".xlsx") || ext.endsWith(".xls") || ext.endsWith(".numbers")) {
       try {
         const buffer = await file.arrayBuffer();
         const workbook = XLSX.read(buffer, { type: "array" });
@@ -188,7 +196,7 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
         processData(data);
       } catch (error) {
         console.error("Error parsing Excel:", error);
-        alert("Erro ao processar o arquivo Excel.");
+        alert("Erro ao processar o arquivo de planilha.");
       }
     } else {
       alert("Formato de arquivo não suportado. Envie CSV ou Excel.");

@@ -117,9 +117,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className={clsx(
-                "relative flex flex-col w-full bg-[#FFFBF7] shadow-glass rounded-[40px] border border-orange-100/50 transition-all duration-300 hover:shadow-2xl hover:border-orange-200/50",
-                variant.px,
-                variant.gap,
+                "relative flex flex-col p-4 gap-3 w-full bg-[#FFFBF7] shadow-glass rounded-[32px] border border-orange-100/50 transition-all duration-300 hover:shadow-2xl hover:border-orange-200/50",
                 !isCadenceColumn ? "cursor-grab active:cursor-grabbing" : "cursor-default",
                 isDragging && "opacity-40 grayscale-[0.5] scale-95"
             )}
@@ -231,7 +229,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                     )}
 
                     {/* Tags List */}
-                    {cardModel === 'FULL' && hasTags && lead.tags?.map((t: string, idx: number) => (
+                    {hasTags && lead.tags?.map((t: string, idx: number) => (
                         <span
                             key={idx}
                             className="inline-flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-xl bg-orange-50 border border-orange-100 text-orange-700 cursor-default shadow-sm hover:bg-orange-100 transition-colors"
@@ -251,7 +249,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                 </div>
 
                 {/* Cadence Progress Badge */}
-                {(cardModel === 'FULL' || cardModel === 'COMPACT') && (
+                {typeof cadenceProgress === 'number' && (
                     <div
                         className={clsx(
                             "shrink-0 flex items-center justify-center min-w-[44px] h-7 px-2.5 rounded-2xl border text-[11px] font-black tracking-widest shadow-sm transition-all",
