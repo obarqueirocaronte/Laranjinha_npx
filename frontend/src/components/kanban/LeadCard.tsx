@@ -51,8 +51,8 @@ export const LeadCard: React.FC<LeadCardProps> = ({
     };
 
     const hasTags = lead.tags && lead.tags.length > 0;
-    const hasContactPhone = lead.phone && lead.phone.trim().length > 0;
-    const hasContactEmail = lead.email && !lead.email.includes('sem_email_');
+    const hasContactPhone = lead.phone && String(lead.phone).trim().length > 0;
+    const hasContactEmail = lead.email && !String(lead.email).includes('sem_email_');
 
     const cadenceProgress = lead.cadence_progress || 0;
     const cnpj = lead.metadata?.cnpj;
