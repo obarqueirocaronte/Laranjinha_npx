@@ -81,6 +81,7 @@ export const KanbanBoard = ({
             ];
 
             try {
+                setIsLoading(true);
                 const [colsRes, leadsRes] = await Promise.all([
                     leadsAPI.getColumns(),
                     leadsAPI.getSegments('qualification_status', 'qualified')
@@ -94,8 +95,6 @@ export const KanbanBoard = ({
 
                 if (leadsRes && leadsRes.success) {
                     setLeads(leadsRes.data || []);
-                } else {
-                    setLeads([]);
                 }
             } catch (err) {
                 console.error("Failed to fetch Kanban data:", err);
