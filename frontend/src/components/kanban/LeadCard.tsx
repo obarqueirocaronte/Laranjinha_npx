@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import type { Lead } from '../../types';
-import { Building2, Undo2, Check, Mail, Phone, Tag, User } from 'lucide-react';
+import { Building2, Undo2, Check, Mail, Phone, Tag, User, Calendar } from 'lucide-react';
 import { useVoip } from '../../contexts/VoipContext';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -111,7 +111,6 @@ export const LeadCard: React.FC<LeadCardProps> = ({
     return (
         <motion.div
             ref={setNodeRef}
-            style={style}
             {...attributes}
             onPointerDown={!isCadenceColumn ? handlePointerDown : undefined}
             onClick={handleClick}
@@ -124,8 +123,16 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                 !isCadenceColumn ? "cursor-grab active:cursor-grabbing" : "cursor-default",
                 isDragging && "opacity-40 grayscale-[0.5] scale-95"
             )}
+            style={{
+                ...style,
+                borderLeft: `5px solid ${accentColor}`,
+                background: `linear-gradient(to right, ${accentColor}08, white 20%, white 100%)`
+            }}
             {...(!isCadenceColumn ? listeners : {})}
         >
+            {/* Background Glow */}
+            <div className="absolute top-0 right-0 w-32 h-32 opacity-[0.03] pointer-events-none" 
+                 style={{ background: `radial-gradient(circle at 70% 30%, ${accentColor} 0%, transparent 70%)` }} />
             {/* ROW 1: Company & Top Actions */}
             <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -154,8 +161,14 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                         </div>
                     )}
                     {hasContactEmail && (
-                        <div className="w-8 h-8 rounded-full bg-white border border-slate-100 shadow-sm flex items-center justify-center text-blue-500 hover:bg-blue-50 transition-colors">
-                            <Mail size={14} {...ICON} />
+                        <div 
+                            className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center cursor-pointer hover:bg-orange-200 transition-colors shadow-sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onSchedule) onSchedule(lead);
+                            }}
+                        >
+                            <Calendar size={18} strokeWidth={2.5} />
                         </div>
                     )}
                 </div>
