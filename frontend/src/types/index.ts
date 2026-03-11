@@ -15,7 +15,15 @@ export interface Lead {
     qualification_status?: 'pending' | 'qualified' | 'disqualified';
     cadence_name?: string;
     tags?: string[];
-    metadata?: Record<string, any>;
+    metadata?: {
+        tags?: string[];
+        profile_picture_url?: string;
+        phone_work?: string;
+        next_contact_at?: string;
+        next_contact_type?: string;
+        last_schedule_notes?: string;
+        [key: string]: any;
+    };
     sdr_profile_picture_url?: string | null;
     created_at: string;
 }

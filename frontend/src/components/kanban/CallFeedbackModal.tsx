@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, CheckCircle, X, XCircle, Voicemail, MessageSquare } from 'lucide-react';
+import { Phone, CheckCircle, X, XCircle, Voicemail, MessageSquare, CalendarClock } from 'lucide-react';
 import type { ActiveCall } from '../../contexts/VoipContext';
 
 interface CallFeedbackModalProps {
@@ -157,6 +157,21 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
                                             </div>
                                             <div className="relative z-10 w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/40 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
                                                 <XCircle size={20} strokeWidth={2.5} />
+                                            </div>
+                                        </button>
+
+                                        {/* Agendar Retorno */}
+                                        <button
+                                            onClick={() => handleResultClick('reschedule')}
+                                            className="w-full relative overflow-hidden p-4 bg-white/10 hover:bg-white/20 border border-white/30 rounded-[24px] flex items-center justify-between group transition-all shadow-[0_8px_24px_rgba(30,41,59,0.2)] mt-3"
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-slate-600 opacity-60 group-hover:opacity-100 transition-opacity" />
+                                            <div className="relative z-10 text-left pl-2">
+                                                <span className="block text-base font-black text-white drop-shadow-md tracking-wide" style={{ fontFamily: 'Comfortaa, cursive' }}>AGENDAR RETORNO</span>
+                                                <span className="block text-[11px] text-white/90 font-bold drop-shadow-sm uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Definir data e hora</span>
+                                            </div>
+                                            <div className="relative z-10 w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/40 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                                                <CalendarClock size={20} strokeWidth={2.5} className="text-orange-400" />
                                             </div>
                                         </button>
                                     </motion.div>

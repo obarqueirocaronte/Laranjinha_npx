@@ -13,6 +13,9 @@ interface CycleCompleteModalProps {
 }
 
 export const CycleCompleteModal: React.FC<CycleCompleteModalProps> = ({ isOpen, onClose, lead, onResult }) => {
+    const [notes, setNotes] = React.useState('');
+    const [isOpportunitySelected, setIsOpportunitySelected] = React.useState(false);
+
     useEffect(() => {
         if (isOpen) {
             try {
@@ -38,9 +41,6 @@ export const CycleCompleteModal: React.FC<CycleCompleteModalProps> = ({ isOpen, 
     }, [isOpen]);
 
     if (!lead) return null;
-
-    const [notes, setNotes] = React.useState('');
-    const [isOpportunitySelected, setIsOpportunitySelected] = React.useState(false);
 
     const handleResult = (result: 'connected' | 'rejected' | 'not_connected' | 'opportunity') => {
         if (result === 'opportunity' && !isOpportunitySelected) {

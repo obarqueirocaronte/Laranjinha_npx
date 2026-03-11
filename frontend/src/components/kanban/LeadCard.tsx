@@ -121,45 +121,50 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                     </h4>
                 </div>
 
-                {/* Header actions — only renders if there's location or schedule */}
-                {(hasLocation || hasSchedule) && (
-                    <div className="flex items-center gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
-                        {hasLocation && (
-                            <motion.button
-                                key="location"
-                                onHoverStart={() => setIsMapHovered(true)}
-                                onHoverEnd={() => setIsMapHovered(false)}
-                                className="h-8 min-w-[32px] rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 text-[#3B82F6] hover:border-[#3B82F6] hover:shadow-md transition-all active:scale-95 px-2 overflow-hidden"
-                                title={location!}
-                            >
-                                <MapPin size={15} strokeWidth={2} className="shrink-0" />
-                                <AnimatePresence>
-                                    {isMapHovered && (
-                                        <motion.span
-                                            initial={{ width: 0, opacity: 0, marginLeft: 0 }}
-                                            animate={{ width: 'auto', opacity: 1, marginLeft: 5 }}
-                                            exit={{ width: 0, opacity: 0, marginLeft: 0 }}
-                                            transition={{ duration: 0.18 }}
-                                            className="text-[11px] font-semibold whitespace-nowrap overflow-hidden"
-                                        >
-                                            {location}
-                                        </motion.span>
-                                    )}
-                                </AnimatePresence>
-                            </motion.button>
+                {/* Header actions — always show schedule for SDRs, and location if exists */}
+                <div className="flex items-center gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
+                    {hasLocation && (
+                        <motion.button
+                            key="location"
+                            onHoverStart={() => setIsMapHovered(true)}
+                            onHoverEnd={() => setIsMapHovered(false)}
+                            className="h-8 min-w-[32px] rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 text-[#3B82F6] hover:border-[#3B82F6] hover:shadow-md transition-all active:scale-95 px-2 overflow-hidden"
+                            title={location!}
+                        >
+                            <MapPin size={15} strokeWidth={2} className="shrink-0" />
+                            <AnimatePresence>
+                                {isMapHovered && (
+                                    <motion.span
+                                        initial={{ width: 0, opacity: 0, marginLeft: 0 }}
+                                        animate={{ width: 'auto', opacity: 1, marginLeft: 5 }}
+                                        exit={{ width: 0, opacity: 0, marginLeft: 0 }}
+                                        transition={{ duration: 0.18 }}
+                                        className="text-[11px] font-semibold whitespace-nowrap overflow-hidden"
+                                    >
+                                        {location}
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
+                        </motion.button>
+                    )}
+                    <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        animate={hasSchedule ? { boxShadow: ['0 0 0 0 rgba(249,115,22,0)', '0 0 0 5px rgba(249,115,22,0.25)', '0 0 0 0 rgba(249,115,22,0)'] } : {}}
+                        transition={hasSchedule ? { duration: 2, repeat: Infinity } : {}}
+                        className={clsx(
+                            "w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all active:scale-90 border shadow-sm",
+                            hasSchedule 
+                                ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white border-orange-300 hover:from-orange-500 hover:to-amber-600 shadow-orange-200" 
+                                : "bg-white text-slate-300 border-slate-100 hover:border-orange-200 hover:text-orange-500 hover:bg-orange-50/50"
                         )}
-                        {hasSchedule && (
-                            <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                className="w-8 h-8 rounded-full bg-[#FFF7ED] text-[#F97316] flex items-center justify-center cursor-pointer hover:bg-[#F97316] hover:text-white hover:shadow-md transition-all active:scale-90 border border-[#FED7AA]/60"
-                                title={`Agenda: ${new Date(lead.metadata!.next_contact_at!).toLocaleDateString()}`}
-                                onClick={(e) => { e.stopPropagation(); onSchedule?.(lead); }}
-                            >
-                                <CalendarClock size={15} strokeWidth={2} />
-                            </motion.button>
-                        )}
-                    </div>
-                )}
+                        title={hasSchedule 
+                            ? `Agenda: ${new Date(lead.metadata!.next_contact_at!).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` 
+                            : "Agendar Retorno"}
+                        onClick={(e) => { e.stopPropagation(); onSchedule?.(lead); }}
+                    >
+                        <CalendarClock size={15} strokeWidth={2} />
+                    </motion.button>
+                </div>
             </div>
 
             {/* ── ROW 2: CNPJ (conditional) ── */}
@@ -213,8 +218,9 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                 )}
 
                 {/* Contact action buttons */}
+                {/* Note: phone button is hidden when hasContactName=false (phone is already shown inline above) */}
                 <div className="flex gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
-                    {hasContactPhone && (
+                    {hasContactPhone && hasContactName && (
                         <motion.span
                             whileHover={{ scale: 1.12 }}
                             className="w-8 h-8 rounded-full bg-[#EBFDF5] text-[#10B981] flex items-center justify-center cursor-pointer hover:bg-[#10B981] hover:text-white transition-all active:scale-90"
@@ -318,22 +324,27 @@ export const LeadCard: React.FC<LeadCardProps> = ({
             <AnimatePresence>
                 {isCadenceColumn && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.7 }}
-                        animate={{ opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 500, damping: 30 } }}
-                        exit={{ opacity: 0, scale: 0.7 }}
-                        className="absolute -top-3 -right-3 flex gap-1.5 z-10"
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 500, damping: 30 } }}
+                        exit={{ opacity: 0, y: 4 }}
+                        className="flex items-center justify-end gap-1.5 w-full mt-1"
+                        onPointerDown={e => e.stopPropagation()}
                     >
                         <button
                             onClick={e => { e.stopPropagation(); onReturn?.(lead); }}
-                            className="w-8 h-8 grid place-items-center bg-white border border-slate-200 text-slate-600 rounded-full shadow-lg hover:bg-slate-50 transition-all active:scale-90"
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-full shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-90 text-[10px] font-bold"
+                            title="Retornar à etapa anterior"
                         >
-                            <Undo2 size={13} {...ICON} />
+                            <Undo2 size={11} {...ICON} />
+                            <span>Voltar</span>
                         </button>
                         <button
                             onClick={e => { e.stopPropagation(); onFinish?.(lead); }}
-                            className="w-8 h-8 grid place-items-center bg-red-500 text-white rounded-full shadow-lg shadow-red-200 hover:bg-red-600 transition-all active:scale-90"
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500 text-white rounded-full shadow-sm shadow-emerald-200 hover:bg-emerald-600 transition-all active:scale-90 text-[10px] font-bold"
+                            title="Encerrar ciclo de cadência"
                         >
-                            <Check size={13} {...ICON} />
+                            <Check size={11} {...ICON} />
+                            <span>Encerrar</span>
                         </button>
                     </motion.div>
                 )}

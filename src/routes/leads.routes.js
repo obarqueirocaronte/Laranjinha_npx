@@ -4,6 +4,9 @@ const leadsController = require('../controllers/leads.controller');
 
 // Specific routes MUST come before wildcard /:id routes
 
+// GET /api/v1/leads/config
+router.get('/config', leadsController.getPipelineConfig);
+
 // GET /api/v1/leads/columns
 router.get('/columns', leadsController.getColumns);
 

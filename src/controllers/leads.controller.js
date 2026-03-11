@@ -121,8 +121,8 @@ exports.batchExport = async (req, res, next) => {
 
 exports.getSegments = async (req, res, next) => {
     try {
-        const { type, value } = req.query;
-        // Example: /api/v1/leads/segments?type=status&value=Novo
+        const { type, value, user_id } = req.query;
+        // Example: /api/v1/leads/segments?type=status&value=Novo&user_id=abc
 
         if (!type || !value) {
             return res.status(400).json({
@@ -131,7 +131,7 @@ exports.getSegments = async (req, res, next) => {
             });
         }
 
-        const leads = await leadsService.getLeadsBySegment(type, value);
+        const leads = await leadsService.getLeadsBySegment(type, value, user_id);
         res.json({ success: true, count: leads.length, data: leads });
     } catch (err) {
         next(err);
@@ -333,6 +333,19 @@ exports.scheduleNextContact = async (req, res, next) => {
         }
 
         res.json({ success: true, data: result });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.getPipelineConfig = async (req, res, next) => {
+    try {
+        const sdrId = req.query.sdr_id;
+        if (!sdrId) {
+            return res.status(400).json({ success: false, error: 'sdr_id is required' });
+        }
+        const config = await leadsService.getPipelineConfig(sdrId);
+        res.json({ success: true, data: config });
     } catch (err) {
         next(err);
     }

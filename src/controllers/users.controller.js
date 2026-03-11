@@ -5,7 +5,7 @@ const inviteService = require('../services/invite.service');
 exports.getUsers = async (req, res) => {
     try {
         const usersResult = await db.query(`
-            SELECT id, email, name, role, status, profile_picture_url 
+            SELECT id, email, name, role, status, NULL as profile_picture_url 
             FROM users 
             ORDER BY name ASC
         `);

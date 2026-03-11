@@ -9,6 +9,8 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "node src/app.js",
+    "seed:test": "node scripts/seed_supabase.js",
+    "test:mattermost": "node scripts/test_mattermost.js",
     "db:init": "node scripts/init-db.js",
     "db:migrate": "node run_migrations.js",
     "db:setup": "npm run db:init && npm run db:migrate"

@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarClock, X, Check } from 'lucide-react';
 const ICON = { strokeWidth: 1.5 };
 import type { Lead } from '../../types';
+import { leadsAPI } from '../../lib/api';
 
 interface ScheduleCadenceModalProps {
     isOpen: boolean;
     onClose: () => void;
     lead: Lead | null;
-    onSave: (dateTime: string, notes: string) => void;
+    onSave: (dateTime: string, notes: string, returnToQueue: boolean) => void;
 }
 
 export const ScheduleCadenceModal: React.FC<ScheduleCadenceModalProps> = ({
@@ -17,14 +18,49 @@ export const ScheduleCadenceModal: React.FC<ScheduleCadenceModalProps> = ({
     const [selectedDate, setSelectedDate] = useState<string>('');
     const [selectedTime, setSelectedTime] = useState<string>('');
     const [notes, setNotes] = useState<string>('');
+    const [returnToQueue, setReturnToQueue] = useState<boolean>(false);
+    const [allowReturnToQueue, setAllowReturnToQueue] = useState<boolean>(true);
+
+    useEffect(() => {
+        if (isOpen && lead) {
+            // Pre-fill with current date and time
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+
+            setSelectedDate(`${year}-${month}-${day}`);
+            setSelectedTime(`${hours}:${minutes}`);
+
+            // Fetch team configuration
+            const fetchConfig = async () => {
+                try {
+                    const userStr = localStorage.getItem('user');
+                    const sdrId = userStr ? JSON.parse(userStr).id : null;
+                    if (sdrId) {
+                        const response = await leadsAPI.getConfig(sdrId);
+                        if (response.success && response.data) {
+                            setAllowReturnToQueue(response.data.allow_return_to_queue !== false);
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error fetching pipeline config:', err);
+                }
+            };
+            fetchConfig();
+        }
+    }, [isOpen, lead]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedDate && selectedTime) {
-            onSave(`${selectedDate}T${selectedTime}`, notes);
+            onSave(`${selectedDate}T${selectedTime}`, notes, returnToQueue);
             setSelectedDate('');
             setSelectedTime('');
             setNotes('');
+            setReturnToQueue(false);
         }
     };
 
@@ -98,6 +134,23 @@ export const ScheduleCadenceModal: React.FC<ScheduleCadenceModalProps> = ({
                                     placeholder="Razão do agendamento..."
                                 />
                             </div>
+
+                            {allowReturnToQueue && (
+                                <div className="flex items-center gap-3 px-1 py-1">
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer"
+                                            checked={returnToQueue}
+                                            onChange={e => setReturnToQueue(e.target.checked)}
+                                        />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                                    </label>
+                                    <span className="text-xs font-bold text-slate-600" style={{ fontFamily: 'Quicksand, sans-serif' }}>
+                                        Retornar para a Fila de Leads
+                                    </span>
+                                </div>
+                            )}
 
                             <button
                                 type="submit"

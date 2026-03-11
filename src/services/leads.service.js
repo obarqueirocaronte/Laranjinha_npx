@@ -226,7 +226,7 @@ class LeadsService {
              s.email as sdr_email,
              pc.name as column_name,
              pc.color as column_color,
-             s.profile_picture_url as sdr_profile_picture_url,
+             NULL as sdr_profile_picture_url,
              (l.metadata->'tags') as tags,
              LEAST(COALESCE((
                  SELECT COUNT(*) * 25
@@ -278,13 +278,13 @@ class LeadsService {
      * Get Leads by Segment (Filter)
      * e.g. type='tag', value='Enterprise'
      */
-    async getLeadsBySegment(type, value) {
+    async getLeadsBySegment(type, value, userId) {
         // Safe parameter handling for dynamic queries
         let queryStr = `
             SELECT 
                 l.*, 
                 pc.name as current_column,
-                s.profile_picture_url as sdr_profile_picture_url,
+                NULL as sdr_profile_picture_url,
                 (l.metadata->'tags') as tags,
                 LEAST(COALESCE((
                     SELECT COUNT(*) * 25
@@ -317,6 +317,15 @@ class LeadsService {
         } else if (type === 'company') {
             params.push(`%${value}%`);
             queryStr += ` AND l.company_name ILIKE $${params.length}`;
+        }
+
+        // Filter by the current user's SDR ID if provided
+        if (userId) {
+            const sdrRes = await db.query('SELECT id FROM sdrs WHERE user_id = $1 LIMIT 1', [userId]);
+            if (sdrRes.rows.length > 0) {
+                params.push(sdrRes.rows[0].id);
+                queryStr += ` AND l.assigned_sdr_id = $${params.length}`;
+            }
         }
 
         queryStr += ` ORDER BY l.created_at DESC LIMIT 100`;
@@ -467,7 +476,7 @@ class LeadsService {
                    l.qualification_status, l.cadence_name, l.created_at,
                    l.metadata,
                    s.full_name as assigned_sdr_name,
-                   s.profile_picture_url as sdr_profile_picture_url
+                   NULL as sdr_profile_picture_url
             FROM leads l
             LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
         `;
@@ -500,7 +509,7 @@ class LeadsService {
                    s.total_leads_assigned
             FROM sdrs s
             LEFT JOIN leads l ON l.assigned_sdr_id = s.id AND l.qualification_status = 'qualified'
-            GROUP BY s.id, s.full_name, s.email, s.total_leads_assigned, s.profile_picture_url
+            GROUP BY s.id, s.full_name, s.email, s.total_leads_assigned
             ORDER BY s.full_name
         `;
         const res = await db.query(sql);
@@ -661,7 +670,7 @@ class LeadsService {
             SELECT 
                 l.*, 
                 pc.name as current_column, 
-                s.profile_picture_url as sdr_profile_picture_url,
+                NULL as sdr_profile_picture_url,
                 (l.metadata->'tags') as tags,
                 LEAST(COALESCE((
                     SELECT COUNT(*) * 25
@@ -760,17 +769,44 @@ class LeadsService {
 
             // 2. Update lead metadata with next_contact_at and type
             // We use || to merge the existing metadata with the new info
-            const updateLeadSql = `
-                UPDATE leads 
-                SET metadata = metadata || jsonb_build_object(
-                    'next_contact_at', $1::text,
-                    'next_contact_type', $3::text
-                ),
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $2
-                RETURNING id, metadata
-            `;
-            await client.query(updateLeadSql, [scheduled_at, leadId, type]);
+            let updateProps = {
+                'next_contact_at': scheduled_at,
+                'next_contact_type': type || 'manual'
+            };
+
+            if (notes) {
+                updateProps['last_schedule_notes'] = notes;
+            }
+
+            let updateSql;
+            let params;
+
+            if (data.return_to_queue) {
+                // Find the first column (position 1)
+                const colRes = await client.query('SELECT id FROM pipeline_columns ORDER BY position ASC LIMIT 1');
+                const firstColId = colRes.rows[0]?.id;
+
+                updateSql = `
+                    UPDATE leads 
+                    SET current_column_id = COALESCE($4, current_column_id),
+                        metadata = metadata || $1::jsonb,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $2
+                    RETURNING id, metadata
+                `;
+                params = [JSON.stringify(updateProps), leadId, type, firstColId];
+            } else {
+                updateSql = `
+                    UPDATE leads 
+                    SET metadata = metadata || $1::jsonb,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $2
+                    RETURNING id, metadata
+                `;
+                params = [JSON.stringify(updateProps), leadId];
+            }
+
+            await client.query(updateSql, params);
 
             await client.query('COMMIT');
 
@@ -780,6 +816,30 @@ class LeadsService {
             throw err;
         } finally {
             client.release();
+        }
+    }
+    async getPipelineConfig(sdrId) {
+        try {
+            // Find team settings for this SDR
+            const sql = `
+                SELECT t.settings 
+                FROM teams t
+                JOIN sdrs s ON s.team_id = t.id
+                WHERE s.id = $1
+            `;
+            const res = await db.query(sql, [sdrId]);
+            
+            // Default settings if none found
+            const defaultSettings = { allow_return_to_queue: true };
+            
+            if (res.rows.length > 0 && res.rows[0].settings) {
+                return { ...defaultSettings, ...res.rows[0].settings };
+            }
+            
+            return defaultSettings;
+        } catch (err) {
+            console.error('Error fetching pipeline config:', err);
+            return { allow_return_to_queue: true };
         }
     }
 }

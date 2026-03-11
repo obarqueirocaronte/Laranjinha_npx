@@ -113,14 +113,17 @@ export const leadsAPI = {
     batchCreateLeads: (leads: any[]) =>
         api.post('/leads/batch', { leads }).then(res => res.data),
 
-    getSegments: (type: string, value: string) =>
-        api.get('/leads/segments', { params: { type, value } }).then(res => res.data),
+    getSegments: (type: string, value: string, user_id?: string) =>
+        api.get('/leads/segments', { params: { type, value, user_id } }).then(res => res.data),
 
     cleanAll: () =>
         api.delete('/leads/clean').then(res => res.data),
 
     pullBackAll: () =>
         api.post('/leads/pull-back').then(res => res.data),
+
+    getConfig: (sdrId: string) =>
+        api.get(`/leads/config?sdr_id=${sdrId}`).then(res => res.data),
 
     deleteLead: (id: string) =>
         api.delete(`/leads/${id}`).then(res => res.data),
@@ -158,7 +161,7 @@ export const leadsAPI = {
     bulkUpdateLeads: (action: 'pause' | 'resume' | 'unassign', lead_ids: string[]) =>
         api.post('/leads/bulk-action', { action, lead_ids }).then(res => res.data),
 
-    scheduleNextContact: (id: string, data: { scheduled_at: string; sdr_id?: string; type?: string; notes?: string }) =>
+    scheduleNextContact: (id: string, data: { scheduled_at: string; sdr_id?: string; type?: string; notes?: string; return_to_queue?: boolean }) =>
         api.post(`/leads/${id}/schedule`, data).then(res => res.data),
 };
 

@@ -29,6 +29,7 @@ import { useVoip } from '../../contexts/VoipContext';
 import { CallFeedbackModal } from './CallFeedbackModal';
 import { SchedulePreviewModal } from './SchedulePreviewModal';
 import { statsAPI } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Notification {
     id: string;
@@ -49,6 +50,7 @@ export const KanbanBoard = ({
     showSchedulePreview?: boolean;
     onCloseSchedulePreview?: () => void;
 }) => {
+    const { user } = useAuth();
     const [leads, setLeads] = useState<Lead[]>([]);
     const [columns, setColumns] = useState<PipelineColumn[]>([]);
     const [activeId, setActiveId] = useState<string | null>(null);
@@ -137,7 +139,10 @@ export const KanbanBoard = ({
                 setIsLoading(true);
                 const [colsRes, leadsRes] = await Promise.all([
                     leadsAPI.getColumns(),
-                    leadsAPI.getSegments('qualification_status', 'qualified')
+                    // SDRs only see their own leads; managers see all
+                    leadsAPI.getSegments('qualification_status', 'qualified', 
+                        user?.role === 'sdr' ? user?.id : undefined
+                    )
                 ]);
 
                 if (colsRes.success && colsRes.data?.length > 0) {
@@ -489,7 +494,7 @@ export const KanbanBoard = ({
                 isOpen={isScheduleModalOpen}
                 onClose={() => setIsScheduleModalOpen(false)}
                 lead={completedLead}
-                onSave={async (dateTime) => {
+                onSave={async (dateTime, notes, returnToQueue) => {
                     if (!completedLead) return;
                     try {
                         const userStr = localStorage.getItem('user');
@@ -499,22 +504,35 @@ export const KanbanBoard = ({
                         await leadsAPI.scheduleNextContact(completedLead.id, {
                             scheduled_at: dateTime,
                             sdr_id: sdrId,
-                            type: 'manual'
+                            type: 'manual',
+                            notes,
+                            return_to_queue: returnToQueue
                         });
 
                         // Update local state
-                        setLeads(prev => prev.map(l =>
-                            l.id === completedLead.id
-                                ? {
+                        setLeads(prev => prev.map(l => {
+                            if (l.id === completedLead.id) {
+                                const baseUpdate = {
                                     ...l,
                                     metadata: {
                                         ...l.metadata,
-                                        next_contact_at: dateTime
+                                        next_contact_at: dateTime,
+                                        last_schedule_notes: notes
                                     },
                                     cadence_progress: 0
+                                };
+
+                                // If returned to queue, we normally move it to the first column (pos 1)
+                                if (returnToQueue && columns.length > 0) {
+                                    const firstCol = [...columns].sort((a, b) => a.position - b.position)[0];
+                                    if (firstCol) {
+                                        baseUpdate.current_column_id = firstCol.id;
+                                    }
                                 }
-                                : l
-                        ));
+                                return baseUpdate;
+                            }
+                            return l;
+                        }));
 
                         addNotification(`Próxima tentativa agendada para: ${new Date(dateTime).toLocaleString('pt-BR')}`, 'success');
                         setIsScheduleModalOpen(false);

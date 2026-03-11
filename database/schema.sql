@@ -15,6 +15,11 @@ CREATE TABLE IF NOT EXISTS teams (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    -- Pipeline behavior configuration (manager-controlled)
+    -- allow_return_to_queue: shows/hides "return to queue" toggle on SDR scheduling modal
+    settings JSONB DEFAULT '{"allow_return_to_queue": true}',
+    -- NOTE FOR PRODUCTION DEPLOY: If upgrading from a version without this column, run:
+    -- ALTER TABLE teams ADD COLUMN IF NOT EXISTS settings JSONB DEFAULT '{"allow_return_to_queue": true}';
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

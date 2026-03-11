@@ -328,10 +328,12 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
             lead.email = `sem_email_${Math.random().toString(36).substr(2, 5)}@import.csv`;
 
           lead.tags = [...globalTags];
+          lead.metadata.tags = [...globalTags];
           lead.qualification_status = "pending";
           if (selectedCadence !== "Sem Cadência") {
             lead.cadence_name = selectedCadence;
             lead.tags.push(selectedCadence);
+            lead.metadata.tags.push(selectedCadence);
           }
 
           const suggestedModel = aiSuggestions[row._originalIndex];

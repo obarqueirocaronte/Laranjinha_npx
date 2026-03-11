@@ -103,7 +103,7 @@ async function acceptInviteRegistration(token, password) {
         const result = await dbClient.query(
             `INSERT INTO users (email, password_hash, full_name, name, role, is_admin, is_verified, invited_by)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-             RETURNING id, email, role, is_admin, profile_picture_url`,
+             RETURNING id, email, role, is_admin, NULL as profile_picture_url`,
             [invite.email, passwordHash, invite.name, invite.name, invite.role, isAdmin, true, invite.invited_by]
         );
 
@@ -250,7 +250,7 @@ async function login(email, password) {
 
     // Find user
     const result = await pool.query(
-        'SELECT id, email, password_hash, is_verified, is_admin, profile_picture_url FROM users WHERE email = $1',
+        'SELECT id, email, password_hash, is_verified, is_admin, NULL as profile_picture_url FROM users WHERE email = $1',
         [email]
     );
 
@@ -400,7 +400,7 @@ async function getUserById(userId) {
     }
 
     const result = await pool.query(
-        'SELECT id, email, is_verified, is_admin, profile_picture_url, created_at FROM users WHERE id = $1',
+        'SELECT id, email, is_verified, is_admin, NULL as profile_picture_url, created_at FROM users WHERE id = $1',
         [userId]
     );
 
