@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     UserPlus, Mail, Shield, CheckCircle2, ArrowRight,
-    Crown, Search, Filter, Briefcase, Zap, Settings, Phone, MessageSquare, Save, Loader2
+    Crown, Search, Filter, Briefcase, Zap, Settings, Phone, MessageSquare, Save, Loader2, Trash2
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import api, { usersAPI } from '../../lib/api';
@@ -153,7 +153,7 @@ const InviteView = ({ newItem, setNewItem, handleInvite, inviteLoading, inviteEr
     </div>
 );
 
-const ListView = ({ users, isLoading, setView, setSelectedUser }: any) => (
+const ListView = ({ users, isLoading, setView, setSelectedUser, handleCleanInvites }: any) => (
     <div className="flex flex-col h-full">
         <div className="flex-1 bg-white border border-orange-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden flex flex-col">
             <div className="p-6 border-b border-orange-100/60 flex items-center justify-between bg-gradient-to-b from-orange-50/60 to-transparent">
@@ -163,6 +163,7 @@ const ListView = ({ users, isLoading, setView, setSelectedUser }: any) => (
                     <span className="text-xs font-bold text-slate-600">Time de Vendas</span>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button onClick={handleCleanInvites} className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 shadow-sm rounded-lg transition-all" title="Limpar Convites Pendentes/Expirados"><Trash2 size={18} /></button>
                     <button className="p-2 text-slate-600 hover:bg-slate-50 border border-slate-200 shadow-sm rounded-lg transition-all"><Search size={18} /></button>
                     <button className="p-2 text-slate-600 hover:bg-slate-50 border border-slate-200 shadow-sm rounded-lg transition-all"><Filter size={18} /></button>
                 </div>
@@ -466,6 +467,20 @@ export const UserZone: React.FC<UserZoneProps> = ({ onClose }) => {
         }
     };
 
+    const handleCleanInvites = async () => {
+        if (!confirm('Tem certeza que deseja apagar todos os convites pendentes e expirados?')) return;
+        try {
+            const res = await usersAPI.cleanAllInvites();
+            if (res.success) {
+                alert('Convites limpos com sucesso.');
+                setUsers(prev => prev.filter(u => u.status !== 'invited'));
+            }
+        } catch (err) {
+            console.error('Erro ao limpar convites', err);
+            alert('Erro ao limpar convites.');
+        }
+    };
+
     return (
         <div className="h-full flex flex-col overflow-hidden text-slate-900 font-sans items-center">
             <div className="w-full max-w-7xl h-full flex flex-col p-6">
@@ -500,7 +515,7 @@ export const UserZone: React.FC<UserZoneProps> = ({ onClose }) => {
                     <AnimatePresence mode="wait">
                         {view === 'list' && (
                             <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                                <ListView users={users} isLoading={isLoading} setView={setView} setSelectedUser={setSelectedUser} />
+                                <ListView users={users} isLoading={isLoading} setView={setView} setSelectedUser={setSelectedUser} handleCleanInvites={handleCleanInvites} />
                             </motion.div>
                         )}
                         {view === 'invite' && (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Users, Search, Filter, Trash2, ExternalLink, ArrowRight, Building2, Mail, Phone, Pause, Play, UserMinus, CheckSquare, Square
+    Users, Search, Filter, Trash2, ExternalLink, ArrowRight, Building2, Mail, Phone, Pause, Play, UserMinus, CheckSquare, Square, Undo2
 } from 'lucide-react';
 import { leadsAPI } from '../../lib/api';
 import type { Lead } from '../../types';
@@ -84,6 +84,38 @@ export const ManagerLeadsZone: React.FC<ManagerLeadsZoneProps> = ({ onClose }) =
         }
     };
 
+    const handlePullBackAll = async () => {
+        if (!confirm('ATENÇÃO: Isso vai remover os leads de TODOS os SDRs e devolvê-colos para a coluna inicial (Leads/Pendentes). Tem certeza absoluta?')) return;
+        try {
+            const response = await leadsAPI.pullBackAll();
+            if (response.success) {
+                alert('Todos os leads foram puxados de volta.');
+                fetchLeads();
+            }
+        } catch (error) {
+            console.error('Error pulling back leads:', error);
+            alert('Erro ao puxar leads.');
+        }
+    };
+
+    const handleCleanAllLeads = async () => {
+        const confirmPhrase = prompt('VOCÊ ESTÁ PRESTES A EXCLUIR TODOS OS LEADS DA BASE! Para continuar, digite: DELETARTUDO');
+        if (confirmPhrase !== 'DELETARTUDO') {
+            alert('Ação cancelada.');
+            return;
+        }
+        try {
+            const response = await leadsAPI.cleanAll();
+            if (response.success) {
+                alert('Toda a base de leads foi excluída.');
+                fetchLeads();
+            }
+        } catch (error) {
+            console.error('Error cleaning leads:', error);
+            alert('Erro ao deletar a base.');
+        }
+    };
+
     const isAllSelected = filteredLeads.length > 0 && selectedIds.size === filteredLeads.length;
 
     return (
@@ -124,6 +156,13 @@ export const ManagerLeadsZone: React.FC<ManagerLeadsZoneProps> = ({ onClose }) =
                         </div>
                         <button className="p-2 bg-gradient-soft border border-orange-200/50 shadow-sm rounded-xl text-slate-600 hover:bg-orange-50/80 transition-all">
                             <Filter size={20} />
+                        </button>
+                        <div className="w-px h-6 bg-orange-200/50 mx-1" />
+                        <button onClick={handlePullBackAll} className="p-2 bg-gradient-soft border border-amber-200/50 shadow-sm rounded-xl text-amber-600 hover:bg-amber-50 hover:border-amber-400 transition-all" title="Puxar todos os Leads">
+                            <Undo2 size={20} />
+                        </button>
+                        <button onClick={handleCleanAllLeads} className="p-2 bg-gradient-soft border border-red-200/50 shadow-sm rounded-xl text-red-600 hover:bg-red-50 hover:border-red-400 transition-all" title="Excluir TODOS os Leads">
+                            <Trash2 size={20} />
                         </button>
                     </div>
                 </div>

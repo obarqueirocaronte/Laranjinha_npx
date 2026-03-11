@@ -141,6 +141,15 @@ class InviteService {
         );
         return { success: true };
     }
+
+    /**
+     * Limpa (remove fisicamente ou expira) todos os convites pendentes
+     */
+    async deleteAllInvites() {
+        // Here we can physically delete or just set status='expired'. Requirements said remove.
+        await db.query("DELETE FROM invites WHERE status = 'pending'");
+        return { success: true };
+    }
 }
 
 module.exports = new InviteService();

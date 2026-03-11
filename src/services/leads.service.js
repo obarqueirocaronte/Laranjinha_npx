@@ -599,6 +599,33 @@ class LeadsService {
         return db.query(sql, [id]);
     }
 
+    async deleteAllLeads() {
+        const sql = 'DELETE FROM leads';
+        // cascade deletes will handle lead_custom_fields if configured, or we can explicit delete
+        await db.query('DELETE FROM lead_custom_fields');
+        return db.query(sql);
+    }
+
+    async pullBackAllLeads() {
+        // Return to column 1 and remove sdr_id
+        const colRes = await db.query('SELECT id FROM pipeline_columns WHERE position = 1 LIMIT 1');
+        const firstColumnId = colRes.rows[0]?.id;
+
+        if (!firstColumnId) throw new Error('First column not found');
+
+        const sql = `
+            UPDATE leads 
+            SET assigned_sdr_id = NULL,
+                current_column_id = $1,
+                status = 'active',
+                qualification_status = 'pending'
+            WHERE assigned_sdr_id IS NOT NULL 
+               OR current_column_id != $1
+        `;
+        return db.query(sql, [firstColumnId]);
+    }
+
+
     async updateLead(id, updates) {
         const { metadata, ...fields } = updates;
         const setClauses = [];

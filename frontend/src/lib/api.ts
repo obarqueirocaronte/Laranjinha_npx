@@ -116,6 +116,12 @@ export const leadsAPI = {
     getSegments: (type: string, value: string) =>
         api.get('/leads/segments', { params: { type, value } }).then(res => res.data),
 
+    cleanAll: () =>
+        api.delete('/leads/clean').then(res => res.data),
+
+    pullBackAll: () =>
+        api.post('/leads/pull-back').then(res => res.data),
+
     deleteLead: (id: string) =>
         api.delete(`/leads/${id}`).then(res => res.data),
 
@@ -241,6 +247,7 @@ export const usersAPI = {
         api.post('/users/invites', data).then(res => res.data),
     listInvites: () => api.get('/users/invites').then(res => res.data),
     revokeInvite: (id: string) => api.delete(`/users/invites/${id}`).then(res => res.data),
+    cleanAllInvites: () => api.delete('/users/invites/clean').then(res => res.data),
     deleteUser: (id: string) => api.delete(`/users/${id}`).then(res => res.data),
     updateUserRole: (id: string, role: string) => api.put(`/users/${id}/role`, { role }).then(res => res.data),
     saveIntegrations: (id: string, integrations: any) => api.post(`/users/${id}/integrations`, integrations).then(res => res.data),

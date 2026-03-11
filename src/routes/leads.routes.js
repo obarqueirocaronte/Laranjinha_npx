@@ -46,6 +46,12 @@ router.get('/sdrs', leadsController.getAllSDRs);
 // POST /api/v1/leads/:id/move
 router.post('/:id/move', leadsController.moveLead);
 
+// DELETE /api/v1/leads/clean
+router.delete('/clean', leadsController.deleteAllLeads);
+
+// POST /api/v1/leads/pull-back
+router.post('/pull-back', leadsController.pullBackAllLeads);
+
 // GET /api/v1/leads/:id
 router.get('/:id', leadsController.getLeadDetails);
 

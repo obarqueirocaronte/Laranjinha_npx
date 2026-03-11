@@ -147,6 +147,24 @@ exports.deleteLead = async (req, res, next) => {
     }
 };
 
+exports.deleteAllLeads = async (req, res, next) => {
+    try {
+        await leadsService.deleteAllLeads();
+        res.json({ success: true, message: 'All leads deleted successfully' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.pullBackAllLeads = async (req, res, next) => {
+    try {
+        await leadsService.pullBackAllLeads();
+        res.json({ success: true, message: 'All leads pulled back to pending status' });
+    } catch (err) {
+        next(err);
+    }
+};
+
 exports.assignLead = async (req, res, next) => {
     try {
         const { id } = req.params;

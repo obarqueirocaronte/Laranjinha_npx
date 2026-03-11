@@ -22,6 +22,7 @@ router.delete('/:id', usersController.deleteUser);
 // ==========================================
 router.post('/invites', usersController.createInvite);
 router.get('/invites', usersController.listInvites);
+router.delete('/invites/clean', usersController.deleteAllInvites);
 router.delete('/invites/:id', usersController.revokeInvite);
 
 module.exports = router;

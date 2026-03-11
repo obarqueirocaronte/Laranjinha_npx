@@ -175,6 +175,16 @@ exports.revokeInvite = async (req, res) => {
     }
 };
 
+exports.deleteAllInvites = async (req, res) => {
+    try {
+        await inviteService.deleteAllInvites();
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Delete all invites error:', error);
+        res.status(500).json({ error: 'Erro ao limpar convites.' });
+    }
+};
+
 exports.deleteUser = async (req, res) => {
     try {
         const { id } = req.params;
