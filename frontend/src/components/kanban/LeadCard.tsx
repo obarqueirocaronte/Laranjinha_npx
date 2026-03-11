@@ -166,17 +166,33 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, columnPosition, onClic
                             openClass="bg-blue-50 border-blue-200 pr-2"
                         />
                     )}
-                    {telEmpresa && (
+                    {lead.phone && (
                         <ExpandChip
                             icon={<Phone size={11} className="text-emerald-600" {...ICON} />}
+                            label={lead.phone}
+                            baseClass="bg-gradient-soft border border-orange-100 shadow-glass/80 border-slate-200/70"
+                            openClass="bg-emerald-50 border-emerald-200 pr-2"
+                        />
+                    )}
+                    {lead.email && !lead.email.includes('sem_email_') && (
+                        <ExpandChip
+                            icon={<Mail size={11} className="text-blue-600" {...ICON} />}
+                            label={lead.email}
+                            baseClass="bg-gradient-soft border border-orange-100 shadow-glass/80 border-slate-200/70"
+                            openClass="bg-blue-50 border-blue-200 pr-2"
+                        />
+                    )}
+                    {(telEmpresa && telEmpresa !== lead.phone) && (
+                        <ExpandChip
+                            icon={<Building2 size={11} className="text-emerald-600" {...ICON} />}
                             label={telEmpresa}
                             baseClass="bg-gradient-soft border border-orange-100 shadow-glass/80 border-slate-200/70"
                             openClass="bg-emerald-50 border-emerald-200 pr-2"
                         />
                     )}
-                    {emailEmpresa && (
+                    {(emailEmpresa && emailEmpresa !== lead.email) && (
                         <ExpandChip
-                            icon={<Mail size={11} className="text-blue-600" {...ICON} />}
+                            icon={<Building2 size={11} className="text-blue-600" {...ICON} />}
                             label={emailEmpresa}
                             baseClass="bg-gradient-soft border border-orange-100 shadow-glass/80 border-slate-200/70"
                             openClass="bg-blue-50 border-blue-200 pr-2"

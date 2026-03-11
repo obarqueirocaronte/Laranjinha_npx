@@ -300,6 +300,20 @@ exports.scheduleNextContact = async (req, res, next) => {
             notes
         });
 
+        // Automação para enviar email padrão
+        try {
+            const emailService = require('../services/email.service');
+            const leadDetails = await leadsService.getLeadById(id);
+            const dateStr = new Date(scheduled_at).toLocaleString('pt-BR');
+            await emailService.sendEmail(
+                'rodrigo.sergio@npx.com.br',
+                `Novo Agendamento: ${leadDetails?.full_name || 'Lead'}`,
+                `<p>O lead <b>${leadDetails?.full_name || 'Lead'}</b> foi agendado para <b>${dateStr}</b>.</p><p><b>Notas do SDR:</b> ${notes || 'Nenhuma nota'}</p>`
+            );
+        } catch (emailErr) {
+            console.error('Falha ao enviar email de agendamento:', emailErr);
+        }
+
         res.json({ success: true, data: result });
     } catch (err) {
         next(err);

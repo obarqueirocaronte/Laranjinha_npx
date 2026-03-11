@@ -21,6 +21,8 @@ import {
 import { cn } from "../../lib/utils";
 import { leadsAPI, notificationsAPI, aiAPI } from "../../lib/api";
 import { LeadAssignmentModal } from "./LeadAssignmentModal";
+import { LeadCard } from "../kanban/LeadCard";
+import type { Lead } from "../../types";
 
 const SYSTEM_FIELDS = [
   { id: "cnpj", label: "CNPJ" },
@@ -69,6 +71,8 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
   const [selectedLeadForAssignment, setSelectedLeadForAssignment] = useState<any | null>(null);
   const [isAIStructuring, setIsAIStructuring] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<Record<string, string>>({});
+
+  const [previewModel, setPreviewModel] = useState<string>("FULL");
 
   const [selectedCadence, setSelectedCadence] = useState<string>("Sem Cadência");
   const availableCadences = [
@@ -228,6 +232,37 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
     }
   };
 
+  const generatePreviewLead = (): Lead | null => {
+    if (parsedData.length === 0) return null;
+    const firstRow = parsedData.find((r) => !excludedRows.includes(r._originalIndex)) || parsedData[0];
+    const previewLead: any = { id: "preview-123", metadata: { card_model: previewModel } };
+
+    parsedHeaders.forEach((header) => {
+      const mappedField = fieldMapping[header];
+      if (!mappedField || mappedField === "ignore") return;
+
+      if (mappedField === "metadata" || mappedField === "custom_field") {
+        const cleanKey = header
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_+|_+$/g, "");
+        if (cleanKey) previewLead.metadata[cleanKey] = firstRow[header];
+      } else {
+        previewLead[mappedField] = firstRow[header];
+      }
+    });
+
+    if (previewLead.display_name && !previewLead.company_name)
+      previewLead.company_name = previewLead.display_name;
+    if (!previewLead.company_name) previewLead.company_name = "Empresa Desconhecida";
+    if (!previewLead.full_name) previewLead.full_name = previewLead.company_name;
+    if (!previewLead.email) previewLead.email = `sem_email_preview@import.csv`;
+
+    previewLead.tags = ["Preview", ...globalTags];
+    return previewLead as Lead;
+  };
+
   const fetchPendingLeads = async () => {
     setIsLoadingPending(true);
     try {
@@ -292,7 +327,11 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
           }
 
           const suggestedModel = aiSuggestions[row._originalIndex];
-          if (suggestedModel) lead.metadata.card_model = suggestedModel;
+          if (suggestedModel) {
+            lead.metadata.card_model = suggestedModel;
+          } else if (previewModel !== "FULL") {
+             lead.metadata.card_model = previewModel;
+          }
 
           return lead;
         });
@@ -483,9 +522,9 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
             </div>
 
             {/* Mapping & Preview Layout */}
-            <div className="flex gap-6 overflow-hidden flex-1 pb-4">
+            <div className="flex gap-4 overflow-hidden flex-1 pb-4">
               {/* Left: De-Para */}
-              <div className="w-[380px] shrink-0 bg-gradient-soft border border-orange-100 shadow-glass border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+              <div className="w-[320px] shrink-0 bg-gradient-soft border border-orange-100 shadow-glass border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
                 <div className="p-4 border-b border-orange-100/60 bg-gradient-to-b from-orange-50/60 to-transparent shrink-0">
                   <h4 className="font-bold text-slate-700 text-sm">
                     De-Para (Colunas)
@@ -580,7 +619,7 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {parsedData.slice(0, 100).map((row) => {
+                      {parsedData.slice(0, 50).map((row) => {
                         const isExcluded = excludedRows.includes(
                           row._originalIndex,
                         );
@@ -646,12 +685,38 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
                     </tbody>
                   </table>
                 </div>
-                {parsedData.length > 100 && (
+                {parsedData.length > 50 && (
                   <div className="p-2 text-center text-[10px] font-bold text-slate-600 bg-gradient-to-t from-orange-50/60 to-transparent border-t border-orange-100/60 shrink-0">
-                    Exibindo os primeiros 100 registros. A importação fará o
-                    processamento de todos os {parsedData.length} leads.
+                    Exibindo os primeiros 50 registros. A importação fará o processamento de todos os {parsedData.length} leads.
                   </div>
                 )}
+              </div>
+
+              {/* Right: Live Preview Card */}
+              <div className="w-[300px] shrink-0 bg-slate-50 border border-slate-200 rounded-2xl shadow-inner overflow-hidden flex flex-col relative">
+                <div className="p-4 border-b border-slate-200 bg-white flex justify-between items-center shrink-0">
+                  <h4 className="font-bold text-slate-700 text-sm flex items-center gap-2">
+                    <Sparkles size={14} className="text-orange-500" /> Card Preview
+                  </h4>
+                  {/* Template Switcher */}
+                  <select
+                    value={previewModel}
+                    onChange={(e) => setPreviewModel(e.target.value)}
+                    className="text-[10px] font-black uppercase bg-slate-100 border-none rounded focus:ring-0 cursor-pointer px-2 py-1"
+                  >
+                    <option value="FULL">FULL</option>
+                    <option value="COMPACT">COMPACT</option>
+                    <option value="PHONE_ONLY">PHONE ONLY</option>
+                    <option value="EMAIL_ONLY">EMAIL ONLY</option>
+                  </select>
+                </div>
+                <div className="flex-1 overflow-auto p-4 flex items-start justify-center custom-scrollbar bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-opacity-20 pointer-events-none">
+                  <div className="w-full relative scale-[0.85] origin-top">
+                    {generatePreviewLead() && (
+                      <LeadCard lead={generatePreviewLead()!} />
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 

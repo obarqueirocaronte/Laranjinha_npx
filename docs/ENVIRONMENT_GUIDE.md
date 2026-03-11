@@ -38,6 +38,17 @@ Este ambiente em `/Users/rodrigodantas/Antigravity - Projetos/inside-sales-pipel
 4. **Deploy em Produção**:
    Acesse o servidor via SSH e rode o pull (veja o `PROJECT_GUIDE.md` para detalhes).
 
+### 🧪 Testando e Validando no Mac (Local)
+Para rodar a aplicação localmente e realizar validações (por exemplo, testar a importação de CSV/XLSX):
+1. Abra um terminal na pasta raiz do projeto.
+2. Inicie o Backend (porta 3001):
+   `npm run dev`
+3. Abra outro terminal na pasta `frontend/`.
+4. Inicie o Frontend (porta 3000):
+   `npm run dev`
+5. Acesse `http://localhost:3000` no navegador, faça o login e navegue até a tela de importação para validar a inserção de novos leads e o funcionamento do Kanban.
+6. Acompanhe os logs nos dois terminais para verificar eventuais erros de processamento ou parse de dados.
+
 ---
 
 ## 🔑 3. Arquivos de Configuração (.env)

@@ -8,7 +8,7 @@ interface ScheduleCadenceModalProps {
     isOpen: boolean;
     onClose: () => void;
     lead: Lead | null;
-    onSave: (dateTime: string) => void;
+    onSave: (dateTime: string, notes: string) => void;
 }
 
 export const ScheduleCadenceModal: React.FC<ScheduleCadenceModalProps> = ({
@@ -16,13 +16,15 @@ export const ScheduleCadenceModal: React.FC<ScheduleCadenceModalProps> = ({
 }) => {
     const [selectedDate, setSelectedDate] = useState<string>('');
     const [selectedTime, setSelectedTime] = useState<string>('');
+    const [notes, setNotes] = useState<string>('');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedDate && selectedTime) {
-            onSave(`${selectedDate}T${selectedTime}`);
+            onSave(`${selectedDate}T${selectedTime}`, notes);
             setSelectedDate('');
             setSelectedTime('');
+            setNotes('');
         }
     };
 
@@ -85,6 +87,16 @@ export const ScheduleCadenceModal: React.FC<ScheduleCadenceModalProps> = ({
                                         className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-100 outline-none"
                                     />
                                 </div>
+                            </div>
+                            
+                            <div className="flex flex-col text-left">
+                                <label className="block text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1 mx-1">Comentários (Opcional)</label>
+                                <textarea
+                                    value={notes}
+                                    onChange={e => setNotes(e.target.value)}
+                                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-100 outline-none h-20 resize-none"
+                                    placeholder="Razão do agendamento..."
+                                />
                             </div>
 
                             <button

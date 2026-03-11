@@ -15,12 +15,25 @@ interface CycleCompleteModalProps {
 export const CycleCompleteModal: React.FC<CycleCompleteModalProps> = ({ isOpen, onClose, lead, onResult }) => {
     useEffect(() => {
         if (isOpen) {
-            confetti({
-                particleCount: 150,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: ['#f97316', '#fbbf24', '#3b82f6'],
-            });
+            try {
+                if (typeof confetti === 'function') {
+                    confetti({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: ['#f97316', '#fbbf24', '#3b82f6'],
+                    });
+                } else if (confetti && typeof (confetti as any).default === 'function') {
+                    (confetti as any).default({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: ['#f97316', '#fbbf24', '#3b82f6'],
+                    });
+                }
+            } catch (e) {
+                console.error('Confetti error:', e);
+            }
         }
     }, [isOpen]);
 
@@ -77,21 +90,19 @@ export const CycleCompleteModal: React.FC<CycleCompleteModalProps> = ({ isOpen, 
                             <h2 className="text-xl font-black text-slate-900 leading-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>{isOpportunitySelected ? '🚀 Nova Oportunidade' : 'Ciclo Concluído!'}</h2>
 
                             <p className="text-xs text-slate-600 font-medium" style={{ fontFamily: 'Quicksand, sans-serif' }}>
-                                {isOpportunitySelected
-                                    ? 'Descreva brevemente o interesse e a etapa de fechamento para o time de novos negócios.'
-                                    : `As tentativas para ${lead.full_name} foram finalizadas. Qual foi o resultado final?`
-                                }
+                                As tentativas para {lead.full_name} foram finalizadas. Qual o resultado final?
                             </p>
+
+                            <textarea
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                placeholder="Notas/Comentários da oportunidade ou motivo do descarte..."
+                                className="w-full mt-4 h-24 p-3 bg-white/50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-400 transition-all font-[Quicksand]"
+                            />
 
                             <div className="w-full space-y-2 mt-4">
                                 {isOpportunitySelected ? (
                                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                                        <textarea
-                                            value={notes}
-                                            onChange={(e) => setNotes(e.target.value)}
-                                            placeholder="Ex: Cliente tem muito interesse no plano Premium, quer agendar demo para semana que vem..."
-                                            className="w-full h-32 p-4 bg-white/50 border border-emerald-100 rounded-2xl text-xs font-bold text-slate-700 outline-none focus:border-emerald-400 transition-all font-[Quicksand]"
-                                        />
                                         <button
                                             onClick={() => handleResult('opportunity')}
                                             className="w-full py-4 bg-emerald-500 text-white rounded-full font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all"
