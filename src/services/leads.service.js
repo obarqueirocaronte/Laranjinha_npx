@@ -226,6 +226,7 @@ class LeadsService {
              s.email as sdr_email,
              pc.name as column_name,
              pc.color as column_color,
+             s.profile_picture_url as sdr_profile_picture_url,
              (l.metadata->'tags') as tags,
              LEAST(COALESCE((
                  SELECT COUNT(*) * 25
@@ -283,6 +284,7 @@ class LeadsService {
             SELECT 
                 l.*, 
                 pc.name as current_column,
+                s.profile_picture_url as sdr_profile_picture_url,
                 (l.metadata->'tags') as tags,
                 LEAST(COALESCE((
                     SELECT COUNT(*) * 25
@@ -291,6 +293,7 @@ class LeadsService {
                 ), 0), 100) as cadence_progress
             FROM leads l
             LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
+            LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
             WHERE 1=1
         `;
         const params = [];
@@ -463,7 +466,8 @@ class LeadsService {
             SELECT l.id, l.full_name, l.company_name, l.email, l.job_title,
                    l.qualification_status, l.cadence_name, l.created_at,
                    l.metadata,
-                   s.full_name as assigned_sdr_name
+                   s.full_name as assigned_sdr_name,
+                   s.profile_picture_url as sdr_profile_picture_url
             FROM leads l
             LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
         `;
@@ -496,7 +500,7 @@ class LeadsService {
                    s.total_leads_assigned
             FROM sdrs s
             LEFT JOIN leads l ON l.assigned_sdr_id = s.id AND l.qualification_status = 'qualified'
-            GROUP BY s.id, s.full_name, s.email, s.total_leads_assigned
+            GROUP BY s.id, s.full_name, s.email, s.total_leads_assigned, s.profile_picture_url
             ORDER BY s.full_name
         `;
         const res = await db.query(sql);
@@ -630,7 +634,7 @@ class LeadsService {
             SELECT 
                 l.*, 
                 pc.name as current_column, 
-                s.full_name as sdr_name,
+                s.profile_picture_url as sdr_profile_picture_url,
                 (l.metadata->'tags') as tags,
                 LEAST(COALESCE((
                     SELECT COUNT(*) * 25

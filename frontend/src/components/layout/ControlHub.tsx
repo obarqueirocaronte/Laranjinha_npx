@@ -4,7 +4,6 @@ import {
     Settings,
     Phone,
     MessageSquare,
-    User,
     Layers,
     Zap,
     Calendar,
@@ -14,6 +13,7 @@ import {
     Trophy,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { UserAvatar } from '../common/UserAvatar';
 
 type TabType = 'Hoje' | 'Semana' | 'Mês';
 
@@ -41,7 +41,7 @@ interface ControlHubProps {
         whatsapp: number;
     };
     onReset?: () => void;
-    user?: { email: string; role?: 'manager' | 'sdr' } | null;
+    user?: { email: string; role?: 'manager' | 'sdr'; profile_picture_url?: string | null } | null;
 }
 
 export const ControlHub: React.FC<ControlHubProps> = ({
@@ -326,9 +326,13 @@ export const ControlHub: React.FC<ControlHubProps> = ({
                                 onClick={() => user?.role === 'manager' && onAdminClick()}
                             >
                                 {/* Avatar */}
-                                <div className="w-10 h-10 rounded-full bg-white/20 border-2 border-white/60 flex items-center justify-center shadow-md backdrop-blur-sm">
-                                    <User size={18} fill="white" className="text-white" />
-                                </div>
+                                <UserAvatar 
+                                    src={user?.profile_picture_url} 
+                                    name={user?.email?.split('@')[0]} 
+                                    size="md" 
+                                    border={false}
+                                    className="!rounded-full !bg-white/20 !border-white/60 shadow-md backdrop-blur-sm" 
+                                />
                                 <div className="flex flex-col">
                                     <span
                                         className="text-sm font-black text-white leading-tight drop-shadow-sm"

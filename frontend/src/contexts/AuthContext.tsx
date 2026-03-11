@@ -14,6 +14,7 @@ interface User {
     email: string;
     role?: 'manager' | 'sdr';
     isAdmin?: boolean;
+    profile_picture_url?: string | null;
 }
 
 interface AuthContextType {
@@ -52,7 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     id: 'google-auth',
                     email: emailFromGoogle,
                     role: isAdminFromGoogle ? 'manager' : 'sdr',
-                    isAdmin: isAdminFromGoogle
+                    isAdmin: isAdminFromGoogle,
+                    profile_picture_url: params.get('profile_picture_url')
                 };
                 localStorage.setItem('auth_token', tokenFromGoogle);
                 localStorage.setItem('user', JSON.stringify(googleUser));
@@ -84,7 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                             id: u.id,
                             email: u.email,
                             role: u.is_admin ? 'manager' : 'sdr',
-                            isAdmin: u.is_admin
+                            isAdmin: u.is_admin,
+                            profile_picture_url: u.profile_picture_url
                         });
                     }
                 } catch (err) {
@@ -125,7 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 id: apiUser.id,
                 email: apiUser.email,
                 role: apiUser.isAdmin ? 'manager' : 'sdr',
-                isAdmin: apiUser.isAdmin
+                isAdmin: apiUser.isAdmin,
+                profile_picture_url: apiUser.profile_picture_url
             };
 
             localStorage.setItem('auth_token', token);

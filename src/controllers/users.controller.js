@@ -5,7 +5,7 @@ const inviteService = require('../services/invite.service');
 exports.getUsers = async (req, res) => {
     try {
         const usersResult = await db.query(`
-            SELECT id, email, name, role, status 
+            SELECT id, email, name, role, status, profile_picture_url 
             FROM users 
             ORDER BY name ASC
         `);
@@ -50,6 +50,7 @@ exports.getUsers = async (req, res) => {
             email: u.email,
             role: u.role || 'sdr',
             status: u.status || 'active',
+            profile_picture_url: u.profile_picture_url,
             integrations: integrationsByUser[u.id] || {
                 email: { enabled: false, host: '', port: '587', user: '', pass: '' },
                 voice: { enabled: false, sipServer: '', extension: '', password: '' },

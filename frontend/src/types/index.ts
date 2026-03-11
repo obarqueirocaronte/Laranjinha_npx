@@ -16,6 +16,7 @@ export interface Lead {
     cadence_name?: string;
     tags?: string[];
     metadata?: Record<string, any>;
+    sdr_profile_picture_url?: string | null;
     created_at: string;
 }
 
@@ -25,4 +26,13 @@ export interface PipelineColumn {
     position: number;
     color: string;
     lead_count?: number;
+}
+
+export interface User {
+    id: string;
+    email: string;
+    name?: string;
+    role?: 'manager' | 'sdr';
+    status?: string;
+    profile_picture_url?: string | null;
 }

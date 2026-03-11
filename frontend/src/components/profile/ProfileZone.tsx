@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Shield, Camera, Lock, ArrowLeft, Save, CheckCircle2 } from 'lucide-react';
+import { User as UserIcon, Mail, Shield, Camera, Lock, ArrowLeft, Save, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { UserAvatar } from '../common/UserAvatar';
 
 interface ProfileZoneProps {
     onClose: () => void;
@@ -32,12 +33,13 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
                     <button onClick={onClose} className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white/40 backdrop-blur-md border border-white/60 shadow-sm text-slate-700 hover:text-orange-600 transition-all group shrink-0">
                         <ArrowLeft className="transition-transform group-hover:-translate-x-1" size={24} strokeWidth={2.5} />
                     </button>
-                    <div
-                        className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow border border-white/20 shrink-0"
-                        style={{ background: gradient }}
-                    >
-                        <User size={28} strokeWidth={2.5} />
-                    </div>
+                    <UserAvatar 
+                        src={user?.profile_picture_url} 
+                        name={name} 
+                        size="lg" 
+                        border={false}
+                        className="!rounded-2xl !bg-white/20 !border-white/20" 
+                    />
                     <div>
                         <h2 className="text-4xl font-black text-slate-800 tracking-tight flex items-center gap-2" style={{ fontFamily: 'Comfortaa, cursive' }}>
                             <span className="text-slate-700 opacity-90">Meu</span>
@@ -57,10 +59,12 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
                         <div className="relative group mb-6">
                             <div className="absolute inset-[-4px] bg-gradient-to-br from-orange-400 to-rose-400 rounded-full blur-md opacity-30 group-hover:opacity-60 transition-opacity" />
                             <div className="relative w-40 h-40 rounded-full overflow-hidden border-4 border-white shadow-2xl bg-gradient-to-br from-orange-100 to-rose-50 flex items-center justify-center">
-                                <img
-                                    src={`https://api.dicebear.com/7.x/notionists/svg?seed=${user?.email || 'Manager'}&backgroundColor=transparent`}
-                                    alt="Profile"
-                                    className="w-full h-full object-cover"
+                                <UserAvatar 
+                                    src={user?.profile_picture_url} 
+                                    name={name} 
+                                    size="xl" 
+                                    border={false}
+                                    className="w-full h-full !rounded-none" 
                                 />
                                 {/* Overlay to change picture */}
                                 <button className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[2px]">
@@ -100,7 +104,7 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
                                 {/* Informações Pessoais */}
                                 <div>
                                     <h4 className="flex items-center gap-2 text-sm font-black text-slate-800 uppercase tracking-widest mb-4">
-                                        <User size={16} style={{ color: accentColor }} /> Informações Pessoais
+                                        <UserIcon size={16} style={{ color: accentColor }} /> Informações Pessoais
                                     </h4>
 
                                     <div className="space-y-4">
