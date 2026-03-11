@@ -175,14 +175,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, columnPosition, onClic
                             openClass="bg-blue-50 border-blue-200 pr-2"
                         />
                     )}
-                    {lead.phone && (
-                        <ExpandChip
-                            icon={<Phone size={11} className="text-emerald-600" {...ICON} />}
-                            label={lead.phone}
-                            baseClass="bg-gradient-soft border border-orange-100 shadow-glass/80 border-slate-200/70"
-                            openClass="bg-emerald-50 border-emerald-200 pr-2"
-                        />
-                    )}
+                    {/* Phone Expand chip removed from here! Now it will be rendered as a prominent Tag below */}
                     {lead.email && !lead.email.includes('sem_email_') && (
                         <ExpandChip
                             icon={<Mail size={11} className="text-blue-600" {...ICON} />}
@@ -291,46 +284,33 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, columnPosition, onClic
                 </div>
             </div>
 
-            {/* ── ROW 4: Tags (static, first tag + count) + Cadence badge ── */}
+            {/* ── ROW 4: Tags + Phone Tag + Cadence badge ── */}
             <div className="flex justify-between items-end mt-auto gap-2 w-full">
-                {cardModel === 'FULL' ? (
-                    <div className="flex-1 min-w-0">
-                        {hasTags && (
-                            <div className="relative group flex items-center gap-1.5">
-                                <span
-                                    className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full bg-orange-100/80 border border-orange-200/70 text-orange-700 cursor-default shadow-sm whitespace-nowrap hover:scale-105 hover:shadow-md transition-all duration-200"
-                                    style={{ fontFamily: 'Comfortaa, cursive' }}
-                                >
-                                    <Tag size={10} className="text-orange-500 shrink-0" {...ICON} />
-                                    {lead.tags![0]}
-                                </span>
-                                {lead.tags!.length > 1 && (
-                                    <span
-                                        className="text-[10px] font-black text-slate-600 cursor-default"
-                                        style={{ fontFamily: 'Comfortaa, cursive' }}
-                                    >
-                                        +{lead.tags!.length - 1}
-                                    </span>
-                                )}
-
-                                {/* Tooltip showing all tags on hover */}
-                                <div className="absolute bottom-full left-0 mb-3 pointer-events-none opacity-0 scale-0 group-hover:opacity-100 group-hover:scale-100 transition-all duration-500 origin-bottom-left z-[100] min-w-[160px]">
-                                    <div className="bg-orange-50/80 backdrop-blur-xl p-3 rounded-2xl shadow-2xl border border-orange-200/50 flex flex-wrap gap-2">
-                                        {lead.tags!.map((t, idx) => (
-                                            <span
-                                                key={idx}
-                                                className="inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-lg bg-red-50 border border-red-200/60 text-red-600 shadow-sm"
-                                                style={{ fontFamily: 'Comfortaa, cursive' }}
-                                            >
-                                                <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                                                {t}
-                                            </span>
-                                        ))}
-                                    </div>
-                                    <div className="absolute -bottom-1.5 left-4 w-3 h-3 bg-orange-50/80 border-r border-b border-orange-200/50 rotate-45" />
-                                </div>
-                            </div>
+                {cardModel === 'FULL' || cardModel === 'PHONE_ONLY' ? (
+                    <div className="flex-1 min-w-0 flex flex-wrap gap-1.5 align-bottom">
+                        {/* Phone mapped as a highlighted tag */}
+                        {hasContactPhone && (
+                            <span
+                                className="inline-flex items-center gap-1.5 text-[9px] font-black px-2 py-1 rounded-md bg-emerald-100/90 border border-emerald-300/70 text-emerald-800 cursor-default shadow-sm hover:scale-105 hover:shadow-md transition-transform duration-200 tracking-wider h-5 flex-shrink-0"
+                                style={{ fontFamily: 'Quicksand, sans-serif' }}
+                                title="Telefone Principal"
+                            >
+                                <Phone size={9} className="text-emerald-600 shrink-0" strokeWidth={2.5} />
+                                {lead.phone}
+                            </span>
                         )}
+
+                        {cardModel === 'FULL' && hasTags && lead.tags?.map((t, idx) => (
+                            <span
+                                key={idx}
+                                className="inline-flex items-center gap-1.5 text-[9px] font-bold px-2 py-1 rounded-md bg-orange-50/90 border border-orange-200/70 text-orange-700 cursor-default shadow-sm hover:scale-105 hover:shadow-md transition-transform duration-200 whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px] h-5"
+                                style={{ fontFamily: 'Comfortaa, cursive' }}
+                                title={t}
+                            >
+                                {idx === 0 && <Tag size={8} className="text-orange-500 shrink-0" {...ICON} />}
+                                {t}
+                            </span>
+                        ))}
                     </div>
                 ) : (
                     <div className="flex-1 min-w-0" />
@@ -340,10 +320,11 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, columnPosition, onClic
                 {(cardModel === 'FULL' || cardModel === 'COMPACT') && (
                     <div
                         className={clsx(
-                            "shrink-0 flex items-center justify-center min-w-[38px] h-6 px-2 rounded-full border text-[10px] font-bold tracking-wide transition-all duration-300 shadow-sm",
+                            "shrink-0 flex items-center justify-center min-w-[34px] h-5 px-1.5 rounded-full border text-[9px] font-bold tracking-widest transition-all duration-300 shadow-sm",
                             cadenceColor
                         )}
                         style={{ fontFamily: 'Comfortaa, cursive' }}
+                        title="Andamento da Cadência"
                     >
                         {cadenceProgress}%
                     </div>
