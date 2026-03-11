@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import type { Lead } from '../../types';
-import { Building2, Undo2, Check, Mail, Phone, Tag, User, MapPin, Linkedin } from 'lucide-react';
+import { Building2, Undo2, Check, Mail, Phone, Tag, User, MapPin, CalendarClock } from 'lucide-react';
 import { useVoip } from '../../contexts/VoipContext';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +25,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
     onClick,
     onReturn,
     onFinish,
+    onSchedule,
 }) => {
     const isCadenceColumn = columnPosition === 5;
     const voip = useVoip();
@@ -53,6 +54,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
     const hasTags = lead.tags && lead.tags.length > 0;
     const hasContactPhone = lead.phone && String(lead.phone).trim().length > 0;
     const hasContactEmail = lead.email && !String(lead.email).includes('sem_email_');
+    const hasLinkedin = lead.metadata?.linkedin_url || lead.metadata?.linkedin;
 
     const cadenceProgress = lead.cadence_progress || 0;
     const cnpj = lead.metadata?.cnpj;
@@ -66,7 +68,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className={clsx(
-                "relative flex flex-col p-5 gap-3 w-full bg-[#E8F6F1] shadow-sm rounded-[32px] border border-[#C2E9D9] transition-all duration-300 hover:shadow-lg",
+                "relative flex flex-col p-5 gap-3 w-full bg-[#ECF9F4] shadow-sm rounded-[32px] border border-[#D1F0E4] transition-all duration-300 hover:shadow-lg",
                 !isCadenceColumn ? "cursor-grab active:cursor-grabbing" : "cursor-default",
                 isDragging && "opacity-40 grayscale-[0.5] scale-95"
             )}
@@ -76,11 +78,11 @@ export const LeadCard: React.FC<LeadCardProps> = ({
             {/* ROW 1: Company & Top Actions */}
             <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm border border-emerald-50">
-                        <Building2 size={24} className="text-emerald-500" strokeWidth={2} />
+                    <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shrink-0 shadow-sm border border-slate-50">
+                        <Building2 size={24} className="text-[#10B981]" strokeWidth={2} />
                     </div>
                     <h4
-                        className="font-bold text-slate-700 text-[18px] leading-tight truncate shrink min-w-0"
+                        className="font-bold text-[#1E293B] text-[18px] leading-tight truncate shrink min-w-0"
                         style={{ fontFamily: 'Comfortaa, cursive' }}
                         title={lead.company_name}
                     >
@@ -89,14 +91,14 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0" onPointerDown={e => e.stopPropagation()}>
-                    <button className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-50 text-blue-500 hover:bg-slate-50 transition-colors">
-                        <MapPin size={16} strokeWidth={2} />
+                    <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 text-[#3B82F6] hover:bg-slate-50 transition-colors">
+                        <MapPin size={18} strokeWidth={2} />
                     </button>
-                    <button className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-50 text-emerald-500 hover:bg-slate-50 transition-colors">
-                        <Phone size={16} strokeWidth={2} />
+                    <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 text-[#10B981] hover:bg-slate-50 transition-colors">
+                        <Phone size={18} strokeWidth={2} />
                     </button>
-                    <button className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-50 text-blue-400 hover:bg-slate-50 transition-colors">
-                        <Mail size={16} strokeWidth={2} />
+                    <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 text-[#6366F1] hover:bg-slate-50 transition-colors">
+                        <Mail size={18} strokeWidth={2} />
                     </button>
                 </div>
             </div>
@@ -104,35 +106,35 @@ export const LeadCard: React.FC<LeadCardProps> = ({
             {/* ROW 2: CNPJ */}
             {cnpj && (
                 <div className="flex -mt-1">
-                    <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-slate-400 text-[12px] font-medium shadow-sm">
+                    <div className="px-3 py-1 rounded-xl bg-white border border-[#E2E8F0] text-[#94A3B8] text-[12px] font-medium shadow-sm">
                         {cnpj}
                     </div>
                 </div>
             )}
 
             {/* ROW 3: Inner Contact Card */}
-            <div className="bg-white rounded-[24px] p-4 shadow-sm border border-slate-50 flex items-center justify-between gap-4">
+            <div className="bg-white rounded-[24px] p-4 shadow-sm border border-[#F1F5F9] flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
-                        <User size={18} className="text-slate-400" strokeWidth={1.5} />
+                    <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
+                        <User size={20} className="text-slate-400" strokeWidth={1.5} />
                     </div>
                     <div className="flex flex-col min-w-0">
                         <p
-                            className="font-bold text-slate-700 text-[16px] truncate"
+                            className="font-bold text-[#334155] text-[17px] truncate"
                             style={{ fontFamily: 'Comfortaa, cursive' }}
                         >
                             {lead.full_name}
                         </p>
-                        <p className="text-slate-400 text-[11px] font-bold uppercase tracking-wider truncate">
+                        <p className="text-[#94A3B8] text-[11px] font-bold uppercase tracking-wider truncate">
                             {lead.metadata?.job_title || 'CONTATO'}
                         </p>
                     </div>
                 </div>
 
-                <div className="flex gap-1.5 shrink-0">
+                <div className="flex gap-2 shrink-0">
                     {hasContactPhone && (
                         <span
-                            className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 border border-emerald-100 flex items-center justify-center cursor-pointer hover:bg-emerald-500 hover:text-white transition-all shadow-sm"
+                            className="w-9 h-9 rounded-full bg-[#EBFDF5] text-[#10B981] flex items-center justify-center cursor-pointer hover:bg-[#10B981] hover:text-white transition-all shadow-sm"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (!voip.isCallActive && lead.phone) {
@@ -140,42 +142,57 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                                 }
                             }}
                         >
-                            <Phone size={14} strokeWidth={2.5} />
+                            <Phone size={16} strokeWidth={2} />
                         </span>
                     )}
                     {hasContactEmail && (
-                        <span className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 border border-blue-100 flex items-center justify-center shadow-sm">
-                            <Mail size={14} strokeWidth={2.5} />
+                        <span className="w-9 h-9 rounded-full bg-[#EEF2FF] text-[#6366F1] flex items-center justify-center shadow-sm">
+                            <Mail size={16} strokeWidth={2} />
                         </span>
                     )}
-                    <span className="w-8 h-8 rounded-lg bg-blue-50/50 text-blue-400 border border-blue-100 flex items-center justify-center shadow-sm">
-                        <Linkedin size={14} strokeWidth={2.5} />
-                    </span>
+                    {(hasLinkedin || true) && (
+                        <span className="w-9 h-9 rounded-full bg-[#EBF5FF] text-[#3B82F6] flex items-center justify-center shadow-sm text-[12px] font-black">
+                            in
+                        </span>
+                    )}
+                    {lead.metadata?.next_contact_at && (
+                        <span
+                            className="w-9 h-9 rounded-full bg-[#FFF7ED] text-[#F97316] flex items-center justify-center cursor-pointer hover:bg-[#F97316] hover:text-white transition-all shadow-sm"
+                            title="Reagendar Retorno"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSchedule?.(lead);
+                            }}
+                        >
+                            <CalendarClock size={16} strokeWidth={2} />
+                        </span>
+                    )}
                 </div>
             </div>
 
             {/* ROW 4: Tags Area */}
             <div className="flex items-center justify-between w-full mt-auto pt-1">
-                <div className="flex flex-wrap gap-2 items-center">
+                <div className="flex items-center gap-2">
                     {/* Tags List */}
-                    {hasTags && lead.tags?.map((t: string, idx: number) => (
-                        <span
-                            key={idx}
-                            className="inline-flex items-center gap-1.5 text-[12px] font-bold px-4 py-2 rounded-2xl bg-[#FFEDD5] border border-orange-100 text-[#9A3412] cursor-default shadow-sm"
-                            style={{ fontFamily: 'Comfortaa, cursive' }}
-                        >
-                            {idx === 0 && <Tag size={12} className="text-orange-400" {...ICON} />}
-                            {t}
-                        </span>
-                    ))}
-                    {lead.tags && lead.tags.length > 2 && (
-                        <span className="text-slate-400 text-[12px] font-bold">+{lead.tags.length - 1}</span>
+                    {hasTags && (
+                        <>
+                            <span
+                                className="inline-flex items-center gap-1.5 text-[13px] font-bold px-4 py-2 rounded-2xl bg-[#FFEDD5] border border-[#FED7AA] text-[#9A3412] cursor-default shadow-sm"
+                                style={{ fontFamily: 'Comfortaa, cursive' }}
+                            >
+                                <Tag size={13} className="text-[#F97316]" {...ICON} />
+                                {lead.tags![0]}
+                            </span>
+                            {lead.tags!.length > 1 && (
+                                <span className="text-[#94A3B8] text-[13px] font-bold">+{lead.tags!.length - 1}</span>
+                            )}
+                        </>
                     )}
                 </div>
 
                 {/* Cadence Progress Badge */}
                 <div
-                    className="shrink-0 flex items-center justify-center min-w-[44px] h-8 px-3 rounded-2xl bg-[#FFEDD5] border border-orange-100 text-[#9A3412] text-[12px] font-bold shadow-sm"
+                    className="shrink-0 flex items-center justify-center w-11 h-11 rounded-full bg-[#FFEDD5] border border-[#FED7AA] text-[#9A3412] text-[13px] font-bold shadow-sm"
                     style={{ fontFamily: 'Comfortaa, cursive' }}
                 >
                     {cadenceProgress}%
