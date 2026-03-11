@@ -17,6 +17,7 @@ interface LeadCardProps {
     onReturn?: (lead: Lead) => void;
     onFinish?: (lead: Lead) => void;
     onSchedule?: (lead: Lead) => void;
+    accentColor?: string;
 }
 
 // Static layout configurations for a pixel-perfect feel
@@ -65,6 +66,8 @@ export const LeadCard: React.FC<LeadCardProps> = ({
     onClick,
     onReturn,
     onFinish,
+    onSchedule,
+    accentColor = '#FF8C00'
 }) => {
     const isCadenceColumn = columnPosition === 5;
     const voip = useVoip();
