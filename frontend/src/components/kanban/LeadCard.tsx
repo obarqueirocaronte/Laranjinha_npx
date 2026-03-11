@@ -215,7 +215,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                     )}
 
                     {/* Tags List */}
-                    {cardModel === 'FULL' && hasTags && lead.tags?.map((t, idx) => (
+                    {cardModel === 'FULL' && hasTags && lead.tags?.map((t: string, idx: number) => (
                         <span
                             key={idx}
                             className="inline-flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-xl bg-orange-50 border border-orange-100 text-orange-700 cursor-default shadow-sm hover:bg-orange-100 transition-colors"
