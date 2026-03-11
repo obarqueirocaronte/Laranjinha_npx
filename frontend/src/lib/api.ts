@@ -182,7 +182,7 @@ export const statsAPI = {
     getStats: () =>
         api.get('/stats').then(res => res.data),
 
-    updateActivity: (type: 'call' | 'email' | 'whatsapp') => {
+    updateActivity: (type: 'call' | 'email' | 'whatsapp' | 'cycle_complete') => {
         const userStr = localStorage.getItem('user');
         const sdr_id = userStr ? JSON.parse(userStr).id : undefined;
         return api.post('/stats/activity', { type, sdr_id }).then(res => res.data);

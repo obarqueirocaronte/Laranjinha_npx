@@ -80,6 +80,59 @@ export const KanbanBoard = ({
                 { id: 'mock-col-5', name: 'Cadência', position: 5, color: '#EF4444' },
             ];
 
+            // Mock leads to test all adaptive layout scenarios
+            const MOCK_LEADS: Lead[] = [
+                {
+                    id: 'mock-1',
+                    full_name: 'Ana Rodrigues',
+                    company_name: 'TechBrasil Soluções Digitais LTDA',
+                    email: 'ana@techbrasil.com.br',
+                    phone: '11999990001',
+                    current_column_id: 'mock-col-2',
+                    assigned_sdr_id: 'mock-sdr',
+                    cadence_progress: 70,
+                    tags: ['Enterprise', 'Prioritário', 'Lead Quente', 'Norte'],
+                    metadata: {
+                        cnpj: '12.345.678/0001-90',
+                        job_title: 'DIRETORA COMERCIAL',
+                        location: 'São Paulo, SP',
+                        next_contact_at: new Date(Date.now() + 86400000).toISOString(),
+                        linkedin_url: 'https://linkedin.com/in/ana'
+                    },
+                    created_at: new Date().toISOString()
+                },
+                {
+                    id: 'mock-2',
+                    full_name: 'Carlos Mendes',
+                    company_name: 'Distribuidora Sul',
+                    email: 'sem_email_carlos@placeholder.com',
+                    phone: '41988880002',
+                    current_column_id: 'mock-col-1',
+                    assigned_sdr_id: 'mock-sdr',
+                    cadence_progress: 25,
+                    tags: ['Oportunidade', 'Frio'],
+                    metadata: {
+                        location: 'Curitiba, PR'
+                    },
+                    created_at: new Date().toISOString()
+                },
+                {
+                    id: 'mock-3',
+                    full_name: '',
+                    company_name: 'Indústria Nacional S.A.',
+                    email: 'sem_email_placeholder@lead.com',
+                    phone: '21977770003',
+                    current_column_id: 'mock-col-3',
+                    assigned_sdr_id: 'mock-sdr',
+                    cadence_progress: 0,
+                    tags: ['Sem Contato'],
+                    metadata: {
+                        cnpj: '98.765.432/0001-11'
+                    },
+                    created_at: new Date().toISOString()
+                }
+            ];
+
             try {
                 setIsLoading(true);
                 const [colsRes, leadsRes] = await Promise.all([
@@ -93,13 +146,16 @@ export const KanbanBoard = ({
                     setColumns(MOCK_COLUMNS);
                 }
 
-                if (leadsRes && leadsRes.success) {
-                    setLeads(leadsRes.data || []);
+                if (leadsRes && leadsRes.success && leadsRes.data?.length > 0) {
+                    setLeads(leadsRes.data);
+                } else {
+                    // Use mock data when no real data available
+                    setLeads(MOCK_LEADS);
                 }
             } catch (err) {
                 console.error("Failed to fetch Kanban data:", err);
                 setColumns(MOCK_COLUMNS);
-                setLeads([]);
+                setLeads(MOCK_LEADS);
             } finally {
                 setIsLoading(false);
             }
@@ -162,6 +218,8 @@ export const KanbanBoard = ({
 
     const handleCallFeedback = async (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule', notes?: string) => {
         if (!voip.callRequiresFeedback) return;
+        const leadIdToUpdate = voip.callRequiresFeedback.leadId;
+        const targetLead = leads.find(l => l.id === leadIdToUpdate);
 
         try {
             // Registrar desfecho da ligação e anotações
@@ -170,11 +228,11 @@ export const KanbanBoard = ({
                 updates.metadata = { last_call_notes: notes };
             }
 
-            await leadsAPI.updateLead(voip.callRequiresFeedback.leadId, updates);
+            await leadsAPI.updateLead(leadIdToUpdate, updates);
 
             // Update local state so it shows up on the card immediately
             setLeads(prev => prev.map(l => {
-                if (l.id === voip.callRequiresFeedback?.leadId) {
+                if (l.id === leadIdToUpdate) {
                     return {
                         ...l,
                         last_call_outcome: result,
@@ -193,7 +251,6 @@ export const KanbanBoard = ({
             // Notificar UI externa (ex: dashboard updates)
             onActivity?.('call');
 
-
             const resultMsg = {
                 success: 'Sucesso',
                 busy: 'Ocupado',
@@ -203,6 +260,21 @@ export const KanbanBoard = ({
             }[result];
 
             addNotification(`Registro salvo: ${resultMsg}`, 'success');
+
+            // Auto-schedule logic for negative outcomes
+            if (['busy', 'voicemail', 'reschedule'].includes(result) && targetLead) {
+                // Update targetLead with the latest notes before passing to modal
+                const updatedTarget = {
+                    ...targetLead,
+                    last_call_outcome: result,
+                    metadata: {
+                        ...targetLead.metadata,
+                         ...(notes ? { last_call_notes: notes } : {})
+                    }
+                };
+                setCompletedLead(updatedTarget);
+                setIsScheduleModalOpen(true);
+            }
         } catch (err) {
             console.error('Failed to save call feedback:', err);
             addNotification('Erro ao salvar o registro da ligação.', 'error');
@@ -381,7 +453,7 @@ export const KanbanBoard = ({
                 columnColor={columns.find(c => c.id === selectedLead?.current_column_id)?.color}
             />
 
-            <CycleCompleteModal
+        <CycleCompleteModal
                 isOpen={isCycleCompleteOpen}
                 onClose={() => setIsCycleCompleteOpen(false)}
                 lead={completedLead}
@@ -401,6 +473,9 @@ export const KanbanBoard = ({
                                 opportunity_notes: opportunityNotes
                             }
                         });
+                        
+                        await statsAPI.updateActivity('cycle_complete');
+
                         setLeads(prev => prev.filter(l => l.id !== completedLead.id));
                         addNotification(`Lead ${completedLead.full_name} finalizado: ${result === 'opportunity' ? 'Oportunidade' : result}`, 'success');
                     } catch (err) {

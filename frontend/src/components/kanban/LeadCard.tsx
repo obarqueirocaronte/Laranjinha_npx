@@ -26,6 +26,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
     onReturn,
     onFinish,
     onSchedule,
+    accentColor,
 }) => {
     const isCadenceColumn = columnPosition === 5;
     const voip = useVoip();
@@ -37,9 +38,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
         disabled: isCadenceColumn,
     });
 
-    const style = transform ? {
-        transform: CSS.Translate.toString(transform),
-    } : undefined;
+
 
     const handlePointerDown = (e: React.PointerEvent) => {
         listeners?.onPointerDown?.(e);
@@ -54,14 +53,40 @@ export const LeadCard: React.FC<LeadCardProps> = ({
     const [isMapHovered, setIsMapHovered] = React.useState(false);
     const [isTagHovered, setIsTagHovered] = React.useState(false);
 
-    const hasTags = lead.tags && lead.tags.length > 0;
+    // ── Data flags ──────────────────────────────────────────────────────────
     const hasContactPhone = lead.phone && String(lead.phone).trim().length > 0;
     const hasContactEmail = lead.email && !String(lead.email).includes('sem_email_');
-    const hasLinkedin = lead.metadata?.linkedin_url || lead.metadata?.linkedin;
+    const hasLinkedin = !!(lead.metadata?.linkedin_url || lead.metadata?.linkedin);
+    const hasTags = lead.tags && lead.tags.length > 0;
+    const hasContactName = !!(lead.full_name && lead.full_name.trim().length > 0);
 
     const cadenceProgress = lead.cadence_progress || 0;
     const cnpj = lead.metadata?.cnpj;
-    const location = lead.metadata?.location;
+    const location = lead.metadata?.location || lead.metadata?.city;
+    const hasLocation = !!location;
+    const hasSchedule = !!lead.metadata?.next_contact_at;
+
+    // Smart tag visibility: if card has limited info, show 2 tags inline instead of 1
+    const hasRichInfo = !!(cnpj || lead.metadata?.job_title || hasContactEmail || hasLinkedin);
+    const visibleTagCount = (!hasRichInfo && hasTags && lead.tags!.length >= 2) ? 2 : 1;
+
+    // Apply dynamic glassmorphism based on accentColor
+    const dynamicStyle = React.useMemo(() => {
+        const baseStyle = transform ? { transform: CSS.Translate.toString(transform) } : {};
+        if (accentColor) {
+            // Add ~10% opacity (1A) for bg, and ~20% opacity (33) for border
+            return {
+                ...baseStyle,
+                backgroundColor: `${accentColor}15`,
+                borderColor: `${accentColor}30`,
+            };
+        }
+        return {
+            ...baseStyle,
+            backgroundColor: 'rgba(255, 255, 255, 0.65)',
+            borderColor: 'rgba(255, 255, 255, 0.8)',
+        };
+    }, [transform, accentColor]);
 
     return (
         <motion.div
@@ -69,185 +94,227 @@ export const LeadCard: React.FC<LeadCardProps> = ({
             {...attributes}
             onPointerDown={!isCadenceColumn ? handlePointerDown : undefined}
             onClick={handleClick}
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             className={clsx(
-                "relative flex flex-col p-[14px] gap-2.5 w-full bg-[#ECF9F4] shadow-sm rounded-[24px] border border-[#D1F0E4] transition-all duration-300 hover:shadow-lg",
+                "relative flex flex-col p-[14px] gap-2.5 w-full backdrop-blur-md shadow-sm rounded-[24px] border transition-all duration-300 hover:shadow-lg",
                 !isCadenceColumn ? "cursor-grab active:cursor-grabbing" : "cursor-default",
                 isDragging && "opacity-40 grayscale-[0.5] scale-95"
             )}
-            style={style}
+            style={dynamicStyle}
             {...(!isCadenceColumn ? listeners : {})}
         >
-            {/* ROW 1: Company & Top Actions */}
-            <div className="flex items-start justify-between w-full">
-                <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                    <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm border border-slate-50 mt-0.5">
-                        <Building2 size={20} className="text-[#10B981]" strokeWidth={2} />
+            {/* ── ROW 1: Company name + icons ── */}
+            <div className="flex items-center justify-between w-full gap-2">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    {/* Company icon */}
+                    <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm border border-slate-50">
+                        <Building2 size={19} className="text-[#10B981]" strokeWidth={2} />
                     </div>
-                    <div className="flex flex-col min-w-0 flex-1">
-                        <h4
-                            className="font-bold text-[#1E293B] text-[15px] leading-tight break-words"
-                            style={{ fontFamily: 'Comfortaa, cursive' }}
-                        >
-                            {lead.company_name}
-                        </h4>
-                    </div>
+                    {/* Company name — single line with ellipsis, full name on hover */}
+                    <h4
+                        className="font-bold text-[#1E293B] text-[14.5px] leading-tight truncate"
+                        style={{ fontFamily: 'Comfortaa, cursive' }}
+                        title={lead.company_name}
+                    >
+                        {lead.company_name}
+                    </h4>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0 ml-2" onPointerDown={e => e.stopPropagation()}>
-                    <motion.button 
-                        onHoverStart={() => setIsMapHovered(true)}
-                        onHoverEnd={() => setIsMapHovered(false)}
-                        className="h-8 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 text-[#3B82F6] hover:bg-white hover:border-[#3B82F6] hover:shadow-md transition-all active:scale-95 px-2"
-                    >
-                        <MapPin size={15} strokeWidth={2} />
-                        <AnimatePresence>
-                            {isMapHovered && location && (
-                                <motion.span
-                                    initial={{ width: 0, opacity: 0, marginLeft: 0 }}
-                                    animate={{ width: 'auto', opacity: 1, marginLeft: 6 }}
-                                    exit={{ width: 0, opacity: 0, marginLeft: 0 }}
-                                    className="text-[10px] font-bold whitespace-nowrap overflow-hidden"
-                                >
-                                    {location}
-                                </motion.span>
-                            )}
-                        </AnimatePresence>
-                    </motion.button>
-                    {hasContactPhone && (
-                         <button className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 text-[#10B981] hover:bg-white hover:border-[#10B981] hover:shadow-md transition-all active:scale-95" title="Cadastro possui Telefone">
-                            <Phone size={15} strokeWidth={2} />
-                        </button>
-                    )}
-                    {hasContactEmail && (
-                        <button className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 text-[#6366F1] hover:bg-white hover:border-[#6366F1] hover:shadow-md transition-all active:scale-95" title="Cadastro possui Email">
-                            <Mail size={15} strokeWidth={2} />
-                        </button>
-                    )}
-                </div>
+                {/* Header actions — only renders if there's location or schedule */}
+                {(hasLocation || hasSchedule) && (
+                    <div className="flex items-center gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
+                        {hasLocation && (
+                            <motion.button
+                                key="location"
+                                onHoverStart={() => setIsMapHovered(true)}
+                                onHoverEnd={() => setIsMapHovered(false)}
+                                className="h-8 min-w-[32px] rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 text-[#3B82F6] hover:border-[#3B82F6] hover:shadow-md transition-all active:scale-95 px-2 overflow-hidden"
+                                title={location!}
+                            >
+                                <MapPin size={15} strokeWidth={2} className="shrink-0" />
+                                <AnimatePresence>
+                                    {isMapHovered && (
+                                        <motion.span
+                                            initial={{ width: 0, opacity: 0, marginLeft: 0 }}
+                                            animate={{ width: 'auto', opacity: 1, marginLeft: 5 }}
+                                            exit={{ width: 0, opacity: 0, marginLeft: 0 }}
+                                            transition={{ duration: 0.18 }}
+                                            className="text-[11px] font-semibold whitespace-nowrap overflow-hidden"
+                                        >
+                                            {location}
+                                        </motion.span>
+                                    )}
+                                </AnimatePresence>
+                            </motion.button>
+                        )}
+                        {hasSchedule && (
+                            <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                className="w-8 h-8 rounded-full bg-[#FFF7ED] text-[#F97316] flex items-center justify-center cursor-pointer hover:bg-[#F97316] hover:text-white hover:shadow-md transition-all active:scale-90 border border-[#FED7AA]/60"
+                                title={`Agenda: ${new Date(lead.metadata!.next_contact_at!).toLocaleDateString()}`}
+                                onClick={(e) => { e.stopPropagation(); onSchedule?.(lead); }}
+                            >
+                                <CalendarClock size={15} strokeWidth={2} />
+                            </motion.button>
+                        )}
+                    </div>
+                )}
             </div>
 
-            {/* ROW 2: CNPJ & Extra Info */}
-            <div className="flex items-center justify-between -mt-1.5">
-                {cnpj && (
-                    <div className="px-2.5 py-0.5 rounded-lg bg-white border border-[#E2E8F0] text-[#94A3B8] text-[11px] font-medium shadow-sm transition-opacity hover:opacity-80 cursor-default" title="CNPJ da Empresa">
+            {/* ── ROW 2: CNPJ (conditional) ── */}
+            {cnpj && (
+                <div className="flex -mt-1">
+                    <div
+                        className="px-2.5 py-0.5 rounded-lg bg-white border border-[#E2E8F0] text-[#94A3B8] text-[11px] font-medium shadow-sm cursor-default select-all"
+                        title="CNPJ"
+                    >
                         {cnpj}
                     </div>
-                )}
-                
-                {lead.metadata?.next_contact_at && (
-                    <motion.span
-                        whileHover={{ scale: 1.1 }}
-                        className="w-7.5 h-7.5 rounded-full bg-[#FFF7ED] text-[#F97316] flex items-center justify-center cursor-pointer hover:bg-[#F97316] hover:text-white hover:shadow-md transition-all active:scale-90 border border-[#FED7AA]/50"
-                        title={`Agenda: ${new Date(lead.metadata.next_contact_at).toLocaleDateString()}`}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onSchedule?.(lead);
-                        }}
-                    >
-                        <CalendarClock size={14} strokeWidth={2} />
-                    </motion.span>
-                )}
-            </div>
-
-            {/* ROW 3: Inner Contact Card */}
-            <div className="bg-white rounded-[18px] p-2.5 shadow-sm border border-[#F1F5F9] flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
-                        <User size={16} className="text-slate-400" strokeWidth={1.5} />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                        <p
-                            className="font-bold text-[#334155] text-[14.2px] truncate leading-tight"
-                            style={{ fontFamily: 'Comfortaa, cursive' }}
-                            title={lead.full_name}
-                        >
-                            {lead.full_name}
-                        </p>
-                        <p className="text-[#94A3B8] text-[9px] font-bold uppercase tracking-wider truncate mt-0.5" title={lead.metadata?.job_title}>
-                            {lead.metadata?.job_title || 'CONTATO'}
-                        </p>
-                    </div>
                 </div>
+            )}
 
+            {/* ── ROW 3: Contact card (adaptive) ── */}
+            <div className="bg-white rounded-[18px] px-3 py-2.5 shadow-sm border border-[#F1F5F9] flex items-center justify-between gap-2">
+                {hasContactName ? (
+                    /* Named contact */
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
+                            <User size={16} className="text-slate-400" strokeWidth={1.5} />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <p
+                                className="font-bold text-[#334155] text-[14px] truncate leading-tight"
+                                style={{ fontFamily: 'Comfortaa, cursive' }}
+                                title={lead.full_name}
+                            >
+                                {lead.full_name}
+                            </p>
+                            {lead.metadata?.job_title && (
+                                <p className="text-[#94A3B8] text-[10px] font-bold uppercase tracking-wider truncate mt-0.5">
+                                    {lead.metadata.job_title}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    /* No named contact — show phone number */
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="w-8 h-8 rounded-full bg-[#EBFDF5] flex items-center justify-center shrink-0 border border-[#D1FAE5]">
+                            <Phone size={16} className="text-[#10B981]" strokeWidth={1.5} />
+                        </div>
+                        <p
+                            className="font-bold text-[#334155] text-[14px] truncate"
+                            title={String(lead.phone)}
+                        >
+                            {String(lead.phone || '')}
+                        </p>
+                    </div>
+                )}
+
+                {/* Contact action buttons */}
                 <div className="flex gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
                     {hasContactPhone && (
-                        <span
-                            className="w-7.5 h-7.5 rounded-full bg-[#EBFDF5] text-[#10B981] flex items-center justify-center cursor-pointer hover:bg-[#10B981] hover:text-white hover:shadow-md transition-all active:scale-90"
-                            title={`Ligar via WhatsApp para ${lead.full_name}`}
+                        <motion.span
+                            whileHover={{ scale: 1.12 }}
+                            className="w-8 h-8 rounded-full bg-[#EBFDF5] text-[#10B981] flex items-center justify-center cursor-pointer hover:bg-[#10B981] hover:text-white transition-all active:scale-90"
+                            title={`Ligar: ${lead.full_name || lead.phone}`}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (!voip.isCallActive && lead.phone) {
-                                    voip.initiateCall(lead.phone, lead.id, lead.full_name);
+                                    voip.initiateCall(String(lead.phone), lead.id, lead.full_name);
                                 }
                             }}
                         >
-                            <Phone size={14} strokeWidth={2} />
-                        </span>
+                            <Phone size={15} strokeWidth={2} />
+                        </motion.span>
                     )}
-                    {(hasLinkedin || true) && (
-                        <span className="w-7.5 h-7.5 rounded-full bg-[#EBF5FF] text-[#3B82F6] flex items-center justify-center hover:shadow-md transition-all cursor-pointer text-[11px] font-black" title="LinkedIn">
+                    {hasContactEmail && (
+                        <motion.span
+                            whileHover={{ scale: 1.12 }}
+                            className="w-8 h-8 rounded-full bg-[#EEF2FF] text-[#6366F1] flex items-center justify-center cursor-pointer hover:bg-[#6366F1] hover:text-white transition-all"
+                            title={lead.email}
+                        >
+                            <Mail size={15} strokeWidth={2} />
+                        </motion.span>
+                    )}
+                    {hasLinkedin && (
+                        <motion.span
+                            whileHover={{ scale: 1.12 }}
+                            className="w-8 h-8 rounded-full bg-[#EBF5FF] text-[#3B82F6] flex items-center justify-center cursor-pointer hover:bg-[#3B82F6] hover:text-white transition-all text-[11.5px] font-black"
+                            title="LinkedIn"
+                        >
                             in
-                        </span>
+                        </motion.span>
                     )}
                 </div>
             </div>
 
-            {/* ROW 4: Tags Area */}
-            <div className="flex items-center justify-between w-full mt-auto pt-1">
-                <div className="relative flex items-center gap-1.5 overflow-visible">
-                    {/* Tags List */}
+            {/* ── ROW 4: Tags + Progress ── */}
+            <div className="flex items-center justify-between w-full mt-auto">
+                {/* Tags — smart display */}
+                <div className="relative flex items-center gap-1.5 overflow-visible min-w-0 flex-1 mr-2">
                     {hasTags && (
-                        <div 
-                            className="relative"
+                        <div
+                            className="relative flex items-center gap-1.5 flex-wrap"
                             onMouseEnter={() => setIsTagHovered(true)}
                             onMouseLeave={() => setIsTagHovered(false)}
                         >
-                            <motion.span
-                                layout
-                                className="inline-flex items-center gap-1.5 text-[11.5px] font-bold px-3 py-1.5 rounded-xl bg-[#FFEDD5] border border-[#FED7AA] text-[#9A3412] cursor-help shadow-sm hover:brightness-95 transition-all"
-                                style={{ fontFamily: 'Comfortaa, cursive' }}
-                            >
-                                <Tag size={11} className="text-[#F97316]" {...ICON} />
-                                {lead.tags![0]}
-                            </motion.span>
-                            
+                            {lead.tags!.slice(0, visibleTagCount).map((tag, idx) => (
+                                <motion.span
+                                    key={idx}
+                                    layout
+                                    className="inline-flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-xl bg-[#FFEDD5] border border-[#FED7AA] text-[#9A3412] cursor-help shadow-sm hover:brightness-95 transition-all whitespace-nowrap"
+                                    style={{ fontFamily: 'Comfortaa, cursive' }}
+                                >
+                                    {idx === 0 && <Tag size={11} className="text-[#F97316]" {...ICON} />}
+                                    {tag}
+                                </motion.span>
+                            ))}
+
+                            {lead.tags!.length > visibleTagCount && !isTagHovered && (
+                                <span className="text-[#94A3B8] text-[12px] font-bold whitespace-nowrap">
+                                    +{lead.tags!.length - visibleTagCount}
+                                </span>
+                            )}
+
+                            {/* Hover popup with all tags */}
                             <AnimatePresence>
-                                {isTagHovered && lead.tags!.length > 1 && (
+                                {isTagHovered && lead.tags!.length > visibleTagCount && (
                                     <motion.div
-                                        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                        initial={{ opacity: 0, y: 8, scale: 0.92 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                                        className="absolute bottom-full left-0 mb-2 p-2 bg-white border border-[#FED7AA] rounded-xl shadow-xl flex flex-wrap gap-1 z-50 min-w-[120px]"
+                                        exit={{ opacity: 0, y: 8, scale: 0.92 }}
+                                        transition={{ duration: 0.15 }}
+                                        className="absolute bottom-full left-0 mb-2 p-2 bg-white border border-[#FED7AA] rounded-xl shadow-xl flex flex-wrap gap-1 z-50 min-w-[140px]"
                                     >
                                         {lead.tags?.map((tag, idx) => (
-                                            <span key={idx} className="px-2 py-0.5 bg-[#FFEDD5] text-[#9A3412] text-[9.5px] font-bold rounded-lg border border-[#FED7AA]/50 whitespace-nowrap">
+                                            <span
+                                                key={idx}
+                                                className="px-2 py-0.5 bg-[#FFEDD5] text-[#9A3412] text-[10px] font-bold rounded-lg border border-[#FED7AA]/50 whitespace-nowrap"
+                                            >
                                                 {tag}
                                             </span>
                                         ))}
                                     </motion.div>
                                 )}
                             </AnimatePresence>
-                            
-                            {!isTagHovered && lead.tags!.length > 1 && (
-                                <span className="text-[#94A3B8] text-[11.5px] font-bold ml-1.5">+{lead.tags!.length - 1}</span>
-                            )}
                         </div>
                     )}
                 </div>
 
-                {/* Cadence Progress Badge */}
-                <div
-                    className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-[#FFEDD5] border border-[#FED7AA] text-[#9A3412] text-[11px] font-bold shadow-sm hover:scale-110 transition-transform cursor-default"
+                {/* Progress badge */}
+                <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-[#FFEDD5] border border-[#FED7AA] text-[#9A3412] text-[11.5px] font-bold shadow-sm cursor-default"
                     style={{ fontFamily: 'Comfortaa, cursive' }}
-                    title={`Progresso da Cadência: ${cadenceProgress}%`}
+                    title={`Cadência: ${cadenceProgress}%`}
                 >
                     {cadenceProgress}%
-                </div>
+                </motion.div>
             </div>
 
-            {/* Floating Cadence Controls */}
+            {/* ── Cadence column controls ── */}
             <AnimatePresence>
                 {isCadenceColumn && (
                     <motion.div
