@@ -11,18 +11,72 @@ interface ProfileZoneProps {
 export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
     const { user } = useAuth();
     const [name, setName] = useState(user?.email?.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'Usuário');
-    const [password, setPassword] = useState('');
-    const [showSuccess, setShowSuccess] = useState(false);
+    const [profilePictureUrl, setProfilePictureUrl] = useState(user?.profile_picture_url || '');
+    const [isSaving, setIsSaving] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const isManager = user?.role === 'manager';
     const accentColor = isManager ? '#FF8C00' : '#10B981';
     const gradient = isManager ? 'linear-gradient(135deg, #FF8C00, #FF6347)' : 'linear-gradient(135deg, #10B981, #059669)';
 
-    const handleSave = (e: React.FormEvent) => {
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Check file size (limit to 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                alert('A imagem deve ter no máximo 2MB.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfilePictureUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Here you would normally update the backend.
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
+        if (!user?.id) return;
+
+        setIsSaving(true);
+        try {
+            import('../../lib/api').then(async ({ usersAPI }) => {
+                const data: any = {};
+                if (name !== user.name && name !== user.email?.split('@')[0]) data.name = name;
+                if (profilePictureUrl !== user.profile_picture_url) data.profile_picture_url = profilePictureUrl;
+                if (password) data.password = password;
+
+                if (Object.keys(data).length > 0) {
+                    const response = await usersAPI.updateProfile(user.id, data);
+                    if (response.success) {
+                        // Update local storage user object if needed
+                        const storedUser = localStorage.getItem('user');
+                        if (storedUser) {
+                            const parsedUser = JSON.parse(storedUser);
+                            const updatedUser = { ...parsedUser, ...response.data };
+                            localStorage.setItem('user', JSON.stringify(updatedUser));
+                            // Force page reload to update AuthContext immediately (quick fix)
+                            window.location.reload(); 
+                        } else {
+                            setShowSuccess(true);
+                            setTimeout(() => setShowSuccess(false), 3000);
+                            setPassword('');
+                        }
+                    }
+                } else {
+                     setShowSuccess(true);
+                     setTimeout(() => setShowSuccess(false), 3000);
+                }
+            }).finally(() => {
+                setIsSaving(false);
+            });
+        } catch (error) {
+            console.error('Failed to update profile:', error);
+            alert('Erro ao atualizar perfil.');
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -34,7 +88,7 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
                         <ArrowLeft className="transition-transform group-hover:-translate-x-1" size={24} strokeWidth={2.5} />
                     </button>
                     <UserAvatar 
-                        src={user?.profile_picture_url} 
+                        src={profilePictureUrl || user?.profile_picture_url} 
                         name={name} 
                         size="lg" 
                         border={false}
@@ -60,17 +114,24 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
                             <div className="absolute inset-[-4px] bg-gradient-to-br from-orange-400 to-rose-400 rounded-full blur-md opacity-30 group-hover:opacity-60 transition-opacity" />
                             <div className="relative w-40 h-40 rounded-full overflow-hidden border-4 border-white shadow-2xl bg-gradient-to-br from-orange-100 to-rose-50 flex items-center justify-center">
                                 <UserAvatar 
-                                    src={user?.profile_picture_url} 
+                                    src={profilePictureUrl || user?.profile_picture_url} 
                                     name={name} 
                                     size="xl" 
                                     border={false}
                                     className="w-full h-full !rounded-none" 
                                 />
                                 {/* Overlay to change picture */}
-                                <button className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[2px]">
+                                <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[2px]">
                                     <Camera size={32} className="mb-2" />
                                     <span className="text-xs font-bold tracking-widest uppercase">Alterar Foto</span>
                                 </button>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleImageChange}
+                                    accept="image/jpeg,image/png,image/webp"
+                                    className="hidden"
+                                />
                             </div>
                         </div>
 
@@ -167,10 +228,11 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
                                 <div className="pt-6">
                                     <button
                                         type="submit"
-                                        className="w-full text-white rounded-2xl px-6 py-4 font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-orange-500/20"
+                                        disabled={isSaving}
+                                        className="w-full text-white rounded-2xl px-6 py-4 font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-orange-500/20 disabled:opacity-70 disabled:hover:scale-100"
                                         style={{ background: gradient }}
                                     >
-                                        <Save size={18} /> Salvar Alterações
+                                        <Save size={18} /> {isSaving ? 'Salvando...' : 'Salvar Alterações'}
                                     </button>
                                 </div>
                             </form>

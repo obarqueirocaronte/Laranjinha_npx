@@ -5,7 +5,7 @@ const inviteService = require('../services/invite.service');
 exports.getUsers = async (req, res) => {
     try {
         const usersResult = await db.query(`
-            SELECT id, email, name, role, status, NULL as profile_picture_url 
+            SELECT id, email, name, role, status, profile_picture_url 
             FROM users 
             ORDER BY name ASC
         `);
@@ -43,7 +43,6 @@ exports.getUsers = async (req, res) => {
             return acc;
         }, {});
 
-        // Combine user/invites and integration
         const activeUsersPayload = users.map(u => ({
             id: u.id,
             name: u.name || 'Sem Nome',
@@ -126,6 +125,76 @@ exports.getUserVoiceConfig = async (req, res) => {
     } catch (error) {
         console.error('Error fetching voice config:', error);
         res.status(500).json({ error: 'Erro ao buscar configuração de voz.' });
+    }
+};
+
+// ==========================================
+// PROFILE MANAGEMENT
+// ==========================================
+
+exports.updateUserProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, profile_picture_url, password } = req.body;
+
+        // Ensure user can only update their own profile unless admin
+        if (req.user.id !== id && !req.user.isAdmin) {
+             return res.status(403).json({ error: 'Você não tem permissão para editar este perfil.' });
+        }
+
+        const updates = [];
+        const values = [];
+        let paramCount = 1;
+
+        if (name !== undefined) {
+             updates.push(`name = $${paramCount}`);
+             values.push(name);
+             paramCount++;
+        }
+
+        if (profile_picture_url !== undefined) {
+             updates.push(`profile_picture_url = $${paramCount}`);
+             values.push(profile_picture_url);
+             paramCount++;
+        }
+
+        if (password && password.trim() !== '') {
+            const bcrypt = require('bcryptjs');
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+            updates.push(`password = $${paramCount}`);
+            values.push(hashedPassword);
+            paramCount++;
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ error: 'Nenhum dado fornecido para atualização.' });
+        }
+
+        values.push(id);
+        const query = `
+            UPDATE users 
+            SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $${paramCount}
+            RETURNING id, name, email, role, profile_picture_url
+        `;
+
+        const result = await db.query(query, values);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado.' });
+        }
+
+        // Also update the SDR table name if the role is SDR and name changed
+        if (name !== undefined) {
+            await db.query(`UPDATE sdrs SET full_name = $1 WHERE user_id = $2`, [name, id]);
+        }
+
+        res.json({ success: true, data: result.rows[0] });
+
+    } catch (error) {
+        console.error('Error updating user profile:', error);
+        res.status(500).json({ error: 'Erro ao atualizar perfil do usuário.' });
     }
 };
 

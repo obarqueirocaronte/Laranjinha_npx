@@ -253,6 +253,7 @@ export const usersAPI = {
     cleanAllInvites: () => api.delete('/users/invites/clean').then(res => res.data),
     deleteUser: (id: string) => api.delete(`/users/${id}`).then(res => res.data),
     updateUserRole: (id: string, role: string) => api.put(`/users/${id}/role`, { role }).then(res => res.data),
+    updateProfile: (id: string, data: { name?: string; profile_picture_url?: string; password?: string }) => api.put(`/users/${id}/profile`, data).then(res => res.data),
     saveIntegrations: (id: string, integrations: any) => api.post(`/users/${id}/integrations`, integrations).then(res => res.data),
 };
 

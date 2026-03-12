@@ -14,6 +14,10 @@ router.post('/:id/integrations', usersController.saveUserIntegration);
 // Update user role
 router.put('/:id/role', usersController.updateUserRole);
 
+// Update user profile
+const { authenticate } = require('../middleware/auth.middleware');
+router.put('/:id/profile', authenticate, usersController.updateUserProfile);
+
 // Delete user
 router.delete('/:id', usersController.deleteUser);
 

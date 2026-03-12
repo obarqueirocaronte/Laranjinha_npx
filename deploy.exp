@@ -24,8 +24,10 @@ expect "$ "
 send "npm install\r"
 expect "$ "
 
-# Migração: settings column
-send "sudo -u postgres psql -d inside_sales_pipeline -c \"ALTER TABLE teams ADD COLUMN IF NOT EXISTS settings JSONB DEFAULT '{\\\"allow_return_to_queue\\\": true}';\" && echo MIGRATION_OK\r"
+# Migração: settings column & profile_picture_url
+send "sudo -u postgres psql -d inside_sales_pipeline -c \"ALTER TABLE teams ADD COLUMN IF NOT EXISTS settings JSONB DEFAULT '{\\\"allow_return_to_queue\\\": true}';\" && echo MIGRATION_1_OK\r"
+expect "$ "
+send "sudo -u postgres psql -d inside_sales_pipeline -c \"ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url TEXT;\" && echo MIGRATION_2_OK\r"
 expect "$ "
 
 # Build frontend
