@@ -1,0 +1,13 @@
+#!/usr/bin/expect -f
+set timeout 30
+
+spawn ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no -o PreferredAuthentications=password -p 55535 rodrigo@178.156.234.198
+expect "password:" { send "Esseanoemeu@2026\r" }
+expect "$ "
+
+send "sudo -u postgres psql -d inside_sales_pipeline -c \"\\dt\" | grep -E 'call_logs|schedules|cadence_completions'\r"
+expect "$ "
+send_user "\nTABLE CHECK FINISHED\n"
+
+send "exit\r"
+expect eof

@@ -12,6 +12,7 @@ const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
 const passport = require('passport');
+const path = require('path');
 require('dotenv').config();
 
 const { configureGoogleStrategy } = require('./services/google_auth.service');
@@ -63,28 +64,25 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ==========================================
-// REGISTRO DE ROTAS
-// ==========================================
-// Todas as requisições que chegam com '/api/v1' são enviadas para o arquivo './routes/index.js'
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+// API Routes
 app.use('/api/v1', require('./routes'));
 
-// Welcome route for port 3001
-app.get('/', (req, res) => {
-    res.json({
-        message: 'Inside Sales Pipeline API is running',
-        version: 'v1',
-        endpoints: {
-            health: '/health',
-            api: '/api/v1'
-        }
-    });
-});
-
-// Rota de Health Check (Verificação de Saúde)
-// Útil na AWS ou Docker para checar se o servidor está rodando sem problemas.
+// Health Check
 app.get('/api/v1/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('*', (req, res) => {
+    // If it's an API route that didn't match, don't serve HTML
+    if (req.path.startsWith('/api')) {
+        return res.status(404).json({ error: 'Endpoint não encontrado' });
+    }
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
 // Error handling

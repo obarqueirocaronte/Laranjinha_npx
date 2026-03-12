@@ -1,0 +1,16 @@
+#!/usr/bin/expect -f
+set timeout 30
+
+spawn ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no -o PreferredAuthentications=password -p 55535 rodrigo@178.156.234.198
+expect "password:" { send "Esseanoemeu@2026\r" }
+expect "$ "
+
+send "cat /opt/laranjinha/frontend/dist/index.html\r"
+expect "$ "
+send "ls -R /opt/laranjinha/frontend/dist/assets\r"
+expect "$ "
+send "grep -r \"express.static\" /opt/laranjinha/src/app.js\r"
+expect "$ "
+
+send "exit\r"
+expect eof
