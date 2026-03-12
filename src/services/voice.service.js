@@ -13,9 +13,9 @@ require('dotenv').config();
  */
 class VoiceService {
     constructor() {
-        this.dialerToken = process.env.DIALER_TOKEN || 'gI9KhObfCsAGBrHHrVsrIwtt';
-        this.dialerBaseUrl = process.env.DIALER_BASE_URL || 'https://app.npxtech.com.br/api/dialer/start_call';
-        this.defaultExtension = process.env.VISITOR_EXTENSION || '11012';
+        this.dialerToken = (process.env.DIALER_TOKEN || 'gI9KhObfCsAGBrHHrVsrIwtt').trim();
+        this.dialerBaseUrl = (process.env.DIALER_BASE_URL || 'https://app.npxtech.com.br/api/dialer/start_call').trim();
+        this.defaultExtension = (process.env.VISITOR_EXTENSION || '11012').trim();
     }
 
     /**
@@ -36,13 +36,15 @@ class VoiceService {
      */
     async initiateCall(sdrExtension, leadPhone) {
         try {
-            const cleanPhone = leadPhone.replace(/\D/g, "");
-            const ramal = sdrExtension || this.defaultExtension;
+            const cleanPhone = String(leadPhone).replace(/\D/g, "").trim();
+            const ramal = String(sdrExtension || this.defaultExtension).replace(/\D/g, "").trim();
+            const token = this.dialerToken.trim();
+            const baseUrl = this.dialerBaseUrl.trim();
             
             // Construção da URL conforme solicitado pelo usuário
-            const url = `${this.dialerBaseUrl}?key=${this.dialerToken}&extension=${ramal}&number=${cleanPhone}`;
+            const url = `${baseUrl}?key=${token}&extension=${ramal}&number=${cleanPhone}`;
 
-            console.log(`[VoiceService] 📞 Retornando URL para chamada: ${url}`);
+            console.log(`[VoiceService] 📞 URL gerada: ${url}`);
             
             return { 
                 success: true, 
