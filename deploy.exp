@@ -1,29 +1,55 @@
 #!/usr/bin/expect -f
-set timeout -1
+set timeout 300
 
-spawn ssh -o StrictHostKeyChecking=no -p 55535 rodrigo@178.156.234.198
+spawn ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no -o PreferredAuthentications=password -p 55535 rodrigo@178.156.234.198
 expect {
     "password:" { send "Esseanoemeu@2026\r" }
+    "Permission denied" { exit 1 }
 }
 expect "$ "
 
+# Backup do banco
+send "sudo -u postgres pg_dump inside_sales_pipeline > /tmp/backup_deploy.sql 2>&1 && echo BACKUP_OK\r"
+expect "$ "
+
+# Ir para o projeto
 send "cd /opt/laranjinha\r"
 expect "$ "
 
-send "git checkout .\r"
-expect "$ "
-
+# Git pull
 send "git pull origin main\r"
 expect "$ "
 
-send "cd frontend && npm install && npm run build\r"
+# npm install backend
+send "npm install\r"
 expect "$ "
 
-send "cd /opt/laranjinha && pkill -f \"node src/server.js\" || true\r"
+# Migração: settings column
+send "sudo -u postgres psql -d inside_sales_pipeline -c \"ALTER TABLE teams ADD COLUMN IF NOT EXISTS settings JSONB DEFAULT '{\\\"allow_return_to_queue\\\": true}';\" && echo MIGRATION_OK\r"
 expect "$ "
 
-send "nohup npm start > app.log 2>&1 &\r"
+# Build frontend
+send "cd /opt/laranjinha/frontend && npm install && npm run build && echo BUILD_OK\r"
+expect -timeout 240 "$ "
+
+# Reiniciar servidor
+send "cd /opt/laranjinha\r"
 expect "$ "
+
+# Tenta pm2 primeiro, se não existir usa nohup
+send "pm2 restart laranjinha 2>/dev/null || (pkill -f 'node src/app.js' 2>/dev/null; sleep 1; nohup node src/app.js > app.log 2>&1 & echo RESTARTED_NOHUP)\r"
+expect "$ "
+
+# Aguarda inicialização
+send "sleep 4 && curl -s http://localhost:3001/api/v1/health | head -c 300; echo\r"
+expect "$ "
+
+# Status final
+send "pm2 list 2>/dev/null || ps aux | grep 'node src/app.js' | grep -v grep\r"
+expect "$ "
+
+send "echo DEPLOY_COMPLETO_OK\r"
+expect "DEPLOY_COMPLETO_OK"
 
 send "exit\r"
 expect eof

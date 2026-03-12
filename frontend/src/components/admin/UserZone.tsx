@@ -153,7 +153,7 @@ const InviteView = ({ newItem, setNewItem, handleInvite, inviteLoading, inviteEr
     </div>
 );
 
-const ListView = ({ users, isLoading, setView, setSelectedUser, handleCleanInvites }: any) => (
+const ListView = ({ users, isLoading, setView, setSelectedUser, handleCleanInvites, handleDeleteUser }: any) => (
     <div className="flex flex-col h-full">
         <div className="flex-1 bg-white border border-orange-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden flex flex-col">
             <div className="p-6 border-b border-orange-100/60 flex items-center justify-between bg-gradient-to-b from-orange-50/60 to-transparent">
@@ -218,9 +218,17 @@ const ListView = ({ users, isLoading, setView, setSelectedUser, handleCleanInvit
                                         <div className="flex items-center justify-end gap-3">
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); setSelectedUser(user); setView('profile'); }}
-                                                className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all lg:opacity-0 lg:group-hover:opacity-100 border border-transparent group-hover:border-orange-200"
+                                                className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all border border-transparent hover:border-orange-200"
+                                                title="Configurações do Usuário"
                                             >
                                                 <Settings size={16} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteUser(user); }}
+                                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all border border-transparent hover:border-red-200"
+                                                title="Excluir Usuário ou Convite"
+                                            >
+                                                <Trash2 size={16} />
                                             </button>
                                         </div>
                                     </td>
@@ -481,6 +489,22 @@ export const UserZone: React.FC<UserZoneProps> = ({ onClose }) => {
         }
     };
 
+    const handleDeleteUser = async (user: User) => {
+        if (!confirm(`Tem certeza absoluta que deseja excluir ${user.name || user.email}?`)) return;
+        try {
+            if (user.status === 'invited' || user.status === 'pending') {
+                const res = await usersAPI.revokeInvite(user.id);
+                if (res.success) setUsers(prev => prev.filter(u => u.id !== user.id));
+            } else {
+                const res = await usersAPI.deleteUser(user.id);
+                if (res.success) setUsers(prev => prev.filter(u => u.id !== user.id));
+            }
+        } catch (err: any) {
+            console.error('Erro ao excluir usuário/convite:', err);
+            alert(err?.response?.data?.error || 'Erro ao excluir.');
+        }
+    };
+
     return (
         <div className="h-full flex flex-col overflow-hidden text-slate-900 font-sans items-center">
             <div className="w-full max-w-7xl h-full flex flex-col p-6">
@@ -515,7 +539,7 @@ export const UserZone: React.FC<UserZoneProps> = ({ onClose }) => {
                     <AnimatePresence mode="wait">
                         {view === 'list' && (
                             <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                                <ListView users={users} isLoading={isLoading} setView={setView} setSelectedUser={setSelectedUser} handleCleanInvites={handleCleanInvites} />
+                                <ListView users={users} isLoading={isLoading} setView={setView} setSelectedUser={setSelectedUser} handleCleanInvites={handleCleanInvites} handleDeleteUser={handleDeleteUser} />
                             </motion.div>
                         )}
                         {view === 'invite' && (
