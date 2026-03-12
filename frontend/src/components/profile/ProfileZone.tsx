@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { User as UserIcon, Mail, Shield, Camera, Lock, ArrowLeft, Save, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,6 +12,8 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
     const { user } = useAuth();
     const [name, setName] = useState(user?.email?.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'Usuário');
     const [profilePictureUrl, setProfilePictureUrl] = useState(user?.profile_picture_url || '');
+    const [password, setPassword] = useState('');
+    const [showSuccess, setShowSuccess] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -44,7 +46,7 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
         try {
             import('../../lib/api').then(async ({ usersAPI }) => {
                 const data: any = {};
-                if (name !== user.name && name !== user.email?.split('@')[0]) data.name = name;
+                if (name !== (user as any).name && name !== user.email?.split('@')[0]) data.name = name;
                 if (profilePictureUrl !== user.profile_picture_url) data.profile_picture_url = profilePictureUrl;
                 if (password) data.password = password;
 

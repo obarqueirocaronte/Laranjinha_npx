@@ -97,22 +97,34 @@ export function VoipProvider({ children }: { children: ReactNode }) {
         console.log(`[VoIP] 📞 Iniciando chamada via Backend para Lead: ${leadId} (${cleanNumber})`);
 
         // Dispara a chamada via nosso Backend (que por sua vez chama a API do Discador da NPX)
-        api.post(`/leads/${leadId}/call`).catch(err => {
-            console.error('[VoIP] Erro ao iniciar chamada via API:', err);
-        });
+        api.post(`/leads/${leadId}/call`)
+            .then(res => {
+                if (res.data?.success && res.data?.url) {
+                    console.log('[VoIP] 📞 Abrindo URL do discador:', res.data.url);
+                    window.open(res.data.url, '_blank');
+                    
+                    setActiveCall({
+                        leadId,
+                        leadName,
+                        phoneNumber,
+                        startedAt: new Date(),
+                    });
 
-        setActiveCall({
-            leadId,
-            leadName,
-            phoneNumber,
-            startedAt: new Date(),
-        });
-
-        // Só executa o callback de sucesso se chegamos aqui (chamada disparada)
-        if (onCallSuccess) {
-            onCallSuccess();
-        }
+                    // Só executa o callback de sucesso se chegamos aqui (chamada disparada)
+                    if (onCallSuccess) {
+                        onCallSuccess();
+                    }
+                } else {
+                    console.error('[VoIP] Erro na resposta da API:', res.data);
+                    alert('Erro ao iniciar chamada. O backend não retornou a URL do discador.');
+                }
+            })
+            .catch(err => {
+                console.error('[VoIP] Erro ao iniciar chamada via API:', err);
+                alert('Erro ao iniciar chamada: ' + (err.response?.data?.error?.message || err.message));
+            });
     }, [activeCall, sipConfig]);
+
 
     const endCall = useCallback(() => {
         console.log('[VoIP] ☎️ Chamada encerrada. Aguardando feedback da ligação.');

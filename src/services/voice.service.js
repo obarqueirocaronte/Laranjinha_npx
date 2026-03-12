@@ -40,16 +40,13 @@ class VoiceService {
             const ramal = sdrExtension || this.defaultExtension;
             
             // Construção da URL conforme solicitado pelo usuário
-            const url = `${this.dialerBaseUrl}?token=${this.dialerToken}&extension=${ramal}&number=${cleanPhone}`;
+            const url = `${this.dialerBaseUrl}?key=${this.dialerToken}&extension=${ramal}&number=${cleanPhone}`;
 
-            console.log(`[VoiceService] 📞 Iniciando chamada via API: ${url}`);
+            console.log(`[VoiceService] 📞 Retornando URL para chamada: ${url}`);
             
-            const response = await axios.get(url);
-
             return { 
                 success: true, 
-                data: response.data,
-                url: url // para debug se necessário
+                url: url 
             };
         } catch (error) {
             console.error('❌ Dialer API Error:', error.message);

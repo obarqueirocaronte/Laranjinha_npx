@@ -8,6 +8,7 @@
  */
 const leadsService = require('../services/leads.service');
 const notificationsService = require('../services/notifications.service');
+const db = require('../config/db');
 
 /**
  * Retorna as colunas do funil de vendas (pipeline).
@@ -358,7 +359,7 @@ exports.getPipelineConfig = async (req, res, next) => {
 exports.initiateLeadCall = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const userId = req.userId; // Definido pelo auth middleware
+        const userId = req.user?.id; // Definido pelo auth middleware
 
         if (!userId) {
             return res.status(401).json({ success: false, error: 'Usuário não autenticado' });
@@ -383,7 +384,7 @@ exports.initiateLeadCall = async (req, res, next) => {
         const result = await voiceService.initiateCall(extension, lead.phone);
 
         if (result.success) {
-            res.json({ success: true, message: 'Chamada solicitada ao discador', data: result.data });
+            res.json({ success: true, message: 'URL de chamada gerada', url: result.url });
         } else {
             res.status(500).json({ success: false, error: result.error });
         }
