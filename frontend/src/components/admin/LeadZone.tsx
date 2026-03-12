@@ -34,6 +34,7 @@ const SYSTEM_FIELDS = [
   { id: "job_title", label: "Cargo" },
   { id: "employee_count", label: "Número de Funcionários" },
   { id: "linkedin_url", label: "LinkedIn URL" },
+  { id: "tag_value", label: "🏷️ Tag (Valor vira Tag no Card Kanban)" },
   { id: "custom_field", label: "+ Criar Campo Customizado (Salva no Lead)" },
   { id: "ignore", label: "Ignorar Coluna" },
 ];
@@ -162,6 +163,21 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
           lower === "employees"
         )
           mapping[h] = "employee_count";
+        // Estado e Cidade viram tags automaticamente
+        else if (
+          lower === "estado" ||
+          lower === "uf" ||
+          lower === "state" ||
+          lower === "cidade" ||
+          lower === "city" ||
+          lower === "municipio" ||
+          lower === "municipio" ||
+          lower === "regiao" ||
+          lower === "region" ||
+          lower.startsWith("cidade_") ||
+          lower.startsWith("estado_")
+        )
+          mapping[h] = "tag_value";
         // Anything unrecognized becomes a custom field (saves as metadata key = column name)
         else mapping[h] = "custom_field";
       });
@@ -302,7 +318,14 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
             const mappedField = fieldMapping[header];
             if (!mappedField || mappedField === "ignore") return;
 
-            if (mappedField === "metadata" || mappedField === "custom_field") {
+            if (mappedField === "tag_value") {
+              // Estado, Cidade, UF, etc. → push value as a tag
+              const tagVal = String(row[header] || "").trim();
+              if (tagVal) {
+                lead._tagValues = lead._tagValues || [];
+                lead._tagValues.push(tagVal);
+              }
+            } else if (mappedField === "metadata" || mappedField === "custom_field") {
               // Clean header name for metadata key (e.g., "Cidade Origem" -> "cidade_origem")
               const cleanKey = header
                 .toLowerCase()
@@ -327,8 +350,11 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
           if (!lead.email)
             lead.email = `sem_email_${Math.random().toString(36).substr(2, 5)}@import.csv`;
 
-          lead.tags = [...globalTags];
-          lead.metadata.tags = [...globalTags];
+          // Merge global tags + estado/cidade tag values
+          const extraTags: string[] = lead._tagValues || [];
+          delete lead._tagValues;
+          lead.tags = [...globalTags, ...extraTags];
+          lead.metadata.tags = [...globalTags, ...extraTags];
           lead.qualification_status = "pending";
           if (selectedCadence !== "Sem Cadência") {
             lead.cadence_name = selectedCadence;

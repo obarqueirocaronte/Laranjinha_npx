@@ -1,0 +1,18 @@
+#!/usr/bin/expect -f
+set timeout 60
+
+spawn ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no -o PreferredAuthentications=password -p 55535 rodrigo@178.156.234.198
+expect {
+    "password:" { send "Esseanoemeu@2026\r" }
+    "Permission denied" { exit 1 }
+}
+expect "$ "
+
+send "sudo -u postgres psql -d inside_sales_pipeline -c \"TRUNCATE TABLE interactions_log, lead_pipeline_history, leads CASCADE; DELETE FROM sdrs WHERE email LIKE '%@npx.com.br' AND email LIKE 'sdr_simulado%'; DELETE FROM users WHERE email LIKE '%@npx.com.br' AND email LIKE 'sdr_simulado%';\"\r"
+
+expect "$ "
+send "echo CLEANUP_OK\r"
+expect "CLEANUP_OK"
+
+send "exit\r"
+expect eof

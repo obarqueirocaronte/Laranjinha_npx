@@ -26,7 +26,7 @@ interface CadenceConfig {
 interface ActiveFilter { type: 'tag' | 'lead' | 'all_pending'; label: string; count?: number; }
 interface LeadPreview { id: string; full_name: string; company_name: string; email: string; job_title: string; qualification_status: string; }
 interface SDR { id: string; full_name: string; email: string; total_leads: number; }
-interface SDRAssignment { sdr_id: string; sdr_name: string; percentage: number; }
+interface SDRAssignment { sdr_id: string; sdr_name: string; percentage: number; quantity: number; }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const PRESETS = [
@@ -181,11 +181,13 @@ export const CadenceZone: React.FC<CadenceZoneProps> = ({ onClose }) => {
                 setSDRs(r.data);
                 // Init equal distribution
                 if (r.data.length > 0 && assignments.length === 0) {
-                    const pct = Math.floor(100 / r.data.length);
-                    setAssignments(r.data.map((s: SDR, i: number) => ({
+                    // Equal quantity distribution
+                    const baseQty = Math.floor(0 / r.data.length); // start at 0, user fills in
+                    setAssignments(r.data.map((s: SDR) => ({
                         sdr_id: s.id,
                         sdr_name: s.full_name,
-                        percentage: i === r.data.length - 1 ? 100 - pct * (r.data.length - 1) : pct,
+                        quantity: baseQty,
+                        percentage: 0,
                     })));
                 }
             }
@@ -218,19 +220,40 @@ export const CadenceZone: React.FC<CadenceZoneProps> = ({ onClose }) => {
         if (existing) {
             setAssignments(prev => prev.filter(a => a.sdr_id !== sdr.id));
         } else {
-            const newAssignments = [...assignments, { sdr_id: sdr.id, sdr_name: sdr.full_name, percentage: 0 }];
-            const equal = Math.floor(100 / newAssignments.length);
-            setAssignments(newAssignments.map((a, i) => ({
-                ...a, percentage: i === newAssignments.length - 1 ? 100 - equal * (newAssignments.length - 1) : equal
-            })));
+            setAssignments(prev => [...prev, { sdr_id: sdr.id, sdr_name: sdr.full_name, quantity: 0, percentage: 0 }]);
         }
     };
 
-    const updatePercentage = (sdr_id: string, val: number) => {
-        setAssignments(prev => prev.map(a => a.sdr_id === sdr_id ? { ...a, percentage: val } : a));
+    const updateQuantity = (sdr_id: string, val: number) => {
+        setAssignments(prev => {
+            const updated = prev.map(a => a.sdr_id === sdr_id ? { ...a, quantity: Math.max(0, val) } : a);
+            // Recalculate percentages from quantities so the backend still receives %
+            const total = updated.reduce((s, a) => s + a.quantity, 0);
+            return updated.map(a => ({
+                ...a,
+                percentage: total > 0 ? Math.round((a.quantity / total) * 100) : 0,
+            }));
+        });
     };
 
-    const totalPct = assignments.reduce((s, a) => s + a.percentage, 0);
+    // Equalize all quantities across selected SDRs
+    const equalizeQuantities = () => {
+        if (assignments.length === 0 || totalLeads === 0) return;
+        const baseQty = Math.floor(totalLeads / assignments.length);
+        setAssignments(prev => {
+            const updated = prev.map((a, i) => ({
+                ...a,
+                quantity: i === prev.length - 1 ? totalLeads - baseQty * (prev.length - 1) : baseQty,
+            }));
+            const total = updated.reduce((s, a) => s + a.quantity, 0);
+            return updated.map(a => ({
+                ...a,
+                percentage: total > 0 ? Math.round((a.quantity / total) * 100) : 0,
+            }));
+        });
+    };
+
+    const totalQty = assignments.reduce((s, a) => s + (a.quantity || 0), 0);
 
     // ── Apply ──────────────────────────────────────────────────────────────
     const handleApply = async () => {
@@ -261,7 +284,7 @@ export const CadenceZone: React.FC<CadenceZoneProps> = ({ onClose }) => {
     const totalLeads = activeFilter?.count ?? 0;
     const canAdvanceStep0 = !!activeFilter;
     const canAdvanceStep1 = config.phone.active || config.whatsapp.active || config.email.active;
-    const canAdvanceStep2 = assignments.length > 0 && totalPct === 100;
+    const canAdvanceStep2 = assignments.length > 0 && totalQty > 0 && totalQty <= totalLeads;
 
     // ─── Render ────────────────────────────────────────────────────────────
     return (
@@ -661,10 +684,17 @@ export const CadenceZone: React.FC<CadenceZoneProps> = ({ onClose }) => {
                     {step === 2 && (
                         <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
                             <div className="bg-gradient-soft border border-orange-100 shadow-glass border border-slate-200 rounded-2xl p-6 shadow-sm">
-                                <h3 className="text-base font-black text-slate-900 flex items-center gap-2 mb-1">
-                                    <Users size={18} className="text-slate-600" /> Atribuição de SDRs
-                                </h3>
-                                <p className="text-xs text-slate-600 mb-5">Selecione os SDRs e distribua a porcentagem dos <strong>{totalLeads} leads</strong>.</p>
+                                <div className="flex items-center justify-between mb-1">
+                                    <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                                        <Users size={18} className="text-slate-600" /> Atribuição de SDRs
+                                    </h3>
+                                    {assignments.length > 0 && totalLeads > 0 && (
+                                        <button onClick={equalizeQuantities} className="text-[10px] font-black text-orange-600 uppercase tracking-wider hover:text-orange-700 transition-colors border border-orange-200 bg-orange-50 px-2.5 py-1 rounded-lg">
+                                            Dividir igualmente
+                                        </button>
+                                    )}
+                                </div>
+                                <p className="text-xs text-slate-600 mb-5">Selecione os SDRs e defina a <strong>quantidade de leads</strong> de {totalLeads > 0 ? `${totalLeads} leads` : 'leads'} disponíveis para cada um.</p>
 
                                 {sdrs.length === 0 && (
                                     <div className="flex items-center justify-center h-32 text-slate-600">
@@ -701,22 +731,22 @@ export const CadenceZone: React.FC<CadenceZoneProps> = ({ onClose }) => {
                                                     </p>
                                                 </div>
 
-                                                {/* Percentage */}
+                                                {/* Quantity Input */}
                                                 {isSelected && (
                                                     <div className="flex items-center gap-2 shrink-0">
-                                                        <input type="number" min={0} max={100}
-                                                            value={assignment!.percentage}
-                                                            onChange={e => updatePercentage(sdr.id, Number(e.target.value))}
-                                                            className="w-16 text-center py-1.5 bg-gradient-soft border border-orange-100 shadow-glass border border-slate-200 rounded-lg text-sm font-black outline-none focus:ring-2 focus:ring-orange-100" />
-                                                        <span className="text-slate-600 font-bold text-sm">%</span>
+                                                        <input type="number" min={0} max={totalLeads || 9999}
+                                                            value={assignment!.quantity ?? 0}
+                                                            onChange={e => updateQuantity(sdr.id, Number(e.target.value))}
+                                                            className="w-20 text-center py-1.5 bg-gradient-soft border border-orange-100 shadow-glass border border-slate-200 rounded-lg text-sm font-black outline-none focus:ring-2 focus:ring-orange-100" />
+                                                        <span className="text-slate-600 font-bold text-xs">leads</span>
                                                     </div>
                                                 )}
 
                                                 {/* Impact */}
                                                 {isSelected && (
-                                                    <div className="text-right shrink-0">
-                                                        <span className="text-xs font-black text-slate-700">
-                                                            ~{Math.round(totalLeads * (assignment!.percentage / 100))} leads
+                                                    <div className="text-right shrink-0 min-w-[64px]">
+                                                        <span className="text-xs font-black text-orange-600">
+                                                            {assignment!.percentage}%
                                                         </span>
                                                     </div>
                                                 )}
@@ -727,9 +757,15 @@ export const CadenceZone: React.FC<CadenceZoneProps> = ({ onClose }) => {
 
                                 {assignments.length > 0 && (
                                     <div className={cn('mt-4 pt-4 border-t border-slate-100 flex items-center justify-between')}>
-                                        <span className="text-xs font-bold text-slate-600">Total distribuído:</span>
-                                        <span className={cn('text-sm font-black', totalPct === 100 ? 'text-emerald-600' : 'text-red-500')}>
-                                            {totalPct}% {totalPct !== 100 && `(faltam ${100 - totalPct}%)`}
+                                        <span className="text-xs font-bold text-slate-600">Total atribuído:</span>
+                                        <span className={cn('text-sm font-black',
+                                            totalQty === 0 ? 'text-slate-400' :
+                                            totalQty > totalLeads ? 'text-red-500' :
+                                            totalQty === totalLeads ? 'text-emerald-600' : 'text-orange-500'
+                                        )}>
+                                            {totalQty} de {totalLeads} leads
+                                            {totalQty > totalLeads && ' (excede o limite!)'}
+                                            {totalQty > 0 && totalQty < totalLeads && ` (${totalLeads - totalQty} sem SDR)`}
                                         </span>
                                     </div>
                                 )}
@@ -785,7 +821,7 @@ export const CadenceZone: React.FC<CadenceZoneProps> = ({ onClose }) => {
                                                     <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
                                                         <div className="bg-slate-900 h-full rounded-full transition-all" style={{ width: `${a.percentage}%` }} />
                                                     </div>
-                                                    <span className="text-xs font-black text-slate-600 w-12 text-right">{a.percentage}% · ~{Math.round(totalLeads * a.percentage / 100)}</span>
+                                                    <span className="text-xs font-black text-slate-600 text-right">{a.quantity ?? 0} leads ({a.percentage}%)</span>
                                                 </div>
                                             </div>
                                         ))}
