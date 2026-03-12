@@ -83,7 +83,7 @@ app.get('/', (req, res) => {
 
 // Rota de Health Check (Verificação de Saúde)
 // Útil na AWS ou Docker para checar se o servidor está rodando sem problemas.
-app.get('/health', (req, res) => {
+app.get('/api/v1/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
