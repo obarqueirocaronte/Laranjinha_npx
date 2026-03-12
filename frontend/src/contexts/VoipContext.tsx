@@ -93,22 +93,13 @@ export function VoipProvider({ children }: { children: ReactNode }) {
         }
 
         const cleanNumber = cleanPhoneNumber(phoneNumber);
-        const sipUri = `sip:${cleanNumber}@${sipConfig.sipDomain}`;
+        
+        console.log(`[VoIP] 📞 Iniciando chamada via Backend para Lead: ${leadId} (${cleanNumber})`);
 
-        console.log(`[VoIP] 📞 Discando: ${sipUri} (Ramal: ${sipConfig.extension})`);
-
-        // window.location.href is the most reliable way to trigger a registered protocol handler
-        // (sip:, tel:, etc.) in modern browsers. anchor.click() is blocked by security policies.
-        try {
-            window.location.href = sipUri;
-        } catch (err) {
-            console.error('[VoIP] Erro ao abrir sip: via window.location, tentando window.open...', err);
-            try {
-                window.open(sipUri, '_self');
-            } catch (openErr) {
-                console.error('[VoIP] Erro ao abrir sip: via window.open', openErr);
-            }
-        }
+        // Dispara a chamada via nosso Backend (que por sua vez chama a API do Discador da NPX)
+        api.post(`/leads/${leadId}/call`).catch(err => {
+            console.error('[VoIP] Erro ao iniciar chamada via API:', err);
+        });
 
         setActiveCall({
             leadId,

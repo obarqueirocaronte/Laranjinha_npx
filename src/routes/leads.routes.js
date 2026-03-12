@@ -49,6 +49,9 @@ router.get('/sdrs', leadsController.getAllSDRs);
 // POST /api/v1/leads/:id/move
 router.post('/:id/move', leadsController.moveLead);
 
+// POST /api/v1/leads/:id/call
+router.post('/:id/call', leadsController.initiateLeadCall);
+
 // DELETE /api/v1/leads/clean
 router.delete('/clean', leadsController.deleteAllLeads);
 

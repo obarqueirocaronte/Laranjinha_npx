@@ -13,49 +13,46 @@ require('dotenv').config();
  */
 class VoiceService {
     constructor() {
-        this.sipDomain = process.env.SIP_DOMAIN || 'tip3.npxtech.com.br';
-        this.apiUrl = process.env.VOIP_API_URL;
-        this.apiKey = process.env.VOIP_API_KEY;
+        this.dialerToken = process.env.DIALER_TOKEN || 'gI9KhObfCsAGBrHHrVsrIwtt';
+        this.dialerBaseUrl = process.env.DIALER_BASE_URL || 'https://app.npxtech.com.br/api/dialer/start_call';
         this.defaultExtension = process.env.VISITOR_EXTENSION || '11012';
     }
 
     /**
-     * Retorna a configuração SIP para o frontend montar os links sip:
-     * @param {string} userExtension - Ramal configurado do usuário (ou usa o padrão)
+     * Retorna a configuração SIP para o frontend (pode ser usado para exibir ramal)
      */
     getSipConfig(userExtension) {
         return {
-            sipDomain: this.sipDomain,
+            sipDomain: 'app.npxtech.com.br',
             extension: userExtension || this.defaultExtension,
         };
     }
 
     /**
-     * Dispara uma chamada entre o Ramal do SDR e o Lead
+     * Dispara uma chamada utilizando a API do discador da NPX
+     * URL: https://app.npxtech.com.br/api/dialer/start_call?token=(TOKEN)&extension=(RAMAL)&number=(TELEFONE)
      * @param {string} sdrExtension - Ramal do SDR logado
      * @param {string} leadPhone - Telefone do lead
      */
     async initiateCall(sdrExtension, leadPhone) {
-        if (!this.apiUrl || !this.apiKey) {
-            console.error('❌ VoIP Credentials missing in .env (PBX API mode not configured)');
-            return { success: false, error: 'VoIP Auth missing — using sip: protocol instead' };
-        }
-
         try {
-            // Este modelo assume uma integração Click-to-Call padrão (AMI ou Rest API do PBX)
-            const response = await axios.post(this.apiUrl, {
-                extension: sdrExtension,
-                destination: leadPhone.replace(/\D/g, ""),
-                context: process.env.VOIP_CONTEXT || "from-internal",
-                priority: 1
-            }, {
-                headers: { 'X-API-KEY': this.apiKey }
-            });
+            const cleanPhone = leadPhone.replace(/\D/g, "");
+            const ramal = sdrExtension || this.defaultExtension;
+            
+            // Construção da URL conforme solicitado pelo usuário
+            const url = `${this.dialerBaseUrl}?token=${this.dialerToken}&extension=${ramal}&number=${cleanPhone}`;
 
-            console.log(`📞 Call initiated: ${sdrExtension} -> ${leadPhone}`);
-            return { success: true, data: response.data };
+            console.log(`[VoiceService] 📞 Iniciando chamada via API: ${url}`);
+            
+            const response = await axios.get(url);
+
+            return { 
+                success: true, 
+                data: response.data,
+                url: url // para debug se necessário
+            };
         } catch (error) {
-            console.error('❌ VoIP Call Error:', error.message);
+            console.error('❌ Dialer API Error:', error.message);
             return { success: false, error: error.message };
         }
     }

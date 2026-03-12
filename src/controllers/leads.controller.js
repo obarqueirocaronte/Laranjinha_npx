@@ -350,3 +350,44 @@ exports.getPipelineConfig = async (req, res, next) => {
         next(err);
     }
 };
+
+/**
+ * Dispara a chamada via API do Discador para um Lead específico.
+ * Puxa o ramal do usuário logado do banco de dados.
+ */
+exports.initiateLeadCall = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const userId = req.userId; // Definido pelo auth middleware
+
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Usuário não autenticado' });
+        }
+
+        // 1. Buscar ramal do usuário
+        const integrations = await db.query(
+            `SELECT config FROM user_integrations WHERE user_id = $1 AND type = 'voice' AND is_active = true`,
+            [userId]
+        );
+
+        const extension = integrations.rows[0]?.config?.extension;
+        
+        // 2. Buscar telefone do lead
+        const lead = await leadsService.getLeadById(id);
+        if (!lead || !lead.phone) {
+            return res.status(404).json({ success: false, error: 'Lead não encontrado ou sem telefone' });
+        }
+
+        // 3. Chamar serviço de voz
+        const voiceService = require('../services/voice.service');
+        const result = await voiceService.initiateCall(extension, lead.phone);
+
+        if (result.success) {
+            res.json({ success: true, message: 'Chamada solicitada ao discador', data: result.data });
+        } else {
+            res.status(500).json({ success: false, error: result.error });
+        }
+    } catch (err) {
+        next(err);
+    }
+};
