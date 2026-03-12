@@ -221,7 +221,7 @@ export const KanbanBoard = ({
         }
     };
 
-    const handleCallFeedback = async (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule', notes?: string) => {
+    const handleCallFeedback = async (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer', notes?: string) => {
         if (!voip.callRequiresFeedback) return;
         const leadIdToUpdate = voip.callRequiresFeedback.leadId;
         const targetLead = leads.find(l => l.id === leadIdToUpdate);
@@ -261,7 +261,8 @@ export const KanbanBoard = ({
                 busy: 'Ocupado',
                 voicemail: 'Caixa Postal',
                 invalid: 'Inválido',
-                reschedule: 'Reagendar'
+                reschedule: 'Reagendar',
+                'no-answer': 'Não Atendeu'
             }[result];
 
             addNotification(`Registro salvo: ${resultMsg}`, 'success');
@@ -314,12 +315,8 @@ export const KanbanBoard = ({
 
                 if (phones.length === 0) {
                     addNotification(`Lead ${movedLead.full_name} não possui telefone cadastrado.`, 'warning');
-                } else if (phones.length === 1) {
-                    // Start call but do NOT log activity yet. Activity is logged on feedback modal submit.
-                    voip.initiateCall(phones[0].number, movedLead.id, movedLead.full_name);
-                    addNotification(`📞 Ligando para ${movedLead.full_name} (${phones[0].number})...`, 'info');
                 } else {
-                    // Multiple phones — show DialerModal to choose
+                    // Restored: Show DialerModal for confirmation
                     setDialerLead(movedLead);
                 }
             }
@@ -470,13 +467,10 @@ export const KanbanBoard = ({
                             addNotification('Oportunidade exportada para o Mattermost!', 'success');
                         }
 
-                        await leadsAPI.updateLead(completedLead.id, {
-                            status: (result === 'connected' || result === 'opportunity') ? 'qualified' : 'archived',
-                            metadata: {
-                                cycle_result: result,
-                                finished_at: new Date().toISOString(),
-                                opportunity_notes: opportunityNotes
-                            }
+                        // Use the new completeCadence API
+                        await leadsAPI.completeCadence(completedLead.id, {
+                            final_outcome: result,
+                            notes: opportunityNotes
                         });
                         
                         await statsAPI.updateActivity('cycle_complete');

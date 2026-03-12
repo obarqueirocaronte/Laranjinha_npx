@@ -12,8 +12,8 @@ import { FloatingActions } from './FloatingActions';
 import { ControlHub } from './ControlHub';
 import { AdminDashboard } from '../admin/AdminDashboard';
 import { ManagerSalesDashboard } from '../manager/ManagerSalesDashboard';
-import { statsAPI } from '../../lib/api';
-import { useAuth } from '../../contexts/AuthContext';
+import { statsAPI, leadsAPI } from '../../lib/api';
+ import { useAuth } from '../../contexts/AuthContext';
 import { VoipProvider } from '../../contexts/VoipContext';
 import { ActiveCallBanner } from '../common/ActiveCallBanner';
 import { User, LogOut, CalendarClock } from 'lucide-react';
@@ -27,6 +27,9 @@ export function Dashboard() {
     const [showSchedulePreview, setShowSchedulePreview] = useState(false);
     const [completedCount, setCompletedCount] = useState(0);
     const [scheduleCount, setScheduleCount] = useState(0);
+    const [testLeadLoading, setTestLeadLoading] = useState(false);
+    const [testLeadSuccess, setTestLeadSuccess] = useState(false);
+    const [kanbanKey, setKanbanKey] = useState(0); // used to force kanban reload
     const [activityStats, setActivityStats] = useState({
         calls: 0,
         emails: 0,
@@ -62,6 +65,21 @@ export function Dashboard() {
         }
     };
 
+    const handleCreateTestLead = async () => {
+        if (testLeadLoading) return;
+        setTestLeadLoading(true);
+        try {
+            await leadsAPI.createTestLead();
+            setTestLeadSuccess(true);
+            setKanbanKey(k => k + 1); // refresh kanban
+            setTimeout(() => setTestLeadSuccess(false), 3000);
+        } catch (err) {
+            console.error('Erro ao criar lead teste:', err);
+        } finally {
+            setTestLeadLoading(false);
+        }
+    };
+
     const handleActivity = (type: 'call' | 'email' | 'whatsapp') => {
         const key = type === 'call' ? 'calls' : type === 'email' ? 'emails' : 'whatsapp';
         setActivityStats(prev => ({
@@ -83,9 +101,9 @@ export function Dashboard() {
     return (
         <VoipProvider>
             <Layout>
-                {view === 'admin' && user?.role === 'manager' ? (
+                {view === 'admin' && (user?.role === 'manager' || user?.role === 'salesops') ? (
                     <AdminDashboard onNavigateBack={() => setView('pipeline')} />
-                ) : view === 'manager-dashboard' && user?.role === 'manager' ? (
+                ) : view === 'manager-dashboard' && (user?.role === 'manager' || user?.role === 'salesops') ? (
                     <div className="absolute inset-0 z-20 flex flex-col h-full bg-transparent">
                         <ManagerSalesDashboard
                             onAdminClick={() => setView('admin')}
@@ -126,8 +144,9 @@ export function Dashboard() {
                                 </h1>
 
                                 <div className="flex items-center gap-4">
-                                    {/* Link for Manager to Dashboard */}
-                                    {user?.role === 'manager' && (
+                                    {/* Link for Manager / SalesOps to Dashboard */}
+                                    {(user?.role === 'manager' || user?.role === 'salesops') && (
+                                        <>
                                         <motion.button
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
@@ -137,6 +156,25 @@ export function Dashboard() {
                                         >
                                             Dashboard de Gestão
                                         </motion.button>
+                                        {/* Test Lead Button — SalesOps only */}
+                                        {user?.role === 'salesops' && (
+                                            <motion.button
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                                onClick={handleCreateTestLead}
+                                                disabled={testLeadLoading}
+                                                className={`px-5 py-2.5 rounded-full font-black text-sm shadow-lg flex items-center gap-2 transition-all ${
+                                                    testLeadSuccess
+                                                        ? 'bg-emerald-500 text-white shadow-emerald-200'
+                                                        : 'bg-slate-800 text-white shadow-slate-300'
+                                                }`}
+                                                style={{ fontFamily: 'Comfortaa, cursive' }}
+                                                title="Criar Lead Teste (SalesOps)"
+                                            >
+                                                {testLeadSuccess ? '✅ Criado!' : testLeadLoading ? '...' : '🧪 Lead Teste'}
+                                            </motion.button>
+                                        )}
+                                        </>
                                     )}
 
                                     {/* Botão de Agendamentos de Retorno (Glassmorphism minimalista) */}
@@ -188,6 +226,7 @@ export function Dashboard() {
                             {/* Kanban Board */}
                             <div className="flex-1 min-h-0">
                                 <KanbanBoard
+                                    key={kanbanKey}
                                     onLeadComplete={handleLeadComplete}
                                     onActivity={handleActivity}
                                     onScheduleCountChange={setScheduleCount}

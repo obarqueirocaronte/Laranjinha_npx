@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Phone, Edit3, Send, Layout, Linkedin, CalendarClock, Database, ShieldCheck } from 'lucide-react';
+import { X, Mail, Phone, Edit3, Send, Layout, Linkedin, CalendarClock, Database, ShieldCheck, Building2 } from 'lucide-react';
 import clsx from 'clsx';
 import { TemplateSelector } from './TemplateSelector';
 import type { Template } from './TemplateSelector';
 import type { Lead } from '../../types';
 import { useVoip } from '../../contexts/VoipContext';
+import { leadsAPI } from '../../lib/api';
 
 const ICON = { strokeWidth: 1.5 };
 
@@ -32,6 +33,8 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
     const [selectedWhatsAppTemplate, setSelectedWhatsAppTemplate] = useState<Template | null>(null);
     const [activeTab, setActiveTab] = useState<TabType>('email');
     const [customName, setCustomName] = useState('');
+    const [interactions, setInteractions] = useState<any[]>([]);
+    const [interactionsLoading, setInteractionsLoading] = useState(false);
     const voip = useVoip();
 
     useEffect(() => {
@@ -40,8 +43,24 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
             setSelectedEmailTemplate(null);
             setSelectedWhatsAppTemplate(null);
             setActiveTab('email');
+            fetchInteractions();
         }
     }, [lead, isOpen]);
+
+    const fetchInteractions = async () => {
+        if (!lead) return;
+        setInteractionsLoading(true);
+        try {
+            const res = await leadsAPI.getInteractions(lead.id);
+            if (res.success) {
+                setInteractions(res.data);
+            }
+        } catch (err) {
+            console.error('Error fetching interactions:', err);
+        } finally {
+            setInteractionsLoading(false);
+        }
+    };
 
     if (!lead) return null;
 
@@ -72,23 +91,73 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
                     className="flex flex-col h-full bg-white/40 border border-white/60 shadow-glass rounded-[32px] overflow-hidden p-6"
                 >
                     <div className="flex-1 overflow-auto custom-scrollbar flex flex-col gap-4">
-                        <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 shadow-sm">
-                            <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <Database size={14} className="text-slate-400" /> Histórico de Score
+                        {/* ── Interaction History Section ── */}
+                        <div className="flex flex-col gap-3">
+                            <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                                <Database size={14} className="text-orange-500" /> Histórico de Chamadas e Ações
                             </h4>
-                            <div className="text-[10px] font-bold text-slate-500">
-                                O score atual do lead é calculado como <span className="text-emerald-500 font-black">{lead.quality_score || 0}%</span>. Este valor é consumido internamente para a ordenação dinâmica nas cadências.
-                            </div>
+                            
+                            {interactionsLoading ? (
+                                <div className="py-8 flex flex-col items-center justify-center opacity-40">
+                                    <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mb-2" />
+                                    <span className="text-[10px] font-bold text-slate-400">Carregando histórico...</span>
+                                </div>
+                            ) : interactions.length === 0 ? (
+                                <div className="py-8 flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                    <Phone size={24} className="text-slate-200 mb-2" strokeWidth={1} />
+                                    <span className="text-[10px] font-bold text-slate-400">Nenhum registro encontrado</span>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {interactions.map((item, idx) => (
+                                        <div key={idx} className="p-3 bg-white/80 border border-slate-100 rounded-2xl shadow-sm flex flex-col gap-1 hover:border-orange-200 transition-colors">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={clsx(
+                                                        "text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider",
+                                                        item.type === 'call' ? "bg-blue-50 text-blue-600" :
+                                                        item.type === 'schedule' ? "bg-orange-50 text-orange-600" :
+                                                        "bg-emerald-50 text-emerald-600"
+                                                    )}>
+                                                        {item.type === 'call' ? 'Chamada' : item.type === 'schedule' ? 'Agenda' : 'Cadência'}
+                                                    </span>
+                                                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-tight">
+                                                        {item.result === 'success' ? 'Sucesso' : 
+                                                         item.result === 'busy' ? 'Ocupado' :
+                                                         item.result === 'no-answer' ? 'Não Atendeu' :
+                                                         item.result === 'invalid' ? 'Inválido' :
+                                                         item.result === 'voicemail' ? 'Caixa Postal' :
+                                                         item.result === 'reschedule' ? 'Reagendado' :
+                                                         item.result}
+                                                    </span>
+                                                </div>
+                                                <span className="text-[9px] font-bold text-slate-400">
+                                                    {new Date(item.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            {item.notes && (
+                                                <p className="text-[11px] text-slate-600 font-medium leading-relaxed italic bg-slate-50/50 p-2 rounded-lg border border-slate-50 mt-1">
+                                                    "{item.notes}"
+                                                </p>
+                                            )}
+                                            <div className="flex items-center gap-1.5 mt-1">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                                                <span className="text-[9px] font-black text-slate-400 uppercase">Feito por: {item.author_name || 'Sistema'}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
-                        <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 shadow-sm flex-1">
+                        <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 shadow-sm">
                             <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest mb-2 flex items-center gap-2">
                                 <ShieldCheck size={14} className="text-slate-400" /> System Metrics
                             </h4>
                             <div className="grid grid-cols-2 gap-3 mt-3">
                                 <div>
-                                    <span className="text-[9px] font-black text-slate-400 uppercase">Tags Processadas</span>
-                                    <div className="text-[11px] font-bold text-slate-600 mt-0.5">{lead.tags?.length || 0} identificadas</div>
+                                    <span className="text-[9px] font-black text-slate-400 uppercase">Score Qualidade</span>
+                                    <div className="text-[11px] font-black text-emerald-600 mt-0.5">{lead.quality_score || 0}%</div>
                                 </div>
                                 <div>
                                     <span className="text-[9px] font-black text-slate-400 uppercase">Cadence ID</span>
@@ -181,29 +250,31 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
                         <div className="absolute inset-0 opacity-[0.08] pointer-events-none"
                             style={{ background: `radial-gradient(circle at 20% 20%, ${accentColor} 0%, transparent 50%), radial-gradient(circle at 80% 80%, ${accentColor} 0%, transparent 50%)` }} />
 
-                        {/* Header */}
                         <div className="px-10 py-7 flex items-center justify-between relative z-10">
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-5">
+                                <div className="w-16 h-16 rounded-[28px] bg-white/60 flex items-center justify-center shrink-0 shadow-glass border border-white/80 backdrop-blur-md">
+                                    <Building2 size={32} className="text-[#10B981]" strokeWidth={2.5} />
+                                </div>
                                 <div className="flex flex-col gap-0.5">
                                     <div className="flex items-center gap-3">
                                         <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                            {lead.full_name}
+                                            {lead.full_name || 'Sem Contato'}
                                         </h2>
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 if (onSchedule) onSchedule(lead);
                                             }}
-                                            className="w-8 h-8 rounded-xl flex items-center justify-center bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 transition-all shadow-sm border border-orange-100"
+                                            className="w-9 h-9 rounded-2xl flex items-center justify-center bg-white/70 text-orange-500 hover:bg-white hover:scale-110 hover:text-orange-600 transition-all shadow-sm border border-white/90"
                                             title="Agendar Retorno"
                                         >
-                                            <CalendarClock size={16} {...ICON} />
+                                            <CalendarClock size={16} strokeWidth={2.5} />
                                         </button>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest" style={{ fontFamily: 'Quicksand, sans-serif' }}>{lead.company_name}</span>
-                                        <div className="w-1 h-1 rounded-full bg-slate-300" />
-                                        <span className="text-[10px] font-bold text-slate-400" style={{ fontFamily: 'Quicksand, sans-serif' }}>{lead.metadata?.cnpj || 'CNPJ não informado'}</span>
+                                        <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest" style={{ fontFamily: 'Quicksand, sans-serif' }}>{lead.company_name}</span>
+                                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                        <span className="text-[11px] font-bold text-slate-400" style={{ fontFamily: 'Quicksand, sans-serif' }}>{lead.metadata?.cnpj || 'CNPJ não informado'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -221,7 +292,7 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
                             <div className="w-[300px] flex flex-col gap-4 flex-shrink-0">
 
                                 {/* ── Contact Zone ── */}
-                                <div className="bg-white border border-slate-100 shadow-glass rounded-[28px] p-4">
+                                <div className="bg-white/50 border border-white/60 shadow-glass rounded-[28px] p-4 backdrop-blur-md">
                                     <div className="flex items-center justify-between mb-3 px-1">
                                         <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]" style={{ fontFamily: 'Quicksand, sans-serif' }}>Contato</span>
                                         <div className={clsx(

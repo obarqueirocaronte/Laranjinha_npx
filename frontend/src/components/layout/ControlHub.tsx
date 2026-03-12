@@ -41,7 +41,7 @@ interface ControlHubProps {
         whatsapp: number;
     };
     onReset?: () => void;
-    user?: { email: string; role?: 'manager' | 'sdr'; profile_picture_url?: string | null } | null;
+    user?: { email: string; role?: 'manager' | 'sdr' | 'salesops'; profile_picture_url?: string | null } | null;
 }
 
 export const ControlHub: React.FC<ControlHubProps> = ({
@@ -323,34 +323,43 @@ export const ControlHub: React.FC<ControlHubProps> = ({
                             <motion.div
                                 className="flex items-center gap-3 cursor-pointer group"
                                 whileHover={{ scale: 1.02 }}
-                                onClick={() => user?.role === 'manager' && onAdminClick()}
+                                onClick={() => (user?.role === 'manager' || user?.role === 'salesops') && onAdminClick()}
                             >
                                 {/* Avatar */}
                                 <UserAvatar 
                                     src={user?.profile_picture_url} 
                                     name={user?.email?.split('@')[0]} 
                                     size="md" 
-                                    border={false}
-                                    className="!rounded-full !bg-white/20 !border-white/60 shadow-md backdrop-blur-sm" 
+                                    border={true}
+                                    role={user?.role}
+                                    className="!rounded-full !bg-white/20 !border-white/30 shadow-md backdrop-blur-sm" 
                                 />
                                 <div className="flex flex-col">
                                     <span
-                                        className="text-sm font-black text-white leading-tight drop-shadow-sm"
+                                        className={cn(
+                                            "text-sm font-black leading-tight drop-shadow-sm",
+                                            user?.role === 'manager' ? "text-amber-200" : user?.role === 'salesops' ? "text-indigo-200" : "text-white"
+                                        )}
                                         style={{ fontFamily: 'Comfortaa, cursive' }}
                                     >
                                         {user?.email?.split('@')[0] || 'Visitante'}
                                     </span>
                                     <span
-                                        className="text-[10px] font-bold text-white/80 uppercase tracking-widest mt-0.5"
+                                        className={cn(
+                                            "text-[10px] font-bold uppercase tracking-widest mt-0.5 px-2 py-0.5 rounded-md bg-white/10 w-fit",
+                                            user?.role === 'manager' ? "text-amber-300 border border-amber-400/30" : 
+                                            user?.role === 'salesops' ? "text-indigo-300 border border-indigo-400/30" : 
+                                            "text-white/80"
+                                        )}
                                         style={{ fontFamily: 'Comfortaa, cursive' }}
                                     >
-                                        {user?.role === 'manager' ? '⭐ SDR Commander' : '🍊 SDR'}
+                                        {user?.role === 'manager' ? '⭐ Manager' : user?.role === 'salesops' ? '🛠️ SalesOps' : '🍊 SDR'}
                                     </span>
                                 </div>
                             </motion.div>
 
                             <div className="flex items-center gap-1.5">
-                                {user?.role === 'manager' && (
+                                {(user?.role === 'manager' || user?.role === 'salesops') && (
                                     <motion.button
                                         whileTap={{ scale: 0.9 }}
                                         onClick={onAdminClick}

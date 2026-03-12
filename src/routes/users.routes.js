@@ -5,7 +5,7 @@ const usersController = require('../controllers/users.controller');
 // List all users
 router.get('/', usersController.getUsers);
 
-// Get user voice/SIP config
+// Get user voice config
 router.get('/:id/voice-config', usersController.getUserVoiceConfig);
 
 // Save user integration config

@@ -105,14 +105,28 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
         <div
             className={clsx(
                 'flex flex-col h-full rounded-t-[1.5rem] rounded-b-none px-1.5 pt-1.5 transition-all duration-300',
-                'backdrop-blur-md border-t border-x border-white/60 shadow-lg border-b-0',
+                'backdrop-blur-md border-t border-x border-white/60 shadow-lg border-b-0 overflow-y-auto overflow-x-visible custom-scrollbar',
                 tok.columnBg,
                 tok.shadow,
+                'hover:z-[1000] z-0 group/col relative transition-all duration-300',
                 isOver && `ring-2 ${tok.ring} scale-[1.005]`
             )}
+            style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
+            } as any}
         >
             {/* ── Header ── */}
-            <div className="relative">
+            <div 
+                className="sticky top-0 z-[50] py-4 backdrop-blur-3xl transition-all duration-300 group-hover/col:z-[99]"
+                style={{ 
+                    marginTop: '-12px', 
+                    paddingTop: '12px',
+                    background: 'transparent',
+                    maskImage: 'linear-gradient(to bottom, black 90%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, black 90%, transparent 100%)'
+                }}
+            >
                 <div
                     className="relative rounded-2xl h-14 flex items-center justify-center shadow-lg transition-all mb-4 mt-1 mx-1 text-white"
                     style={{
@@ -147,13 +161,13 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
                     key={leads.length}
                     initial={{ scale: 0.6, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-                    className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 flex items-center justify-center rounded-full text-[10px] font-black shadow-md z-10"
+                    transition={{ type: 'spring', stiffness: 550, damping: 25 }}
+                    className="absolute top-1 right-1 min-w-[20px] h-[20px] px-1.5 flex items-center justify-center rounded-full text-[9px] font-black shadow-lg z-[2]"
                     style={{
                         fontFamily: 'Comfortaa, cursive',
                         background: headerGradient,
                         color: 'white',
-                        border: '2px solid rgba(255,255,255,0.6)',
+                        border: '1px solid rgba(255,255,255,0.8)',
                     }}
                 >
                     {leads.length}
@@ -164,14 +178,9 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
             <div
                 ref={setNodeRef}
                 className={clsx(
-                    'flex-1 overflow-y-auto px-1 pt-1 pb-16 space-y-3 transition-all duration-200',
-                    isOver ? 'bg-white/25 ring-2 ring-white/50 ring-inset' : 'bg-transparent'
+                    'flex-1 px-1.5 pt-6 pb-20 space-y-5 relative z-[10]',
+                    isOver ? 'bg-white/25 ring-2 ring-white/50 ring-inset rounded-2xl' : 'bg-transparent'
                 )}
-                style={{
-                    // Mask para suavizar o final da lista (efeito infinity) sem quebrar o vidro
-                    maskImage: 'linear-gradient(to bottom, black 90%, transparent 100%)',
-                    WebkitMaskImage: 'linear-gradient(to bottom, black 90%, transparent 100%)'
-                }}
             >
                 <AnimatePresence mode="sync">
                     {leads.map((lead) => (

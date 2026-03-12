@@ -226,7 +226,8 @@ class LeadsService {
              s.email as sdr_email,
              pc.name as column_name,
              pc.color as column_color,
-             NULL as sdr_profile_picture_url,
+             u.profile_picture_url as sdr_profile_picture_url,
+             u.role as sdr_role,
              (l.metadata->'tags') as tags,
              LEAST(COALESCE((
                  SELECT COUNT(*) * 25
@@ -235,6 +236,7 @@ class LeadsService {
              ), 0), 100) as cadence_progress
       FROM leads l
       LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
+      LEFT JOIN users u ON s.user_id = u.id
       LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
       WHERE l.id = $1
     `;
@@ -284,7 +286,8 @@ class LeadsService {
             SELECT 
                 l.*, 
                 pc.name as current_column,
-                NULL as sdr_profile_picture_url,
+                u.profile_picture_url as sdr_profile_picture_url,
+                u.role as sdr_role,
                 (l.metadata->'tags') as tags,
                 LEAST(COALESCE((
                     SELECT COUNT(*) * 25
@@ -294,6 +297,7 @@ class LeadsService {
             FROM leads l
             LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
             LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
+            LEFT JOIN users u ON s.user_id = u.id
             WHERE 1=1
         `;
         const params = [];
@@ -670,7 +674,8 @@ class LeadsService {
             SELECT 
                 l.*, 
                 pc.name as current_column, 
-                NULL as sdr_profile_picture_url,
+                u.profile_picture_url as sdr_profile_picture_url,
+                u.role as sdr_role,
                 (l.metadata->'tags') as tags,
                 LEAST(COALESCE((
                     SELECT COUNT(*) * 25
@@ -680,6 +685,7 @@ class LeadsService {
             FROM leads l
             LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
             LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
+            LEFT JOIN users u ON s.user_id = u.id
             WHERE l.status NOT IN ('qualified', 'archived')
               AND l.assigned_sdr_id IS NOT NULL
         `;
@@ -818,6 +824,75 @@ class LeadsService {
             client.release();
         }
     }
+    async logCallInteraction(leadId, data) {
+        const { sdr_id, outcome, notes } = data;
+        const sql = `
+            INSERT INTO call_logs (lead_id, sdr_id, outcome, notes)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        `;
+        return db.query(sql, [leadId, sdr_id, outcome, notes]);
+    }
+
+    async getLeadInteractions(id) {
+        const sql = `
+            SELECT 'call' as type, outcome as result, notes, created_at, s.full_name as author_name
+            FROM call_logs cl
+            LEFT JOIN sdrs s ON cl.sdr_id = s.id
+            WHERE cl.lead_id = $1
+            UNION ALL
+            SELECT 'cadence_completion' as type, final_outcome as result, notes, completed_at as created_at, s.full_name as author_name
+            FROM cadence_completions cc
+            LEFT JOIN sdrs s ON cc.sdr_id = s.id
+            WHERE cc.lead_id = $1
+            UNION ALL
+            SELECT 'schedule' as type, status as result, notes, created_at, s.full_name as author_name
+            FROM schedules sch
+            LEFT JOIN sdrs s ON sch.sdr_id = s.id
+            WHERE sch.lead_id = $1
+            ORDER BY created_at DESC
+        `;
+        const res = await db.query(sql, [id]);
+        return res.rows;
+    }
+
+    async completeCadence(leadId, data) {
+        const { sdr_id, notes, final_outcome } = data;
+        const client = await db.getClient();
+        try {
+            await client.query('BEGIN');
+
+            // 1. Log completion
+            const completionSql = `
+                INSERT INTO cadence_completions (lead_id, sdr_id, notes, final_outcome)
+                VALUES ($1, $2, $3, $4)
+                RETURNING *
+            `;
+            const completionRes = await client.query(completionSql, [leadId, sdr_id, notes, final_outcome]);
+
+            // 2. Update lead status if it's an opportunity or rejected
+            let status = 'active';
+            if (final_outcome === 'opportunity') status = 'qualified';
+            if (final_outcome === 'rejected') status = 'lost';
+
+            await client.query(`
+                UPDATE leads 
+                SET status = $1, 
+                    updated_at = CURRENT_TIMESTAMP,
+                    metadata = metadata || jsonb_build_object('cadence_completed_at', CURRENT_TIMESTAMP)
+                WHERE id = $2
+            `, [status, leadId]);
+
+            await client.query('COMMIT');
+            return completionRes.rows[0];
+        } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        } finally {
+            client.release();
+        }
+    }
+
     async getPipelineConfig(sdrId) {
         try {
             // Find team settings for this SDR

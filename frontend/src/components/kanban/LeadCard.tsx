@@ -1,13 +1,15 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import type { Lead } from '../../types';
-import { Building2, Undo2, Check, Mail, Phone, Tag, User, MapPin, CalendarClock } from 'lucide-react';
+import { Building2, Undo2, Check, Mail, Phone, Tag, Linkedin, User, Calendar } from 'lucide-react';
 import { useVoip } from '../../contexts/VoipContext';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ICON = { strokeWidth: 1.5 };
+const ICON_BASE = { strokeWidth: 1.5 };
+const ICON_BOLD = { strokeWidth: 2.2 };
 
 interface LeadCardProps {
     lead: Lead;
@@ -17,6 +19,7 @@ interface LeadCardProps {
     onFinish?: (lead: Lead) => void;
     onSchedule?: (lead: Lead) => void;
     accentColor?: string;
+    model?: 'MODERN_FULL' | 'MODERN_COMPACT' | 'MODERN_MINIMAL' | 'MODERN_ACTION';
 }
 
 export const LeadCard: React.FC<LeadCardProps> = ({
@@ -38,8 +41,6 @@ export const LeadCard: React.FC<LeadCardProps> = ({
         disabled: isCadenceColumn,
     });
 
-
-
     const handlePointerDown = (e: React.PointerEvent) => {
         listeners?.onPointerDown?.(e);
         pointerDownPos.current = { x: e.clientX, y: e.clientY };
@@ -50,43 +51,274 @@ export const LeadCard: React.FC<LeadCardProps> = ({
         onClick?.();
     };
 
-    const [isMapHovered, setIsMapHovered] = React.useState(false);
-    const [isTagHovered, setIsTagHovered] = React.useState(false);
-
     // ── Data flags ──────────────────────────────────────────────────────────
-    const hasContactPhone = lead.phone && String(lead.phone).trim().length > 0;
-    const hasContactEmail = lead.email && !String(lead.email).includes('sem_email_');
     const hasLinkedin = !!(lead.metadata?.linkedin_url || lead.metadata?.linkedin);
     const hasTags = lead.tags && lead.tags.length > 0;
-    const hasContactName = !!(lead.full_name && lead.full_name.trim().length > 0);
 
     const cadenceProgress = lead.cadence_progress || 0;
     const cnpj = lead.metadata?.cnpj;
-    const location = lead.metadata?.location || lead.metadata?.city;
-    const hasLocation = !!location;
-    const hasSchedule = !!lead.metadata?.next_contact_at;
+    const jobTitle = lead.metadata?.job_title;
+    const isFirstColumn = columnPosition === 1;
 
-    // Smart tag visibility: if card has limited info, show 2 tags inline instead of 1
-    const hasRichInfo = !!(cnpj || lead.metadata?.job_title || hasContactEmail || hasLinkedin);
-    const visibleTagCount = (!hasRichInfo && hasTags && lead.tags!.length >= 2) ? 2 : 1;
+    // ── Idle "Impatience" Animation Logic ──
+    const [shakeVariant, setShakeVariant] = useState<string | null>(null);
+    React.useEffect(() => {
+        if (!isFirstColumn) return;
 
-    // Apply dynamic glassmorphism based on accentColor
+        const interval = setInterval(() => {
+            const variants = ['footTap', 'pushUp', 'shiver', 'heartbeat', 'swing'];
+            const randomVariant = variants[Math.floor(Math.random() * variants.length)];
+            setShakeVariant(randomVariant);
+            
+            // Reset variant after a duration (increased to see the full motion)
+            setTimeout(() => setShakeVariant(null), 2500);
+        }, 30000); // 30 seconds (Production interval)
+
+        return () => clearInterval(interval);
+    }, [isFirstColumn]);
+
+    // Animation Variants
+    const impatienceVariants = {
+        footTap: { 
+            rotate: [0, -8, 0, -8, 0],
+            originX: 1, originY: 1, // Pivot from bottom right
+            transition: { duration: 0.4, repeat: 2, ease: "easeInOut" } 
+        },
+        pushUp: { 
+            y: [0, -15, 0, -10, 0],
+            transition: { duration: 0.5, ease: "easeOut" } 
+        },
+        shiver: { 
+            x: [-2, 2, -2, 2, -1, 1, 0],
+            scale: [1, 1.02, 1],
+            transition: { duration: 0.1, repeat: 8 } 
+        },
+        heartbeat: { 
+            scale: [1, 1.1, 1, 1.08, 1],
+            transition: { duration: 0.6, times: [0, 0.2, 0.4, 0.7, 1] } 
+        },
+        swing: { 
+            rotate: [0, 5, -5, 3, -3, 0],
+            originX: 0.5, originY: 0, // Pivot from top
+            transition: { duration: 0.8, ease: "easeInOut" } 
+        }
+    };
+
+    // Apply dynamic glassmorphism based on accentColor - Ultra-soft mint green theme
     const dynamicStyle = React.useMemo(() => {
         const baseStyle = transform ? { transform: CSS.Translate.toString(transform) } : {};
         if (accentColor) {
-            // Add ~10% opacity (1A) for bg, and ~20% opacity (33) for border
             return {
                 ...baseStyle,
-                backgroundColor: `${accentColor}15`,
-                borderColor: `${accentColor}30`,
+                backgroundColor: `${accentColor}12`,
+                borderColor: `${accentColor}26`,
+                backdropFilter: 'blur(8px)',
             };
         }
         return {
             ...baseStyle,
-            backgroundColor: 'rgba(255, 255, 255, 0.65)',
-            borderColor: 'rgba(255, 255, 255, 0.8)',
+            backgroundColor: 'rgba(236, 253, 245, 0.6)', 
+            borderColor: 'rgba(167, 243, 208, 0.4)',
+            backdropFilter: 'blur(12px)',
         };
     }, [transform, accentColor]);
+
+    const ActionButton = ({ icon: Icon, color, text, previewText, onClick: btnClick, isMini }: any) => {
+        const [isHovered, setIsHovered] = useState(false);
+        const [coords, setCoords] = useState({ top: 0, left: 0 });
+        const triggerRef = useRef<HTMLButtonElement>(null);
+
+        const hasData = text || previewText;
+
+        useLayoutEffect(() => {
+            if (isHovered && triggerRef.current && hasData) {
+                const rect = triggerRef.current.getBoundingClientRect();
+                setCoords({
+                    top: rect.top + rect.height / 2,
+                    left: rect.right + 12
+                });
+            }
+        }, [isHovered, hasData]);
+
+        return (
+            <div className="relative flex items-center h-full">
+                <motion.button
+                    ref={triggerRef}
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                    whileTap={{ scale: 0.95 }}
+                    className={clsx(
+                        "relative flex items-center justify-center rounded-full bg-white/60 shadow-sm border border-white/80 transition-all gap-2 px-0",
+                        isMini ? "h-6 min-w-[24px]" : "h-7 min-w-[28px]",
+                        isHovered && hasData && "bg-white z-[100] shadow-md ring-1 ring-white/50",
+                        color
+                    )}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        btnClick?.(e);
+                    }}
+                >
+                    <Icon size={isMini ? 11 : 13} {...ICON_BOLD} className="shrink-0" />
+                </motion.button>
+                
+                {isHovered && hasData && createPortal(
+                    <div className="fixed inset-0 pointer-events-none z-[99999]">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0 }}
+                                animate={{ opacity: 1, scale: 1, y: '-50%' }}
+                                exit={{ opacity: 0, scale: 0 }}
+                                transition={{ 
+                                    type: 'spring', 
+                                    stiffness: 650, 
+                                    damping: 40,
+                                    mass: 0.3
+                                }}
+                                style={{ 
+                                    position: 'fixed',
+                                    top: coords.top,
+                                    left: coords.left,
+                                    originX: 0,
+                                    originY: 0.5
+                                }}
+                                className="px-4 py-2.5 bg-orange-50/90 backdrop-blur-[50px] border border-orange-200/50 rounded-2xl shadow-2xl flex flex-col group"
+                            >
+                                <div className="absolute inset-0 rounded-2xl border border-white/40 pointer-events-none" />
+                                <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest whitespace-nowrap drop-shadow-[0_1px_1px_rgba(255,255,255,0.5)]">
+                                    {text || 'Ação'}
+                                </span>
+                                {previewText && (
+                                    <span className="text-[13px] font-bold text-slate-900 tracking-tight whitespace-nowrap mt-1 drop-shadow-[0_1px_1px_rgba(255,255,255,0.5)]">
+                                        {previewText}
+                                    </span>
+                                )}
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>,
+                    document.body
+                )}
+            </div>
+        );
+    };
+
+    const ExplorationBalloon = ({ children, title, position = 'top' }: any) => {
+        const [isVisible, setIsVisible] = useState(false);
+        const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+        const triggerRef = useRef<HTMLDivElement>(null);
+
+        // Conditional Data Check
+        const hasContent = React.useMemo(() => {
+            if (title === 'Explorar Empresa') return !!(lead.metadata?.cnpj || lead.metadata?.city);
+            if (title === 'Explorar Contato') return !!(lead.phone || lead.email);
+            if (title === 'Explorar Tags') return (lead.tags || []).length > 0;
+            return false;
+        }, [title, lead]);
+
+        useLayoutEffect(() => {
+            if (isVisible && triggerRef.current && hasContent) {
+                const rect = triggerRef.current.getBoundingClientRect();
+                setCoords({
+                    top: position === 'top' ? rect.top : rect.bottom,
+                    left: rect.left + rect.width / 2, // Center of the trigger
+                    width: rect.width
+                });
+            }
+        }, [isVisible, position, hasContent]);
+
+        return (
+            <div 
+                ref={triggerRef}
+                className="relative group flex items-center h-full"
+                onMouseEnter={() => setIsVisible(true)}
+                onMouseLeave={() => setIsVisible(false)}
+            >
+                <div className={clsx(
+                    "cursor-pointer transition-transform duration-200",
+                    isVisible && hasContent && "scale-110"
+                )}>
+                    {children}
+                </div>
+                {isVisible && hasContent && createPortal(
+                    <div className="fixed inset-0 pointer-events-none z-[99999]">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0 }}
+                                animate={{ 
+                                    opacity: 1, 
+                                    scale: 1, 
+                                    x: '-50%',
+                                    y: position === 'top' ? '-100%' : '0%'
+                                }}
+                                exit={{ opacity: 0, scale: 0 }}
+                                transition={{ 
+                                    type: 'spring', 
+                                    stiffness: 650, 
+                                    damping: 40,
+                                    mass: 0.3
+                                }}
+                                style={{ 
+                                    position: 'fixed',
+                                    top: coords.top,
+                                    left: coords.left,
+                                    width: position === 'top' ? '280px' : '240px',
+                                    marginTop: position === 'bottom' ? '8px' : '0px',
+                                    marginBottom: position === 'top' ? '8px' : '0px',
+                                    originX: 0.5,
+                                    originY: position === 'top' ? 1 : 0
+                                }}
+                                className={clsx(
+                                    "bg-orange-50/90 backdrop-blur-[50px] border border-orange-200/50 rounded-2xl p-4 shadow-2xl transition-all duration-300",
+                                    "shadow-[0_20px_50px_-12px_rgba(251,146,60,0.15)]"
+                                )}
+                            >
+                                <div className="absolute inset-0 rounded-2xl border border-white/50 pointer-events-none" />
+                                <div className="flex flex-col gap-3">
+                                    {title === 'Explorar Empresa' && (
+                                        <div className="flex flex-col gap-2.5">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">CNPJ</span>
+                                                <span className="text-[13px] font-bold text-slate-900 tracking-tight mt-0.5">{lead.metadata?.cnpj || '-'}</span>
+                                            </div>
+                                            <div className="flex flex-col border-t border-orange-100/30 pt-2">
+                                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">Cidade</span>
+                                                <span className="text-[13px] font-bold text-slate-900 tracking-tight mt-0.5">{lead.metadata?.city || '-'}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {title === 'Explorar Contato' && (
+                                        <div className="flex flex-col gap-2.5">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">Telefone</span>
+                                                <span className="text-[13px] font-bold text-slate-900 tracking-tight mt-0.5">{lead.phone || '-'}</span>
+                                            </div>
+                                            <div className="flex flex-col border-t border-orange-100/30 pt-2">
+                                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">Email</span>
+                                                <span className="text-[12px] font-bold text-slate-900 tracking-tight mt-0.5 truncate">{lead.email || '-'}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {title === 'Explorar Tags' && (
+                                        <div className="flex flex-col gap-2">
+                                            <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70 mb-1">Tags</span>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {(lead.tags || []).map((t, i) => (
+                                                    <div key={i} className="px-3 py-1 rounded-full bg-orange-100/50 border border-orange-200/50">
+                                                        <span className="text-orange-700 text-[10px] font-black uppercase tracking-tight">{t}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>,
+                    document.body
+                )}
+            </div>
+        );
+    };
+
 
     return (
         <motion.div
@@ -94,264 +326,129 @@ export const LeadCard: React.FC<LeadCardProps> = ({
             {...attributes}
             onPointerDown={!isCadenceColumn ? handlePointerDown : undefined}
             onClick={handleClick}
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ 
+                opacity: 1, 
+                scale: 1,
+                ...(shakeVariant ? (impatienceVariants as any)[shakeVariant] : {})
+            }}
+            whileHover={{ y: -4, zIndex: 1000, boxShadow: "0 20px 40px -12px rgba(251, 146, 60, 0.2)" }}
             className={clsx(
-                "relative flex flex-col p-[14px] gap-2.5 w-full backdrop-blur-md shadow-sm rounded-[24px] border transition-all duration-300 hover:shadow-lg",
+                "relative flex flex-col p-4 gap-3 w-full rounded-[32px] border transition-all duration-500",
                 !isCadenceColumn ? "cursor-grab active:cursor-grabbing" : "cursor-default",
-                isDragging && "opacity-40 grayscale-[0.5] scale-95"
+                isDragging && "opacity-40 grayscale-[0.5] scale-95",
+                "min-h-[190px]" // Fixed height for consistency
             )}
             style={dynamicStyle}
             {...(!isCadenceColumn ? listeners : {})}
         >
-            {/* ── ROW 1: Company name + icons ── */}
-            <div className="flex items-center justify-between w-full gap-2">
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    {/* Company icon */}
-                    <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm border border-slate-50">
-                        <Building2 size={19} className="text-[#10B981]" strokeWidth={2} />
-                    </div>
-                    {/* Company name — single line with ellipsis, full name on hover */}
-                    <h4
-                        className="font-bold text-[#1E293B] text-[14.5px] leading-tight truncate"
-                        style={{ fontFamily: 'Comfortaa, cursive' }}
-                        title={lead.company_name}
-                    >
-                        {lead.company_name}
-                    </h4>
-                </div>
-
-                {/* Header actions — always show schedule for SDRs, and location if exists */}
-                <div className="flex items-center gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
-                    {hasLocation && (
-                        <motion.button
-                            key="location"
-                            onHoverStart={() => setIsMapHovered(true)}
-                            onHoverEnd={() => setIsMapHovered(false)}
-                            className="h-8 min-w-[32px] rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 text-[#3B82F6] hover:border-[#3B82F6] hover:shadow-md transition-all active:scale-95 px-2 overflow-hidden"
-                            title={location!}
-                        >
-                            <MapPin size={15} strokeWidth={2} className="shrink-0" />
-                            <AnimatePresence>
-                                {isMapHovered && (
-                                    <motion.span
-                                        initial={{ width: 0, opacity: 0, marginLeft: 0 }}
-                                        animate={{ width: 'auto', opacity: 1, marginLeft: 5 }}
-                                        exit={{ width: 0, opacity: 0, marginLeft: 0 }}
-                                        transition={{ duration: 0.18 }}
-                                        className="text-[11px] font-semibold whitespace-nowrap overflow-hidden"
-                                    >
-                                        {location}
-                                    </motion.span>
-                                )}
-                            </AnimatePresence>
-                        </motion.button>
-                    )}
-                    <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        animate={hasSchedule ? { boxShadow: ['0 0 0 0 rgba(249,115,22,0)', '0 0 0 5px rgba(249,115,22,0.25)', '0 0 0 0 rgba(249,115,22,0)'] } : {}}
-                        transition={hasSchedule ? { duration: 2, repeat: Infinity } : {}}
-                        className={clsx(
-                            "w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all active:scale-90 border shadow-sm",
-                            hasSchedule 
-                                ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white border-orange-300 hover:from-orange-500 hover:to-amber-600 shadow-orange-200" 
-                                : "bg-white text-slate-300 border-slate-100 hover:border-orange-200 hover:text-orange-500 hover:bg-orange-50/50"
-                        )}
-                        title={hasSchedule 
-                            ? `Agenda: ${new Date(lead.metadata!.next_contact_at!).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` 
-                            : "Agendar Retorno"}
-                        onClick={(e) => { e.stopPropagation(); onSchedule?.(lead); }}
-                    >
-                        <CalendarClock size={15} strokeWidth={2} />
-                    </motion.button>
-                </div>
-            </div>
-
-            {/* ── ROW 2: CNPJ (conditional) ── */}
-            {cnpj && (
-                <div className="flex -mt-1">
-                    <div
-                        className="px-2.5 py-0.5 rounded-lg bg-white border border-[#E2E8F0] text-[#94A3B8] text-[11px] font-medium shadow-sm cursor-default select-all"
-                        title="CNPJ"
-                    >
-                        {cnpj}
-                    </div>
-                </div>
-            )}
-
-            {/* ── ROW 3: Contact card (adaptive) ── */}
-            <div className="bg-white rounded-[18px] px-3 py-2.5 shadow-sm border border-[#F1F5F9] flex items-center justify-between gap-2">
-                {hasContactName ? (
-                    /* Named contact */
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
-                            <User size={16} className="text-slate-400" strokeWidth={1.5} />
+            {/* 1. Header: Company Info and Quick Actions */}
+            <div className="flex items-start justify-between">
+                <ExplorationBalloon title="Explorar Empresa" icon={Building2}>
+                    <div className="flex items-center gap-2.5 min-w-0 pointer-events-none">
+                        <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0 border border-emerald-100 shadow-sm">
+                            <Building2 size={16} className="text-[#10B981]" {...ICON_BOLD} />
                         </div>
                         <div className="flex flex-col min-w-0">
-                            <p
-                                className="font-bold text-[#334155] text-[14px] truncate leading-tight"
-                                style={{ fontFamily: 'Comfortaa, cursive' }}
-                                title={lead.full_name}
-                            >
-                                {lead.full_name}
-                            </p>
-                            {lead.metadata?.job_title && (
-                                <p className="text-[#94A3B8] text-[10px] font-bold uppercase tracking-wider truncate mt-0.5">
-                                    {lead.metadata.job_title}
-                                </p>
+                            <h4 className="font-bold text-[#334155] text-[13px] leading-tight truncate tracking-tight" style={{ fontFamily: 'Quicksand, sans-serif' }}>
+                                {lead.company_name}
+                            </h4>
+                            {cnpj && (
+                                <div className="mt-0.5 px-1.5 py-0.5 rounded bg-white/40 border border-white/50 text-slate-400 text-[7px] font-black tracking-widest inline-flex w-fit shadow-xs uppercase">
+                                    {cnpj}
+                                </div>
                             )}
                         </div>
                     </div>
-                ) : (
-                    /* No named contact — show phone number */
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <div className="w-8 h-8 rounded-full bg-[#EBFDF5] flex items-center justify-center shrink-0 border border-[#D1FAE5]">
-                            <Phone size={16} className="text-[#10B981]" strokeWidth={1.5} />
-                        </div>
-                        <p
-                            className="font-bold text-[#334155] text-[14px] truncate"
-                            title={String(lead.phone)}
-                        >
-                            {String(lead.phone || '')}
-                        </p>
-                    </div>
-                )}
-
-                {/* Contact action buttons */}
-                {/* Note: phone button is hidden when hasContactName=false (phone is already shown inline above) */}
-                <div className="flex gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
-                    {hasContactPhone && hasContactName && (
-                        <motion.span
-                            whileHover={{ scale: 1.12 }}
-                            className="w-8 h-8 rounded-full bg-[#EBFDF5] text-[#10B981] flex items-center justify-center cursor-pointer hover:bg-[#10B981] hover:text-white transition-all active:scale-90"
-                            title={`Ligar: ${lead.full_name || lead.phone}`}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (!voip.isCallActive && lead.phone) {
-                                    voip.initiateCall(String(lead.phone), lead.id, lead.full_name);
-                                }
-                            }}
-                        >
-                            <Phone size={15} strokeWidth={2} />
-                        </motion.span>
-                    )}
-                    {hasContactEmail && (
-                        <motion.span
-                            whileHover={{ scale: 1.12 }}
-                            className="w-8 h-8 rounded-full bg-[#EEF2FF] text-[#6366F1] flex items-center justify-center cursor-pointer hover:bg-[#6366F1] hover:text-white transition-all"
-                            title={lead.email}
-                        >
-                            <Mail size={15} strokeWidth={2} />
-                        </motion.span>
-                    )}
-                    {hasLinkedin && (
-                        <motion.span
-                            whileHover={{ scale: 1.12 }}
-                            className="w-8 h-8 rounded-full bg-[#EBF5FF] text-[#3B82F6] flex items-center justify-center cursor-pointer hover:bg-[#3B82F6] hover:text-white transition-all text-[11.5px] font-black"
-                            title="LinkedIn"
-                        >
-                            in
-                        </motion.span>
-                    )}
+                </ExplorationBalloon>
+                <div className="flex items-center gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
+                    <ActionButton icon={Phone} color="text-emerald-500" text="Ligar" previewText={lead.phone} onClick={() => !voip.isCallActive && lead.phone && voip.initiateCall(String(lead.phone), lead.id, lead.full_name)} />
+                    <ActionButton icon={Mail} color="text-blue-500" text="Email" previewText={lead.email} />
                 </div>
             </div>
 
-            {/* ── ROW 4: Tags + Progress ── */}
-            <div className="flex items-center justify-between w-full mt-auto">
-                {/* Tags — smart display */}
-                <div className="relative flex items-center gap-1.5 overflow-visible min-w-0 flex-1 mr-2">
-                    {hasTags && (
-                        <div
-                            className="relative flex items-center gap-1.5 flex-wrap"
-                            onMouseEnter={() => setIsTagHovered(true)}
-                            onMouseLeave={() => setIsTagHovered(false)}
-                        >
-                            {lead.tags!.slice(0, visibleTagCount).map((tag, idx) => (
-                                <motion.span
-                                    key={idx}
-                                    layout
-                                    className="inline-flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-xl bg-[#FFEDD5] border border-[#FED7AA] text-[#9A3412] cursor-help shadow-sm hover:brightness-95 transition-all whitespace-nowrap"
-                                    style={{ fontFamily: 'Comfortaa, cursive' }}
-                                >
-                                    {idx === 0 && <Tag size={11} className="text-[#F97316]" {...ICON} />}
-                                    {tag}
-                                </motion.span>
-                            ))}
+                <div className="flex-1">
+                    <ExplorationBalloon title="Explorar Contato" icon={User}>
+                        <div className="bg-white/80 rounded-[20px] p-2.5 shadow-sm border border-white/90 flex items-center justify-between gap-2 backdrop-blur-sm transition-all hover:bg-white group/contact pointer-events-auto">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <div className="w-7 h-7 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                                    <User size={12} className="text-slate-400" {...ICON_BASE} />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <p className="font-bold text-[#475569] text-[11px] truncate tracking-tight">
+                                        {lead.full_name || 'Sem Contato'}
+                                    </p>
+                                    {jobTitle && (
+                                        <p className="text-[#94A3B8] text-[7px] font-black uppercase tracking-wider truncate mt-0.5 opacity-80">
+                                            {jobTitle}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0" onPointerDown={e => e.stopPropagation()}>
+                                 <ActionButton icon={Phone} color="text-emerald-500" text="Ligar" previewText={lead.phone} isMini onClick={() => !voip.isCallActive && lead.phone && voip.initiateCall(String(lead.phone), lead.id, lead.full_name)} />
+                                 <ActionButton icon={Mail} color="text-blue-500" text="Email" previewText={lead.email} isMini />
+                                 {hasLinkedin && <ActionButton icon={Linkedin} color="text-sky-500" text="LinkedIn" isMini />}
+                            </div>
+                        </div>
+                    </ExplorationBalloon>
+                </div>
 
-                            {lead.tags!.length > visibleTagCount && !isTagHovered && (
-                                <span className="text-[#94A3B8] text-[12px] font-bold whitespace-nowrap">
-                                    +{lead.tags!.length - visibleTagCount}
+            {/* 3. Footer: Tags and Engagement */}
+            <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                    <ExplorationBalloon title="Explorar Tags" icon={Tag} position="bottom">
+                        <motion.div 
+                            whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.8)' }}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-orange-100 bg-orange-50/40 cursor-default shadow-xs"
+                        >
+                            <Tag size={10} className="text-orange-600" {...ICON_BOLD} />
+                            <div className="flex items-center gap-1">
+                                <span className="text-[9px] font-black text-orange-700 uppercase tracking-tighter">
+                                    {hasTags ? lead.tags![0] : 'Lead'}
                                 </span>
-                            )}
-
-                            {/* Hover popup with all tags */}
-                            <AnimatePresence>
-                                {isTagHovered && lead.tags!.length > visibleTagCount && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 8, scale: 0.92 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 8, scale: 0.92 }}
-                                        transition={{ duration: 0.15 }}
-                                        className="absolute bottom-full left-0 mb-2 p-2 bg-white border border-[#FED7AA] rounded-xl shadow-xl flex flex-wrap gap-1 z-50 min-w-[140px]"
-                                    >
-                                        {lead.tags?.map((tag, idx) => (
-                                            <span
-                                                key={idx}
-                                                className="px-2 py-0.5 bg-[#FFEDD5] text-[#9A3412] text-[10px] font-bold rounded-lg border border-[#FED7AA]/50 whitespace-nowrap"
-                                            >
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </motion.div>
+                                {hasTags && lead.tags!.length > 1 && (
+                                    <span className="text-[8px] font-black text-orange-400">+{lead.tags!.length - 1}</span>
                                 )}
-                            </AnimatePresence>
-                        </div>
-                    )}
+                            </div>
+                            {(lead.metadata?.city || lead.metadata?.state) && (
+                                <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-orange-200/50 text-[8px] font-bold text-slate-400 truncate max-w-[80px]">
+                                    {lead.metadata.city && <span>{lead.metadata.city}</span>}
+                                    {lead.metadata.state && <span className="opacity-50">/{lead.metadata.state}</span>}
+                                </div>
+                            )}
+                        </motion.div>
+                    </ExplorationBalloon>
                 </div>
-
-                {/* Progress badge */}
-                <motion.div
-                    whileHover={{ scale: 1.1 }}
-                    className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-[#FFEDD5] border border-[#FED7AA] text-[#9A3412] text-[11.5px] font-bold shadow-sm cursor-default"
-                    style={{ fontFamily: 'Comfortaa, cursive' }}
-                    title={`Cadência: ${cadenceProgress}%`}
-                >
-                    {cadenceProgress}%
-                </motion.div>
+                <div className="flex items-center gap-1">
+                    <div className="px-2 py-1 rounded-lg bg-emerald-50/50 border border-emerald-100/50 text-emerald-700 text-[9px] font-black shadow-xs tracking-tight">
+                        {cadenceProgress}%
+                    </div>
+                    <ActionButton icon={Calendar} color="text-orange-500 bg-orange-50 border-orange-100" text="Agenda" onClick={() => onSchedule?.(lead)} />
+                </div>
             </div>
 
-            {/* ── Cadence column controls ── */}
+            {/* Cadence controls (overlay) */}
             <AnimatePresence>
                 {isCadenceColumn && (
                     <motion.div
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 500, damping: 30 } }}
-                        exit={{ opacity: 0, y: 4 }}
-                        className="flex items-center justify-end gap-1.5 w-full mt-1"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute inset-x-0 -bottom-1 flex items-center justify-center gap-2 pb-2 z-10"
                         onPointerDown={e => e.stopPropagation()}
                     >
-                        <button
-                            onClick={e => { e.stopPropagation(); onReturn?.(lead); }}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-full shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-90 text-[10px] font-bold"
-                            title="Retornar à etapa anterior"
-                        >
-                            <Undo2 size={11} {...ICON} />
-                            <span>Voltar</span>
+                        <button onClick={e => { e.stopPropagation(); onReturn?.(lead); }} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl shadow-md text-[10px] font-bold flex items-center gap-1">
+                            <Undo2 size={10} /> Voltar
                         </button>
-                        <button
-                            onClick={e => { e.stopPropagation(); onFinish?.(lead); }}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500 text-white rounded-full shadow-sm shadow-emerald-200 hover:bg-emerald-600 transition-all active:scale-90 text-[10px] font-bold"
-                            title="Encerrar ciclo de cadência"
-                        >
-                            <Check size={11} {...ICON} />
-                            <span>Encerrar</span>
+                        <button onClick={e => { e.stopPropagation(); onFinish?.(lead); }} className="px-3 py-1.5 bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-200 text-[10px] font-bold flex items-center gap-1">
+                            <Check size={10} /> Concluir
                         </button>
                     </motion.div>
                 )}
             </AnimatePresence>
-
             {lead.metadata?.is_paused && (
-                <span className="absolute -bottom-2 right-12 text-[9px] font-black px-2 py-0.5 bg-amber-100 text-amber-700 border border-amber-300 rounded-lg uppercase tracking-widest shadow-sm">
+                <span className="absolute -bottom-3 right-8 text-[10px] font-black px-3 py-1 bg-amber-100 text-amber-700 border border-amber-300 rounded-xl uppercase tracking-widest shadow-sm">
                     Pausado
                 </span>
             )}

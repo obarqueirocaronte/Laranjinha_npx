@@ -6,16 +6,16 @@ import type { ActiveCall } from '../../contexts/VoipContext';
 interface CallFeedbackModalProps {
     isOpen: boolean;
     callData: ActiveCall | null;
-    onResult: (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule', notes?: string) => void;
+    onResult: (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer', notes?: string) => void;
     onClose: () => void;
 }
 
 export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, callData, onResult, onClose }) => {
     const [step, setStep] = useState<'feedback' | 'notes'>('feedback');
     const [noteText, setNoteText] = useState('');
-    const [selectedResult, setSelectedResult] = useState<'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | null>(null);
+    const [selectedResult, setSelectedResult] = useState<'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer' | null>(null);
 
-    const handleResultClick = (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule') => {
+    const handleResultClick = (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer') => {
         setSelectedResult(result);
         setStep('notes');
     };
@@ -54,40 +54,42 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.8, y: 20 }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="relative w-full max-w-sm bg-gradient-to-br from-orange-500 via-orange-500 to-red-500 border border-white/40 shadow-[0_20px_60px_rgba(249,115,22,0.4)] rounded-[40px] overflow-hidden p-8 text-center backdrop-blur-xl"
+                        className="relative w-full max-w-sm bg-white/40 border border-white/60 shadow-glass rounded-[40px] overflow-hidden p-8 text-center backdrop-blur-2xl"
                     >
-                        {/* Glass Reflections */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
-                        <div className="absolute -top-24 -left-24 w-48 h-48 bg-white/20 rounded-full blur-3xl pointer-events-none" />
-                        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-red-600/30 rounded-full blur-3xl pointer-events-none" />
+                        {/* Soft Nude/Orange Glass Background */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-orange-50/80 via-white/40 to-orange-100/60 pointer-events-none" />
+                        
+                        {/* Premium Reflections */}
+                        <div className="absolute -top-32 -left-32 w-64 h-64 bg-orange-200/30 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-rose-200/20 rounded-full blur-3xl pointer-events-none" />
 
                         <button
                             onClick={handleClose}
-                            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-white shadow-sm border border-white/20 z-10"
+                            className="absolute top-6 right-6 p-2 bg-black/5 hover:bg-black/10 rounded-full transition-colors text-slate-400 shadow-sm border border-white/40 z-10"
                         >
-                            <X size={20} strokeWidth={2.5} />
+                            <X size={18} strokeWidth={2.5} />
                         </button>
 
                         <div className="relative z-10 flex flex-col items-center gap-2">
-                            {/* Ícone Refinado Azul/Glass */}
-                            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center mb-2 shadow-[0_8px_32px_rgba(59,130,246,0.4)] border border-white/40">
+                            {/* Refined Icon Block */}
+                            <div className="w-16 h-16 rounded-[28px] bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center mb-3 shadow-[0_12px_24px_rgba(249,115,22,0.3)] border border-white/40">
                                 <motion.div
                                     animate={{ rotate: [0, -10, 10, -5, 5, 0] }}
                                     transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
                                 >
-                                    <Phone size={36} className="text-white drop-shadow-md" strokeWidth={2.5} />
+                                    <Phone size={28} className="text-white drop-shadow-md" strokeWidth={2.5} />
                                 </motion.div>
                             </div>
 
-                            <h2 className="text-2xl font-black text-white leading-tight tracking-tight drop-shadow-sm mt-2" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                            <h2 className="text-2xl font-black text-slate-800 leading-tight tracking-tight mt-1" style={{ fontFamily: 'Comfortaa, cursive' }}>
                                 {step === 'feedback' ? 'Chamada Encerrada' : 'Anotações'}
                             </h2>
 
-                            <p className="text-sm text-white/90 font-bold mb-6 drop-shadow-sm px-4" style={{ fontFamily: 'Quicksand, sans-serif' }}>
+                            <p className="text-sm text-slate-500 font-medium mb-6 px-4" style={{ fontFamily: 'Quicksand, sans-serif' }}>
                                 {step === 'feedback' ? (
-                                    <>A ligação com <strong className="text-white font-black underline decoration-white/40 decoration-2 underline-offset-4">{callData.leadName}</strong> terminou. Qual foi o desfecho?</>
+                                    <>A ligação com <strong className="text-orange-600 font-black">{callData.leadName}</strong> terminou. Qual foi o desfecho?</>
                                 ) : (
-                                    <>Registre os detalhes da conversa com <strong className="text-white font-black">{callData.leadName}</strong>.</>
+                                    <>Registre os detalhes da conversa com <strong className="text-orange-600 font-black">{callData.leadName}</strong>.</>
                                 )}
                             </p>
 
@@ -103,75 +105,84 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
                                         {/* Sucesso */}
                                         <button
                                             onClick={() => handleResultClick('success')}
-                                            className="w-full relative overflow-hidden p-4 bg-white/10 hover:bg-white/20 border border-white/30 rounded-[24px] flex items-center justify-between group transition-all shadow-[0_8px_24px_rgba(16,185,129,0.3)] hover:shadow-[0_12px_32px_rgba(16,185,129,0.5)]"
+                                            className="w-full relative overflow-hidden p-4 bg-white/60 hover:bg-white/90 border border-white/80 rounded-[28px] flex items-center justify-between group transition-all shadow-sm hover:shadow-md"
                                         >
-                                            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/80 to-teal-400/80 opacity-60 group-hover:opacity-100 transition-opacity" />
                                             <div className="relative z-10 text-left pl-2">
-                                                <span className="block text-base font-black text-white drop-shadow-md tracking-wide" style={{ fontFamily: 'Comfortaa, cursive' }}>CONTATO FEITO</span>
-                                                <span className="block text-[11px] text-white/90 font-bold drop-shadow-sm uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Avançou na qualificação</span>
+                                                <span className="block text-sm font-black text-emerald-700 tracking-wide uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>CONTATO FEITO</span>
+                                                <span className="block text-[10px] text-emerald-600/80 font-bold uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Qualificou o lead</span>
                                             </div>
-                                            <div className="relative z-10 w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/40 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                                                <CheckCircle size={20} strokeWidth={2.5} />
+                                            <div className="relative z-10 w-9 h-9 rounded-2xl bg-emerald-500 shadow-sm flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                                <CheckCircle size={18} strokeWidth={2.5} />
                                             </div>
                                         </button>
 
-                                        {/* Ocupado / Recusou */}
+                                        {/* Ocupado */}
                                         <button
                                             onClick={() => handleResultClick('busy')}
-                                            className="w-full relative overflow-hidden p-4 bg-white/10 hover:bg-white/20 border border-white/30 rounded-[24px] flex items-center justify-between group transition-all shadow-[0_8px_24px_rgba(245,158,11,0.2)] hover:shadow-[0_12px_32px_rgba(245,158,11,0.4)]"
+                                            className="w-full relative overflow-hidden p-4 bg-white/60 hover:bg-white/90 border border-white/80 rounded-[28px] flex items-center justify-between group transition-all shadow-sm hover:shadow-md"
                                         >
-                                            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/80 to-yellow-400/80 opacity-60 group-hover:opacity-100 transition-opacity" />
                                             <div className="relative z-10 text-left pl-2">
-                                                <span className="block text-base font-black text-white drop-shadow-md tracking-wide" style={{ fontFamily: 'Comfortaa, cursive' }}>OCUPADO / RECUSOU</span>
-                                                <span className="block text-[11px] text-white/90 font-bold drop-shadow-sm uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Tentar novamente depois</span>
+                                                <span className="block text-sm font-black text-amber-700 tracking-wide uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>OCUPADO / RECUSOU</span>
+                                                <span className="block text-[10px] text-amber-600/80 font-bold uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Tentar novamente</span>
                                             </div>
-                                            <div className="relative z-10 w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/40 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                                                <Phone size={18} strokeWidth={2.5} className="rotate-90" />
+                                            <div className="relative z-10 w-9 h-9 rounded-2xl bg-amber-500 shadow-sm flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                                <Phone size={16} strokeWidth={2.5} className="rotate-90" />
                                             </div>
                                         </button>
 
                                         {/* Caixa Postal */}
                                         <button
                                             onClick={() => handleResultClick('voicemail')}
-                                            className="w-full relative overflow-hidden p-4 bg-white/10 hover:bg-white/20 border border-white/30 rounded-[24px] flex items-center justify-between group transition-all shadow-[0_8px_24px_rgba(0,0,0,0.1)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.2)]"
+                                            className="w-full relative overflow-hidden p-4 bg-white/60 hover:bg-white/90 border border-white/80 rounded-[28px] flex items-center justify-between group transition-all shadow-sm hover:shadow-md"
                                         >
-                                            <div className="absolute inset-0 bg-gradient-to-r from-slate-600/80 to-slate-500/80 opacity-60 group-hover:opacity-100 transition-opacity" />
                                             <div className="relative z-10 text-left pl-2">
-                                                <span className="block text-base font-black text-white drop-shadow-md tracking-wide" style={{ fontFamily: 'Comfortaa, cursive' }}>CAIXA POSTAL</span>
-                                                <span className="block text-[11px] text-white/90 font-bold drop-shadow-sm uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Não atendeu / Recado</span>
+                                                <span className="block text-sm font-black text-slate-700 tracking-wide uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>CAIXA POSTAL</span>
+                                                <span className="block text-[10px] text-slate-500/80 font-bold uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Não atendeu / Recado</span>
                                             </div>
-                                            <div className="relative z-10 w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/40 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                                                <Voicemail size={20} strokeWidth={2.5} />
+                                            <div className="relative z-10 w-9 h-9 rounded-2xl bg-slate-500 shadow-sm flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                                <Voicemail size={18} strokeWidth={2.5} />
                                             </div>
                                         </button>
 
-                                        {/* Número Inválido / Errado */}
+                                        {/* Não Atendeu */}
+                                        <button
+                                            onClick={() => handleResultClick('no-answer')}
+                                            className="w-full relative overflow-hidden p-4 bg-white/60 hover:bg-white/90 border border-white/80 rounded-[28px] flex items-center justify-between group transition-all shadow-sm hover:shadow-md"
+                                        >
+                                            <div className="relative z-10 text-left pl-2">
+                                                <span className="block text-sm font-black text-orange-700 tracking-wide uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>NÃO ATENDEU</span>
+                                                <span className="block text-[10px] text-orange-600/80 font-bold uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Ligação perdida</span>
+                                            </div>
+                                            <div className="relative z-10 w-9 h-9 rounded-2xl bg-orange-500 shadow-sm flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                                <X size={18} strokeWidth={2.5} />
+                                            </div>
+                                        </button>
+
+                                        {/* Inválido */}
                                         <button
                                             onClick={() => handleResultClick('invalid')}
-                                            className="w-full relative overflow-hidden p-4 bg-white/10 hover:bg-white/20 border border-white/30 rounded-[24px] flex items-center justify-between group transition-all shadow-[0_8px_24px_rgba(239,68,68,0.3)] hover:shadow-[0_12px_32px_rgba(239,68,68,0.5)] mt-6"
+                                            className="w-full relative overflow-hidden p-4 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-[28px] flex items-center justify-between group transition-all mt-6"
                                         >
-                                            <div className="absolute inset-0 bg-gradient-to-r from-red-600/90 to-red-500/90 opacity-60 group-hover:opacity-100 transition-opacity" />
                                             <div className="relative z-10 text-left pl-2">
-                                                <span className="block text-base font-black text-white drop-shadow-md tracking-wide" style={{ fontFamily: 'Comfortaa, cursive' }}>NÚMERO INVÁLIDO</span>
-                                                <span className="block text-[11px] text-white/90 font-bold drop-shadow-sm uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Descartar lead</span>
+                                                <span className="block text-sm font-black text-rose-700 tracking-wide uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>NÚMERO INVÁLIDO</span>
+                                                <span className="block text-[10px] text-rose-500/80 font-bold uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Descartar lead</span>
                                             </div>
-                                            <div className="relative z-10 w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/40 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                                                <XCircle size={20} strokeWidth={2.5} />
+                                            <div className="relative z-10 w-9 h-9 rounded-2xl bg-rose-500 shadow-sm flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                                <XCircle size={18} strokeWidth={2.5} />
                                             </div>
                                         </button>
 
                                         {/* Agendar Retorno */}
                                         <button
                                             onClick={() => handleResultClick('reschedule')}
-                                            className="w-full relative overflow-hidden p-4 bg-white/10 hover:bg-white/20 border border-white/30 rounded-[24px] flex items-center justify-between group transition-all shadow-[0_8px_24px_rgba(30,41,59,0.2)] mt-3"
+                                            className="w-full relative overflow-hidden p-4 bg-slate-100/80 hover:bg-slate-200/80 border border-slate-300/40 rounded-[28px] flex items-center justify-between group transition-all mt-3"
                                         >
-                                            <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-slate-600 opacity-60 group-hover:opacity-100 transition-opacity" />
                                             <div className="relative z-10 text-left pl-2">
-                                                <span className="block text-base font-black text-white drop-shadow-md tracking-wide" style={{ fontFamily: 'Comfortaa, cursive' }}>AGENDAR RETORNO</span>
-                                                <span className="block text-[11px] text-white/90 font-bold drop-shadow-sm uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Definir data e hora</span>
+                                                <span className="block text-sm font-black text-slate-800 tracking-wide uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>AGENDAR RETORNO</span>
+                                                <span className="block text-[10px] text-slate-500/80 font-bold uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Definir data e hora</span>
                                             </div>
-                                            <div className="relative z-10 w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/40 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                                                <CalendarClock size={20} strokeWidth={2.5} className="text-orange-400" />
+                                            <div className="relative z-10 w-9 h-9 rounded-2xl bg-slate-800 shadow-sm flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                                <CalendarClock size={18} strokeWidth={2.5} className="text-orange-400" />
                                             </div>
                                         </button>
                                     </motion.div>
@@ -183,23 +194,25 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
                                         exit={{ opacity: 0, scale: 0.9, y: 10 }}
                                         className="w-full space-y-4"
                                     >
-                                        <div className="relative">
+                                        <div className="relative group">
                                             <textarea
                                                 value={noteText}
                                                 onChange={(e) => setNoteText(e.target.value)}
-                                                placeholder="Descreva aqui o que foi falado (ex: cliente pediu para ligar amanhã às 14h, ou quais os próximos passos...)"
+                                                placeholder="Descreva aqui o que foi falado..."
                                                 rows={4}
-                                                className="w-full p-4 bg-white/20 border border-white/30 rounded-2xl text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:bg-white/30 transition-all resize-none shadow-inner"
+                                                className="w-full p-4 bg-white/60 border border-white/80 rounded-3xl text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:bg-white/90 transition-all resize-none shadow-sm"
                                                 style={{ fontFamily: 'Quicksand, sans-serif' }}
                                                 autoFocus
                                             />
-                                            <MessageSquare className="absolute bottom-4 right-4 text-white/40 pointer-events-none" size={20} />
+                                            <div className="absolute bottom-4 right-4 text-orange-200 pointer-events-none group-focus-within:text-orange-400 transition-colors">
+                                                <MessageSquare size={20} />
+                                            </div>
                                         </div>
 
                                         <div className="flex gap-3">
                                             <button
                                                 onClick={() => setStep('feedback')}
-                                                className="flex-1 py-3 px-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-[20px] text-white font-bold transition-all shadow-sm"
+                                                className="flex-1 py-4 px-4 bg-white/40 hover:bg-white/60 border border-white/80 rounded-full text-slate-600 font-bold transition-all shadow-sm"
                                                 style={{ fontFamily: 'Quicksand, sans-serif' }}
                                             >
                                                 Voltar
@@ -207,7 +220,7 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
                                             <button
                                                 onClick={handleSaveNotes}
                                                 disabled={selectedResult === 'success' ? !noteText.trim() : false}
-                                                className="flex-[2] py-3 px-4 bg-white text-orange-600 hover:bg-orange-50 rounded-[20px] font-black transition-all shadow-[0_8px_16px_rgba(0,0,0,0.1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="flex-[2] py-4 px-4 bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white rounded-full font-black text-sm uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                                 style={{ fontFamily: 'Comfortaa, cursive' }}
                                             >
                                                 Salvar Anotação

@@ -12,7 +12,7 @@ import { authAPI } from '../lib/api';
 interface User {
     id: string;
     email: string;
-    role?: 'manager' | 'sdr';
+    role?: 'manager' | 'sdr' | 'salesops';
     isAdmin?: boolean;
     profile_picture_url?: string | null;
 }
@@ -31,8 +31,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Manager bypass — SOMENTE este usuário tem acesso sem banco
-const MANAGER_BYPASS = { email: 'rodrigo.sergio@npx.com.br', password: '505050' };
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -67,26 +66,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             const token = localStorage.getItem('auth_token');
             if (token) {
-                // Bypass token do manager
-                if (token === 'bypass-token') {
-                    const savedUser = localStorage.getItem('user');
-                    if (savedUser) {
-                        setUser(JSON.parse(savedUser));
-                    }
-                    setLoading(false);
-                    return;
-                }
+
 
                 // Token JWT real — validar com o backend
                 try {
                     const response = await authAPI.getCurrentUser();
                     if (response.success) {
                         const u = response.data.user;
+                        const roleMap: Record<string, 'manager' | 'sdr' | 'salesops'> = {
+                            manager: 'manager', salesops: 'salesops', sdr: 'sdr'
+                        };
                         setUser({
                             id: u.id,
                             email: u.email,
-                            role: u.is_admin ? 'manager' : 'sdr',
-                            isAdmin: u.is_admin,
+                            role: roleMap[u.role] || (u.is_admin ? 'manager' : 'sdr'),
+                            isAdmin: u.is_admin || u.role === 'salesops',
                             profile_picture_url: u.profile_picture_url
                         });
                     }
@@ -107,16 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setLoading(true);
             setError(null);
 
-            // Bypass SOMENTE para o manager
-            if (email === MANAGER_BYPASS.email && password === MANAGER_BYPASS.password) {
-                const managerUser: User = { id: 'admin-bypass', email, role: 'manager', isAdmin: true };
-                setUser(managerUser);
-                localStorage.setItem('auth_token', 'bypass-token');
-                localStorage.setItem('user', JSON.stringify(managerUser));
-                return;
-            }
-
-            // Autenticação REAL via banco de dados para todos os outros
+            // Autenticação REAL via banco de dados para todos os usuários
+            // O backend já possui suporte a bypass-dev para contas específicas
             const response = await authAPI.login(email, password);
 
             if (!response.success) {
@@ -127,8 +113,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const loggedUser: User = {
                 id: apiUser.id,
                 email: apiUser.email,
-                role: apiUser.isAdmin ? 'manager' : 'sdr',
-                isAdmin: apiUser.isAdmin,
+                role: (apiUser.role as 'manager' | 'sdr' | 'salesops') || (apiUser.isAdmin ? 'manager' : 'sdr'),
+                isAdmin: apiUser.isAdmin || apiUser.role === 'salesops',
                 profile_picture_url: apiUser.profile_picture_url
             };
 

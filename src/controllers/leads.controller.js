@@ -267,7 +267,49 @@ exports.updateLead = async (req, res, next) => {
     try {
         const { id } = req.params;
         const updates = req.body;
+        const userId = req.user?.id;
+
         const result = await leadsService.updateLead(id, updates);
+
+        // If this update contains a call outcome, log it to call_logs too
+        if (updates.last_call_outcome) {
+            try {
+                // Find SDR ID from user ID
+                const sdrRes = await db.query('SELECT id FROM sdrs WHERE user_id = $1 LIMIT 1', [userId]);
+                const sdrId = sdrRes.rows[0]?.id;
+
+                await leadsService.logCallInteraction(id, {
+                    sdr_id: sdrId,
+                    outcome: updates.last_call_outcome,
+                    notes: updates.metadata?.last_call_notes
+                });
+            } catch (logErr) {
+                console.error('Failed to log call interaction:', logErr.message);
+            }
+        }
+
+        res.json({ success: true, data: result });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.completeCadence = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { notes, final_outcome } = req.body;
+        const userId = req.user?.id;
+
+        // Find SDR ID from user ID
+        const sdrRes = await db.query('SELECT id FROM sdrs WHERE user_id = $1 LIMIT 1', [userId]);
+        const sdrId = sdrRes.rows[0]?.id;
+
+        const result = await leadsService.completeCadence(id, {
+            sdr_id: sdrId,
+            notes,
+            final_outcome
+        });
+
         res.json({ success: true, data: result });
     } catch (err) {
         next(err);
@@ -365,29 +407,120 @@ exports.initiateLeadCall = async (req, res, next) => {
             return res.status(401).json({ success: false, error: 'Usuário não autenticado' });
         }
 
-        // 1. Buscar ramal do usuário
-        const integrations = await db.query(
-            `SELECT config FROM user_integrations WHERE user_id = $1 AND type = 'voice' AND is_active = true`,
-            [userId]
-        );
+        // 1. Buscar ramal (Prioritário: SDR dono do lead -> Secundário: Usuário logado)
+        const sdrExtensionRes = await db.query(`
+            SELECT ui.config->>'extension' as extension, ui.is_active
+            FROM leads l
+            JOIN sdrs s ON l.assigned_sdr_id = s.id
+            JOIN user_integrations ui ON s.user_id = ui.user_id
+            WHERE l.id = $1 AND ui.type = 'voice' AND ui.is_active = true
+        `, [id]);
 
-        const extension = integrations.rows[0]?.config?.extension;
+        let extension = sdrExtensionRes.rows[0]?.extension;
+
+        // Se não houver ramal do SDR dono, ou lead sem dono, buscar ramal do usuário logado
+        if (!extension) {
+            const userInteg = await db.query(
+                `SELECT config->>'extension' as extension FROM user_integrations WHERE user_id = $1 AND type = 'voice' AND is_active = true`,
+                [userId]
+            );
+            extension = userInteg.rows[0]?.extension;
+        }
         
         // 2. Buscar telefone do lead
         const lead = await leadsService.getLeadById(id);
-        if (!lead || !lead.phone) {
-            return res.status(404).json({ success: false, error: 'Lead não encontrado ou sem telefone' });
+        if (!lead) {
+            return res.status(404).json({ success: false, error: 'Lead não encontrado' });
+        }
+
+        const phoneNumber = req.body?.phoneNumber || lead.phone;
+
+        if (!phoneNumber) {
+            return res.status(404).json({ success: false, error: 'Lead sem telefone cadastrado' });
         }
 
         // 3. Chamar serviço de voz
         const voiceService = require('../services/voice.service');
-        const result = await voiceService.initiateCall(extension, lead.phone);
-
+        const overrideExtension = req.body?.extension; 
+        const result = await voiceService.initiateCall(overrideExtension || extension, phoneNumber);
+        
         if (result.success) {
-            res.json({ success: true, message: 'URL de chamada gerada', url: result.url });
+            return res.json({ 
+                success: true, 
+                message: 'Chamada disparada com sucesso', 
+                url: result.url,
+                dialerResponse: result.data 
+            });
         } else {
-            res.status(500).json({ success: false, error: result.error });
+            return res.status(500).json({ 
+                success: false, 
+                error: result.error || 'Erro ao comunicar com o discador' 
+            });
         }
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.createTestLead = async (req, res, next) => {
+    try {
+        const userId = req.user?.id;
+        let sdrId = null;
+
+        if (userId) {
+            // Find SDR record for this user
+            const sdrRes = await db.query('SELECT id FROM sdrs WHERE user_id = $1 LIMIT 1', [userId]);
+            if (sdrRes.rows.length > 0) {
+                sdrId = sdrRes.rows[0].id;
+            } else {
+                // If user doesn't have an SDR profile, create a fake one for testing so they can see the board
+                const userRes = await db.query('SELECT name, email FROM users WHERE id = $1', [userId]);
+                if (userRes.rows.length > 0) {
+                    const newSdr = await db.query(
+                        'INSERT INTO sdrs (user_id, full_name, email) VALUES ($1, $2, $3) RETURNING id',
+                        [userId, userRes.rows[0].name || 'SalesOps Tester', userRes.rows[0].email]
+                    );
+                    sdrId = newSdr.rows[0].id;
+                }
+            }
+        }
+
+        const testLeadData = {
+            full_name: 'OLIVEIRA',
+            company_name: 'Empresa Teste',
+            email: `teste.oliveira.${Date.now()}@npx.com.br`,
+            phone: '85987662628',
+            job_title: 'Contato Teste',
+            state: 'CE',
+            city: 'FORTALEZA',
+            cadence_name: 'Sem Cadência',
+            metadata: {
+                is_test: true,
+                salesops_only: true,
+                notes: '4002-8922',
+                tags: ['[TESTE]', 'SalesOps']
+            }
+        };
+
+        const result = await leadsService.ingestLead(testLeadData);
+        
+        // Assign to the SDR if found
+        if (sdrId) {
+            await leadsService.assignLead(result.lead_id, sdrId, 'Sem Cadência');
+        }
+
+        console.log(`[TestLead] ✅ Lead de teste criado e atribuído ao SDR ${sdrId}: ${result.lead_id}`);
+        res.json({ success: true, message: 'Lead de teste criado', data: { lead_id: result.lead_id } });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.getInteractions = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const interactions = await leadsService.getLeadInteractions(id);
+        res.json({ success: true, data: interactions });
     } catch (err) {
         next(err);
     }

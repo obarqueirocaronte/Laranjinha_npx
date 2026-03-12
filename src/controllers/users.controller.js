@@ -49,10 +49,10 @@ exports.getUsers = async (req, res) => {
             email: u.email,
             role: u.role || 'sdr',
             status: u.status || 'active',
-            profile_picture_url: u.profile_picture_url,
+            profile_picture_url: u.profile_picture_url || null,
             integrations: integrationsByUser[u.id] || {
                 email: { enabled: false, host: '', port: '587', user: '', pass: '' },
-                voice: { enabled: false, sipServer: '', extension: '', password: '' },
+                voice: { enabled: false, extension: '' },
                 aurora: { enabled: false, auroraUserId: '', phoneNumber: '' }
             }
         }));
@@ -62,7 +62,7 @@ exports.getUsers = async (req, res) => {
 
         res.json(resultPayload);
     } catch (error) {
-        console.error('Error fetching users:', error);
+        console.error('Error fetching users:', error.message);
         res.status(500).json({ error: 'Erro ao buscar usuários do sistema.' });
     }
 };
@@ -101,24 +101,22 @@ exports.getUserVoiceConfig = async (req, res) => {
 
         if (result.rows.length > 0 && result.rows[0].is_active) {
             const config = result.rows[0].config;
-            const sipConfig = voiceService.getSipConfig(config.extension);
+            const voiceConfig = voiceService.getVoiceConfig(config.extension);
             res.json({
                 success: true,
                 data: {
-                    sipDomain: config.sipServer || sipConfig.sipDomain,
-                    extension: config.extension || sipConfig.extension,
+                    extension: config.extension || voiceConfig.extension,
                     enabled: true,
                 }
             });
         } else {
             // Return default config
-            const sipConfig = voiceService.getSipConfig();
-            res.json({
+            const voiceConfig = voiceService.getVoiceConfig();
+            return res.json({
                 success: true,
                 data: {
-                    sipDomain: sipConfig.sipDomain,
-                    extension: sipConfig.extension,
                     enabled: false,
+                    extension: voiceConfig.extension || ''
                 }
             });
         }

@@ -1,0 +1,35 @@
+#!/usr/bin/expect -f
+set timeout 300
+
+spawn ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no -o PreferredAuthentications=password -p 55535 rodrigo@178.156.234.198
+expect {
+    "password:" { send "Esseanoemeu@2026\r" }
+    "Permission denied" { exit 1 }
+}
+expect "$ "
+
+send "cd /opt/laranjinha\r"
+expect "$ "
+
+send "git pull origin main\r"
+expect "$ "
+
+# Configura o Token do Discador de forma segura no .env
+send "grep -q 'DIALER_TOKEN' .env && sed -i 's/DIALER_TOKEN=.*/DIALER_TOKEN=gI9KhObfCsAGBrHHrVsrIwtt/' .env || echo 'DIALER_TOKEN=gI9KhObfCsAGBrHHrVsrIwtt' >> .env\r"
+expect "$ "
+
+# Reconstrói o Frontend
+send "cd /opt/laranjinha/frontend && npm run build && echo BUILD_OK\r"
+expect -timeout 240 "$ "
+
+# Reinicia o servidor
+send "cd /opt/laranjinha\r"
+expect "$ "
+send "pm2 restart laranjinha 2>/dev/null || (pkill -f 'node src/app.js' 2>/dev/null; sleep 1; nohup node src/app.js > app.log 2>&1 & echo RESTARTED_NOHUP)\r"
+expect "$ "
+
+send "echo DEPLOY_COMPLETE\r"
+expect "DEPLOY_COMPLETE"
+
+send "exit\r"
+expect eof

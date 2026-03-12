@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { User as UserIcon, Mail, Shield, Camera, Lock, ArrowLeft, Save, CheckCircle2 } from 'lucide-react';
+import { User as UserIcon, Mail, Shield, Camera, Lock, ArrowLeft, Save, CheckCircle2, Phone } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserAvatar } from '../common/UserAvatar';
 
@@ -13,9 +13,26 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
     const [name, setName] = useState(user?.email?.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'Usuário');
     const [profilePictureUrl, setProfilePictureUrl] = useState(user?.profile_picture_url || '');
     const [password, setPassword] = useState('');
+    const [extension, setExtension] = useState('');
     const [showSuccess, setShowSuccess] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Load voice/extension config on mount
+    React.useEffect(() => {
+        if (!user?.id) return;
+        import('../../lib/api').then(async (apiModule) => {
+            try {
+                // Using a direct axios call if not in the object, or accessing the instance
+                const res = await apiModule.default.get(`/users/${user.id}/voice-config`);
+                if (res.data?.success) {
+                    setExtension(res.data.data.extension || '');
+                }
+            } catch (error) {
+                console.error('Failed to load voice config', error);
+            }
+        });
+    }, [user?.id]);
 
     const isManager = user?.role === 'manager';
     const accentColor = isManager ? '#FF8C00' : '#10B981';
@@ -32,7 +49,31 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
 
             const reader = new FileReader();
             reader.onloadend = () => {
-                setProfilePictureUrl(reader.result as string);
+                const base64String = reader.result as string;
+                setProfilePictureUrl(base64String);
+                
+                // Immediately upload the image
+                if (user?.id) {
+                    setIsSaving(true);
+                    import('../../lib/api').then(async ({ usersAPI }) => {
+                        try {
+                            const response = await usersAPI.updateProfile(user.id, { profile_picture_url: base64String });
+                            if (response.success) {
+                                const storedUser = localStorage.getItem('user');
+                                if (storedUser) {
+                                    const parsedUser = JSON.parse(storedUser);
+                                    const updatedUser = { ...parsedUser, ...response.data };
+                                    localStorage.setItem('user', JSON.stringify(updatedUser));
+                                    window.location.reload(); 
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Failed to quick-save profile picture', error);
+                        } finally {
+                            setIsSaving(false);
+                        }
+                    });
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -50,26 +91,36 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
                 if (profilePictureUrl !== user.profile_picture_url) data.profile_picture_url = profilePictureUrl;
                 if (password) data.password = password;
 
-                if (Object.keys(data).length > 0) {
-                    const response = await usersAPI.updateProfile(user.id, data);
-                    if (response.success) {
-                        // Update local storage user object if needed
+                const hasProfileUpdates = Object.keys(data).length > 0;
+                
+                if (hasProfileUpdates) {
+                    const profileRes = await usersAPI.updateProfile(user.id, data);
+                    if (profileRes.success) {
                         const storedUser = localStorage.getItem('user');
                         if (storedUser) {
                             const parsedUser = JSON.parse(storedUser);
-                            const updatedUser = { ...parsedUser, ...response.data };
+                            const updatedUser = { ...parsedUser, ...profileRes.data };
                             localStorage.setItem('user', JSON.stringify(updatedUser));
-                            // Force page reload to update AuthContext immediately (quick fix)
-                            window.location.reload(); 
-                        } else {
-                            setShowSuccess(true);
-                            setTimeout(() => setShowSuccess(false), 3000);
-                            setPassword('');
                         }
                     }
-                } else {
-                     setShowSuccess(true);
-                     setTimeout(() => setShowSuccess(false), 3000);
+                }
+
+                // Save Voice/Extension integration
+                const integrationData = {
+                    voice: {
+                        enabled: true,
+                        extension: extension.trim()
+                    }
+                };
+                await usersAPI.saveIntegrations(user.id, integrationData);
+
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 3000);
+                setPassword('');
+                
+                if (hasProfileUpdates) {
+                    // Force page reload only if profile (name/photo) changed to update AuthContext
+                    window.location.reload(); 
                 }
             }).finally(() => {
                 setIsSaving(false);
@@ -198,6 +249,23 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
                                                 />
                                             </div>
                                             <p className="text-[10px] text-slate-400 mt-1.5 ml-1 font-medium">O e-mail é utilizado para login e não pode ser alterado.</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">
+                                                Configuração de Voz (Ramal)
+                                            </label>
+                                            <div className="relative">
+                                                <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                                <input
+                                                    type="text"
+                                                    value={extension}
+                                                    onChange={(e) => setExtension(e.target.value.replace(/\D/g, ''))}
+                                                    className="w-full bg-white/60 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10 rounded-2xl pl-12 pr-5 py-3.5 outline-none font-bold text-slate-700 transition-all placeholder:text-slate-400"
+                                                    placeholder="Digite seu ramal (ex: 11012)"
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-slate-400 mt-1.5 ml-1 font-medium">Configure seu ramal para realizar chamadas diretamente do Kanban.</p>
                                         </div>
                                     </div>
                                 </div>

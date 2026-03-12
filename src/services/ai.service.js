@@ -99,7 +99,7 @@ class AIService {
         try {
             const prompt = `
 Você é um especialista em telefonia brasileiro.
-Normalize o número de telefone a seguir para uso em sistemas de VoIP (formato SIP):
+Normalize o número de telefone a seguir para uso em sistemas de VoIP:
 - Remova TODOS os caracteres que não sejam dígitos (parênteses, hífens, espaços, pontos)
 - Se o DDD tiver 2 dígitos e não começar com 0, adicione o 0 na frente (ex: 85 → 085)
 - O número deve conter apenas dígitos, sem qualquer formatação

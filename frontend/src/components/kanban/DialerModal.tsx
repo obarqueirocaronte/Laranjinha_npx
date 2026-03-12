@@ -60,8 +60,8 @@ export const DialerModal: React.FC<DialerModalProps> = ({
                         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                         className="relative w-full max-w-sm bg-white/90 backdrop-blur-xl border border-white/60 shadow-[0_24px_60px_rgba(0,0,0,0.12)] rounded-[32px] overflow-hidden"
                     >
-                        {/* Green glow top accent */}
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500" />
+                        {/* Orange glow top accent */}
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 via-orange-500 to-rose-500" />
 
                         {/* Header */}
                         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
@@ -98,11 +98,11 @@ export const DialerModal: React.FC<DialerModalProps> = ({
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => handleSelect(phone)}
                                     disabled={isCallActive}
-                                    className="w-full flex items-center gap-4 p-4 bg-slate-50/80 hover:bg-emerald-50 border border-slate-200/60 hover:border-emerald-300 rounded-2xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-50/80 disabled:hover:border-slate-200/60"
+                                    className="w-full flex items-center gap-4 p-4 bg-slate-50/80 hover:bg-orange-50 border border-slate-200/60 hover:border-orange-300 rounded-2xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-50/80 disabled:hover:border-slate-200/60"
                                 >
                                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-sm transition-colors ${phone.icon === 'contact'
-                                        ? 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200'
-                                        : 'bg-blue-100 text-blue-600 group-hover:bg-blue-200'
+                                        ? 'bg-orange-100 text-orange-600 group-hover:bg-orange-200'
+                                        : 'bg-rose-100 text-rose-600 group-hover:bg-rose-200'
                                         }`}>
                                         {phone.icon === 'contact'
                                             ? <User size={18} strokeWidth={2} />

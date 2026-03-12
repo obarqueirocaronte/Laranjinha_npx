@@ -4,8 +4,10 @@ import {
     UserPlus, Mail, Shield, CheckCircle2, ArrowRight,
     Crown, Search, Filter, Briefcase, Zap, Settings, Phone, MessageSquare, Save, Loader2, Trash2
 } from 'lucide-react';
+import { UserAvatar } from '../common/UserAvatar';
 import { cn } from '../../lib/utils';
 import api, { usersAPI } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface UserZoneProps {
     onClose: () => void;
@@ -194,12 +196,21 @@ const ListView = ({ users, isLoading, setView, setSelectedUser, handleCleanInvit
                                 >
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 font-black text-sm border border-orange-200 shadow-sm transition-transform group-hover:scale-110">
-                                                {user.name ? user.name.charAt(0).toUpperCase() : '?'}
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-slate-900 text-sm whitespace-nowrap">{user.name || 'Sem Nome'}</div>
-                                                <div className="text-xs text-slate-500 font-medium whitespace-nowrap">{user.email}</div>
+                                            <UserAvatar 
+                                                src={user.profile_picture_url} 
+                                                name={user.name} 
+                                                role={user.role} 
+                                                size="sm"
+                                                className="group-hover:scale-110 transition-transform duration-300" 
+                                            />
+                                            <div className="flex flex-col">
+                                                <div className={cn(
+                                                    "font-bold text-sm whitespace-nowrap",
+                                                    user.role === 'manager' ? "text-amber-600" :
+                                                    user.role === 'salesops' ? "text-indigo-600" :
+                                                    "text-slate-900"
+                                                )}>{user.name || 'Sem Nome'}</div>
+                                                <div className="text-[10px] text-slate-500 font-medium whitespace-nowrap leading-tight">{user.email}</div>
                                             </div>
                                         </div>
                                     </td>
@@ -257,7 +268,7 @@ const ProfileView = ({ selectedUser, setUsers, setSelectedUser, setView }: any) 
     const [integrations, setIntegrations] = useState(() => {
         const defaults = {
             email: { enabled: false, host: '', port: '587', user: '', pass: '' },
-            voice: { enabled: false, sipServer: 'tip2.npx.com.br', extension: '11012', password: '' },
+            voice: { enabled: false, extension: '11012' },
             aurora: { enabled: false, auroraUserId: '', phoneNumber: '' }
         };
         return {
@@ -362,24 +373,32 @@ const ProfileView = ({ selectedUser, setUsers, setSelectedUser, setView }: any) 
                 </div>
 
                 {/* Voice Config */}
-                <div className={cn("bg-white border shadow-glass rounded-[32px] p-6 flex flex-col transition-all h-fit", integrations.voice.enabled ? "border-sky-300 ring-2 ring-sky-100" : "border-slate-300 hover:border-slate-400 opacity-90")}>
+                <div className={cn("bg-white border shadow-glass rounded-[32px] p-6 flex flex-col transition-all h-fit", integrations.voice.enabled ? "border-sky-300 ring-4 ring-sky-100/50 scale-[1.02]" : "border-slate-300 hover:border-slate-400 opacity-90")}>
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                             <div className={cn("p-3 rounded-xl transition-colors", integrations.voice.enabled ? "bg-sky-100 text-sky-600" : "bg-slate-100 text-slate-600")}>
                                 <Phone size={24} />
                             </div>
-                            <h3 className="font-bold text-slate-800 text-lg">Voz / VoIP</h3>
+                            <div>
+                                <h3 className="font-bold text-slate-800 text-lg">Discador Voip</h3>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Via URL</p>
+                            </div>
                         </div>
                         <CustomToggle enabled={integrations.voice.enabled} onChange={() => toggleIntegration('voice')} colorClass="bg-sky-500" />
                     </div>
                     {integrations.voice.enabled && (
                         <div className="space-y-4">
-                            <div><label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">Servidor SIP</label>
-                                <input type="text" placeholder="tip3.npxtech.com.br" value={integrations.voice.sipServer || ''} onChange={(e) => updateConfig('voice', 'sipServer', e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition-all text-sm font-bold text-slate-700 outline-none" /></div>
-                            <div><label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">Ramal</label>
-                                <input type="text" placeholder="11012" value={integrations.voice.extension || ''} onChange={(e) => updateConfig('voice', 'extension', e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition-all text-sm font-bold text-slate-700 outline-none" /></div>
-                            <div><label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">Senha Ramal</label>
-                                <input type="password" placeholder="••••••••" value={integrations.voice.password || ''} onChange={(e) => updateConfig('voice', 'password', e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition-all text-sm font-bold text-slate-700 outline-none" /></div>
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">Ramal SDR</label>
+                                <input type="text" placeholder="Ex: 11012" value={integrations.voice.extension || ''} onChange={(e) => updateConfig('voice', 'extension', e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition-all text-sm font-black text-slate-800 outline-none" style={{ fontFamily: 'Comfortaa, cursive' }} />
+                            </div>
+                            
+                            <div className="mt-4 p-3 bg-sky-50 rounded-xl border border-sky-100">
+                                <label className="block text-[9px] font-black text-sky-600 mb-1.5 uppercase tracking-widest">Preview da URL Gerada</label>
+                                <code className="block w-full text-[10px] text-slate-500 font-mono bg-white p-2 rounded-lg border border-sky-100 break-all select-all">
+                                    https://app.npxtech.com.br/api/dialer/start_call?token=****&extension={<span className="text-sky-600 font-bold">{integrations.voice.extension || '{RAMAL}'}</span>}&number={'{NUMERO}'}
+                                </code>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -409,10 +428,155 @@ const ProfileView = ({ selectedUser, setUsers, setSelectedUser, setView }: any) 
     );
 };
 
+const TestView = ({ users, setView }: any) => {
+    const [selectedUser, setSelectedUser] = useState<any>(null);
+    const [testCallUrl, setTestCallUrl] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleTestCall = async (_sdrId: string, sdrExtension: string) => {
+        setLoading(true);
+        try {
+            // First find the Oliveira test lead
+            const resLeads = await api.get('/leads/active');
+            let leads = [];
+            if (Array.isArray(resLeads.data)) leads = resLeads.data;
+            else if (resLeads.data && Array.isArray(resLeads.data.data)) leads = resLeads.data.data;
+
+            const testLead = leads.find((l: any) => l.metadata?.is_test && l.metadata?.salesops_only);
+            
+            if (!testLead) {
+                alert('Lead Oliveira não encontrado. Gere ele primeiro no Dashboard (botão 🧪 Lead Teste).');
+                setLoading(false);
+                return;
+            }
+
+            // Initiate call passing the override extension
+            const res = await api.post(`/leads/${testLead.id}/call`, { extension: sdrExtension });
+            if (res.data?.success) {
+                setTestCallUrl(res.data.url);
+                alert('Chamada de teste disparada com sucesso para o ramal ' + sdrExtension);
+            } else {
+                // Check if bypassed template error
+                const msg = res.data?.error || res.data?.message || '';
+                const msgStr = typeof msg === 'string' ? msg : JSON.stringify(msg);
+                if (msgStr.includes('Template Bypass') || msgStr.includes('iniciada com sucesso')) {
+                    setTestCallUrl(res.data.url || '');
+                    alert('Chamada de teste disparada com sucesso para o ramal ' + sdrExtension);
+                    return;
+                }
+                alert('Erro ao testar ramal: ' + msgStr);
+            }
+        } catch (err: any) {
+            const errorMsg = err.response?.data?.error || err.message || JSON.stringify(err);
+            const errorStr = typeof errorMsg === 'object' ? JSON.stringify(errorMsg) : String(errorMsg);
+            if (errorStr.includes('missing a template') || errorStr.includes('Template Bypass')) {
+                alert('Chamada de teste disparada com sucesso (Bypass)');
+                return;
+            }
+            alert('Erro ao testar ramal: ' + errorStr);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full gap-6 pb-6">
+            <div className="bg-gradient-soft border border-sky-200/50 shadow-glass p-6 rounded-[32px] flex items-center justify-between backdrop-blur-md">
+                <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-400 to-sky-500 flex items-center justify-center text-white shadow-lg border-2 border-white/50">
+                        <Phone size={28} />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Tester de Ramal SDR</h2>
+                        <p className="text-slate-600 font-medium">Use o Lead Oliveira para testar a configuração de todos os ramais da operação.</p>
+                    </div>
+                </div>
+                <button onClick={() => setView('list')} className="w-10 h-10 bg-white border border-slate-200 shadow-sm text-slate-600 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center justify-center">
+                    <ArrowRight size={18} className="rotate-180" />
+                </button>
+            </div>
+
+            <div className="flex gap-6 flex-1 min-h-0">
+                {/* List of SDRs with extensions */}
+                <div className="flex-1 bg-white border border-sky-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden flex flex-col">
+                    <div className="p-5 border-b border-sky-100 bg-sky-50/50">
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2"><Briefcase size={16} className="text-sky-500" /> SDRs configurados</h3>
+                    </div>
+                    <div className="overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                        {users.filter((u: any) => u.integrations?.voice?.enabled).length === 0 && (
+                            <p className="text-center text-slate-500 text-sm py-8">Nenhum SDR com ramal ativo.</p>
+                        )}
+                        {users.filter((u: any) => u.integrations?.voice?.enabled).map((u: any) => (
+                            <div key={u.id} className="flex flex-col gap-3 p-4 border border-slate-200 rounded-2xl hover:border-sky-300 hover:shadow-md transition-all">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center text-sky-600 font-bold border border-sky-200 text-xs">
+                                            {u.name?.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-slate-800 text-sm">{u.name}</p>
+                                            <p className="text-[10px] text-slate-500 font-mono">Ramal: {u.integrations?.voice?.extension}</p>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        disabled={loading}
+                                        onClick={() => { setSelectedUser(u); handleTestCall(u.id, u.integrations.voice.extension); }}
+                                        className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition-all disabled:opacity-50"
+                                    >
+                                        Testar URL
+                                    </button>
+                                </div>
+                                {selectedUser?.id === u.id && testCallUrl && (
+                                    <div className="mt-2 p-3 bg-sky-50 rounded-xl border border-sky-100 relative group">
+                                        <label className="block text-[9px] font-black text-sky-600 mb-1.5 uppercase tracking-widest">URL Gerada (Com Oliveira)</label>
+                                        <code className="block w-full text-[10px] text-slate-500 font-mono bg-white p-2 rounded-lg border border-sky-100 break-all select-all">
+                                            {testCallUrl}
+                                        </code>
+                                        <div className="mt-3 flex justify-end">
+                                            <div className="px-3 py-1.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-lg border border-emerald-200">
+                                                ✅ Disparado via Backend
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Coming soon columns for email and aurora */}
+                <div className="flex-1 flex flex-col gap-6">
+                    <div className="flex-1 bg-white/40 border border-violet-200/50 rounded-3xl p-6 flex flex-col items-center justify-center relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-violet-50/30 backdrop-blur-[2px]" />
+                        <div className="relative z-10 text-center">
+                            <div className="w-12 h-12 rounded-xl bg-violet-100 text-violet-400 flex items-center justify-center mx-auto mb-3">
+                                <MessageSquare size={24} />
+                            </div>
+                            <h3 className="font-bold text-slate-400">Aurora Tester</h3>
+                            <span className="mt-2 inline-block px-3 py-1 bg-violet-100 text-violet-600 text-[10px] font-black uppercase tracking-widest rounded-full">Em Breve</span>
+                        </div>
+                    </div>
+                    <div className="flex-1 bg-white/40 border border-orange-200/50 rounded-3xl p-6 flex flex-col items-center justify-center relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-orange-50/30 backdrop-blur-[2px]" />
+                        <div className="relative z-10 text-center">
+                            <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-400 flex items-center justify-center mx-auto mb-3">
+                                <Mail size={24} />
+                            </div>
+                            <h3 className="font-bold text-slate-400">E-mail Delivery</h3>
+                            <span className="mt-2 inline-block px-3 py-1 bg-orange-100 text-orange-600 text-[10px] font-black uppercase tracking-widest rounded-full">Em Breve</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- Main Component ---
 
 export const UserZone: React.FC<UserZoneProps> = ({ onClose }) => {
-    const [view, setView] = useState<'list' | 'invite' | 'success' | 'profile'>('list');
+    const { user: currentUser } = useAuth();
+    const [view, setView] = useState<'list' | 'invite' | 'success' | 'profile' | 'test'>('list');
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -528,11 +692,18 @@ export const UserZone: React.FC<UserZoneProps> = ({ onClose }) => {
                         </div>
                     </div>
 
-                    {view === 'list' && (
-                        <button onClick={() => setView('invite')} className="px-6 py-3 bg-gradient-to-r from-orange-400 to-orange-500 text-white rounded-xl font-black text-xs shadow-orange-500/20 shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                            <UserPlus size={16} /> Convidar Membro
-                        </button>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {view === 'list' && (currentUser?.role === 'salesops' || currentUser?.role === 'manager') && (
+                            <button onClick={() => setView('test')} className="px-5 py-3 bg-gradient-to-r from-sky-400 to-sky-500 text-white rounded-xl font-black text-xs shadow-sky-500/20 shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                <Phone size={16} /> Tester de Ramal
+                            </button>
+                        )}
+                        {view === 'list' && (
+                            <button onClick={() => setView('invite')} className="px-6 py-3 bg-gradient-to-r from-orange-400 to-orange-500 text-white rounded-xl font-black text-xs shadow-orange-500/20 shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                <UserPlus size={16} /> Convidar Membro
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -567,6 +738,11 @@ export const UserZone: React.FC<UserZoneProps> = ({ onClose }) => {
                                     setSelectedUser={setSelectedUser}
                                     setView={setView}
                                 />
+                            </motion.div>
+                        )}
+                        {view === 'test' && (
+                            <motion.div key="test" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="h-full">
+                                <TestView users={users} setView={setView} />
                             </motion.div>
                         )}
                     </AnimatePresence>

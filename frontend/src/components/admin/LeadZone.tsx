@@ -14,15 +14,26 @@ import {
   Tag,
   ShieldCheck,
   Bell,
-  ChevronDown,
   X,
   Sparkles,
+  GripVertical,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { leadsAPI, notificationsAPI, aiAPI } from "../../lib/api";
 import { LeadAssignmentModal } from "./LeadAssignmentModal";
 import { LeadCard } from "../kanban/LeadCard";
 import type { Lead } from "../../types";
+import {
+  DndContext,
+  useDraggable,
+  useDroppable,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from "@dnd-kit/core";
 
 const SYSTEM_FIELDS = [
   { id: "cnpj", label: "CNPJ" },
@@ -32,6 +43,10 @@ const SYSTEM_FIELDS = [
   { id: "email", label: "E-mail do Contato" },
   { id: "phone", label: "Telefone" },
   { id: "job_title", label: "Cargo" },
+  { id: "website", label: "Website / URL" },
+  { id: "location", label: "🗺️ Localização (Endereço Completo)" },
+  { id: "city", label: "Cidade" },
+  { id: "state", label: "Estado" },
   { id: "employee_count", label: "Número de Funcionários" },
   { id: "linkedin_url", label: "LinkedIn URL" },
   { id: "tag_value", label: "🏷️ Tag (Valor vira Tag no Card Kanban)" },
@@ -51,6 +66,149 @@ type Step =
   | "summary"
   | "pending";
 
+const DraggableColumn = ({ header }: { header: string }) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `col-${header}`,
+    data: { header, type: "column" },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={cn(
+        "p-3 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-between cursor-grab active:cursor-grabbing transition-all hover:border-orange-200 group relative overflow-hidden",
+        isDragging && "opacity-40"
+      )}
+    >
+      <div className="flex items-center gap-2.5 min-w-0">
+        <GripVertical size={14} className="text-slate-300 group-hover:text-orange-400 shrink-0" />
+        <span className="text-[12px] font-bold text-slate-700 truncate">{header}</span>
+      </div>
+      <ArrowRight size={12} className="text-slate-200 group-hover:text-orange-300" />
+    </div>
+  );
+};
+
+const DroppableField = ({ 
+  field, 
+  mappedHeader, 
+  onDrop, 
+  availableHeaders,
+  isAIStructuring 
+}: { 
+  field: any; 
+  mappedHeader: string | null; 
+  onDrop: (header: string, fieldId: string) => void;
+  availableHeaders: string[];
+  isAIStructuring: boolean;
+}) => {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `field-${field.id}`,
+    data: { fieldId: field.id },
+  });
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "p-4 rounded-[24px] border transition-all duration-300 relative group/target",
+        isOver ? "bg-orange-50/50 border-orange-300 scale-[1.02] shadow-lg" : "bg-white/40 border-slate-100",
+        mappedHeader ? "border-emerald-200 bg-emerald-50/10" : "border-dashed",
+        isAIStructuring && "animate-pulse border-orange-200"
+      )}
+    >
+      {isAIStructuring && (
+        <motion.div 
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-100/30 to-transparent -translate-x-full"
+          animate={{ translateX: ["100%", "-100%"] }}
+          transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+        />
+      )}
+
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className={cn(
+            "w-2 h-2 rounded-full",
+            mappedHeader ? "bg-emerald-400 animate-pulse" : "bg-slate-200"
+          )} />
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{field.label}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {mappedHeader && (
+            <button
+              onClick={() => onDrop("", field.id)}
+              className="p-1 text-slate-300 hover:text-red-400 transition-colors"
+            >
+              <X size={12} />
+            </button>
+          )}
+          <button 
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-1 text-slate-300 hover:text-slate-600 transition-colors"
+          >
+            <ChevronDown size={12} className={cn("transition-transform", isOpen && "rotate-180")} />
+          </button>
+        </div>
+      </div>
+
+      <div className="min-h-[40px] flex items-center justify-center">
+        {mappedHeader ? (
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full p-2.5 rounded-xl bg-white border border-emerald-100 shadow-sm flex items-center justify-between"
+          >
+            <span className="text-[12px] font-black text-emerald-700 truncate">{mappedHeader}</span>
+            <CheckCircle2 size={14} className="text-emerald-500" />
+          </motion.div>
+        ) : (
+          <span className="text-[11px] text-slate-400 font-medium italic">Arraste aqui ou selecione</span>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 p-2 overflow-y-auto max-h-[160px] custom-scrollbar"
+          >
+            <div className="flex flex-col gap-1">
+               {availableHeaders.length === 0 && <p className="text-[10px] text-slate-400 p-2 italic text-center">Nenhuma coluna livre</p>}
+               {availableHeaders.map(h => (
+                 <button
+                   key={h}
+                   onClick={() => {
+                     onDrop(h, field.id);
+                     setIsOpen(false);
+                   }}
+                   className="flex items-center justify-between p-2 rounded-xl text-[11px] font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-all text-left"
+                 >
+                   {h}
+                   <Check size={10} className="opacity-0 group-hover:opacity-100" />
+                 </button>
+               ))}
+               <button
+                  onClick={() => {
+                    onDrop("", field.id);
+                    setIsOpen(false);
+                  }}
+                  className="p-2 rounded-xl text-[11px] font-bold text-red-400 hover:bg-red-50 transition-all text-left"
+               >
+                 Limpar Mapeamento
+               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
   const [currentStep, setCurrentStep] = useState<Step>("upload");
   const [isDragging, setIsDragging] = useState(false);
@@ -61,6 +219,52 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
   const [excludedRows, setExcludedRows] = useState<number[]>([]);
   const [mappingModalOpen, setMappingModalOpen] = useState<string | null>(null);
   const [isCadenceModalOpen, setIsCadenceModalOpen] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    })
+  );
+
+  const handleDragStart = (event: any) => {
+    setActiveId(event.active.id);
+  };
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (over && over.id.startsWith("field-")) {
+      const fieldId = over.data.current.fieldId;
+      const header = active.data.current.header;
+      onHandleDrop(header, fieldId);
+    }
+  };
+
+  const onHandleDrop = (header: string, fieldId: string) => {
+    setFieldMapping((prev) => {
+      const next = { ...prev };
+      // If we're removing a mapping (empty header)
+      if (!header) {
+        Object.keys(next).forEach(h => {
+          if (next[h] === fieldId) delete next[h];
+        });
+        return next;
+      }
+      // Clear any existing mapping for this field
+      Object.keys(next).forEach(h => {
+        if (next[h] === fieldId) delete next[h];
+      });
+      // Set new mapping
+      next[header] = fieldId;
+      return next;
+    });
+  };
+
+  const getMappedHeaderForField = (fieldId: string) => {
+    const entry = Object.entries(fieldMapping).find(([_, id]) => id === fieldId);
+    return entry ? entry[0] : null;
+  };
 
   const [globalTags, setGlobalTags] = useState<string[]>(["Importação"]);
   const [newTag, setNewTag] = useState("");
@@ -73,7 +277,7 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
   const [isAIStructuring, setIsAIStructuring] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<Record<string, string>>({});
 
-  const [previewModel, setPreviewModel] = useState<string>("FULL");
+  const [previewModel, setPreviewModel] = useState<string>("MODERN_FULL");
 
   const [selectedCadence, setSelectedCadence] = useState<string>("Sem Cadência");
   const availableCadences = [
@@ -235,18 +439,23 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
       });
 
       const response = await aiAPI.structureLeads(sampleLeads);
-      if (response.success && response.data.leads) {
-        const suggestions: Record<string, string> = {};
-        response.data.leads.forEach((item: any, idx: number) => {
-          if (item.suggested_model) {
-            // We don't have stable IDs yet, so we'll use index-based mapping for the demo/preview
-            // but ideally the AI would give us rules.
-            // For now, let's just store the suggestions to show in the UI.
-            suggestions[idx] = item.suggested_model;
-          }
-        });
-        setAiSuggestions(suggestions);
-        // Auto-mapping logic could also be improved here, but the primary request is the "model"
+      if (response && response.success && response.data) {
+        if (response.data.leads) {
+          const suggestions: Record<string, string> = {};
+          response.data.leads.forEach((item: any, idx: number) => {
+            if (item.suggested_model) {
+              suggestions[idx] = item.suggested_model;
+            }
+          });
+          setAiSuggestions(suggestions);
+        }
+        
+        if (response.data.mappings) {
+          setFieldMapping(prev => ({
+            ...prev,
+            ...response.data.mappings
+          }));
+        }
       }
     } catch (err) {
       console.error("AI Structuring failed:", err);
@@ -365,7 +574,7 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
           const suggestedModel = aiSuggestions[row._originalIndex];
           if (suggestedModel) {
             lead.metadata.card_model = suggestedModel;
-          } else if (previewModel !== "FULL") {
+          } else if (previewModel !== "MODERN_FULL") {
              lead.metadata.card_model = previewModel;
           }
 
@@ -484,25 +693,25 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
             </div>
 
             <div className="mt-12 grid grid-cols-2 gap-6 w-full max-w-xl">
-              <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 flex gap-4 shadow-sm">
-                <AlertCircle className="text-blue-600 shrink-0" size={20} />
+              <div className="p-4 rounded-2xl bg-white/40 border border-white/60 shadow-glass flex gap-4 backdrop-blur-md">
+                <AlertCircle className="text-blue-500 shrink-0" size={20} />
                 <div>
-                  <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider mb-1">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
                     Deduplicação
                   </h4>
-                  <p className="text-[11px] text-blue-800 leading-relaxed font-medium">
+                  <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
                     O sistema usa automaticamente o **CNPJ** como chave primária
                     para evitar duplicatas.
                   </p>
                 </div>
               </div>
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 flex gap-4 shadow-sm">
-                <Database className="text-amber-600 shrink-0" size={20} />
+              <div className="p-4 rounded-2xl bg-white/40 border border-white/60 shadow-glass flex gap-4 backdrop-blur-md">
+                <Database className="text-[#FF6B00] shrink-0" size={20} />
                 <div>
-                  <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider mb-1">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
                     Estrutura Flexível
                   </h4>
-                  <p className="text-[11px] text-amber-800 leading-relaxed font-medium">
+                  <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
                     Aceitamos XLSX e CSV. Colunas não-padrão são salvas como
                     metadados estruturados.
                   </p>
@@ -517,262 +726,271 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="px-8 flex flex-col h-[calc(100vh-180px)] max-w-7xl mx-auto"
+            className="px-8 flex flex-col h-[calc(100vh-200px)] max-w-full mx-auto"
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-6 shrink-0 pt-4">
-              <div>
-                <h3 className="text-2xl font-bold text-slate-800">
-                  Preview & Mapeamento
-                </h3>
-                <p className="text-sm text-slate-600 font-medium mt-1">
-                  Encontramos{" "}
-                  <span className="text-slate-900 font-bold">
-                    {parsedData.length} leads
-                  </span>
-                  . Valide o mapeamento e desmarque os que desejar excluir.
-                </p>
-              </div>
-              <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full uppercase">
-                {parsedHeaders.length} Colunas Detectadas (Máx. Exibido)
-              </span>
-              <button
-                onClick={handleAIStructure}
-                disabled={isAIStructuring}
-                className={cn(
-                  "ml-4 px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider flex items-center gap-2 transition-all shadow-md active:scale-95",
-                  isAIStructuring
-                    ? "bg-slate-100 text-slate-400 cursor-wait"
-                    : "bg-gradient-to-r from-orange-400 to-orange-600 text-white hover:shadow-orange-200"
-                )}
-              >
-                {isAIStructuring ? (
-                  <>Processando...</>
-                ) : (
-                  <>
-                    <Sparkles size={14} />
-                    Classificar com IA
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Mapping & Preview Layout */}
-            <div className="flex gap-4 overflow-hidden flex-1 pb-4">
-              {/* Left: De-Para */}
-              <div className="w-[320px] shrink-0 bg-gradient-soft border border-orange-100 shadow-glass border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
-                <div className="p-4 border-b border-orange-100/60 bg-gradient-to-b from-orange-50/60 to-transparent shrink-0">
-                  <h4 className="font-bold text-slate-700 text-sm">
-                    De-Para (Colunas)
-                  </h4>
+            <div className="flex items-center justify-between mb-6 shrink-0 pt-2">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-600 shadow-sm border border-orange-200/50">
+                  <TableIcon size={24} />
                 </div>
-                <div className="overflow-y-auto p-4 custom-scrollbar">
-                  <div className="flex flex-col gap-3">
-                    {parsedHeaders.map((header) => {
-                      const mapVal = fieldMapping[header];
-                      // For custom fields, show the column name itself as the label
-                      const isCustomField = mapVal === "custom_field";
-                      const fieldLabel = isCustomField
-                        ? header // show "Estado → Estado"
-                        : mapVal && mapVal !== "ignore"
-                          ? SYSTEM_FIELDS.find((f) => f.id === mapVal)?.label ||
-                          mapVal
-                          : "Mapear...";
-
-                      return (
-                        <div
-                          key={header}
-                          className="flex items-center justify-between p-3 border border-slate-100 rounded-xl hover:border-slate-300 transition-colors bg-gradient-soft border border-orange-100 shadow-glass shadow-sm"
-                        >
-                          <span
-                            className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded truncate max-w-[120px]"
-                            title={header}
-                          >
-                            {header}
-                          </span>
-                          <ArrowRight
-                            size={14}
-                            className="text-slate-300 shrink-0 mx-2"
-                          />
-                          <button
-                            onClick={() => setMappingModalOpen(header)}
-                            className={cn(
-                              "flex items-center justify-between flex-1 px-3 py-2 rounded-lg text-[11px] font-bold border transition-colors",
-                              mapVal && mapVal !== "ignore"
-                                ? isCustomField
-                                  ? "bg-slate-100 border-slate-300 text-slate-600 hover:bg-slate-200"
-                                  : "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
-                                : "bg-white/40 border-orange-200/50 text-slate-600 hover:bg-orange-50 hover:shadow-glass hover:border-orange-300",
-                            )}
-                          >
-                            <span className="truncate">
-                              {mapVal === "ignore"
-                                ? "Ignorar Campo"
-                                : fieldLabel}
-                            </span>
-                            <ChevronDown
-                              size={14}
-                              className="opacity-50 shrink-0 ml-1"
-                            />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
+                <div>
+                  <h3 className="text-2xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                    Preview & Mapeamento Inteligente
+                  </h3>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>
+                    Mapeie as colunas da sua planilha para os componentes do sistema
+                  </p>
                 </div>
               </div>
 
-              {/* Right: Preview Table */}
-              <div className="flex-1 bg-gradient-soft border border-orange-100 shadow-glass border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
-                <div className="p-4 border-b border-orange-100/60 bg-gradient-to-b from-orange-50/60 to-transparent shrink-0 flex justify-between items-center">
-                  <h4 className="font-bold text-slate-700 text-sm">
-                    Preview dos Dados
-                  </h4>
-                  <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider bg-gradient-soft border border-orange-100 shadow-glass px-2 py-1 rounded border border-slate-200">
-                    {parsedData.length - excludedRows.length} Selecionados
-                  </span>
-                </div>
-                <div className="overflow-auto flex-1 custom-scrollbar">
-                  <table className="w-full text-left whitespace-nowrap">
-                    <thead className="bg-[#f8fafc] sticky top-0 z-10 shadow-sm border-b border-slate-200">
-                      <tr>
-                        <th className="px-3 py-3 text-center w-10 border-r border-slate-200"></th>
-                        <th className="px-3 py-3 text-[10px] font-black text-slate-600 uppercase tracking-wider border-r border-slate-200 w-24">IA Model</th>
-                        {parsedHeaders.map((h) => (
-                          <th
-                            key={h}
-                            className="px-4 py-3 text-[10px] font-black text-slate-600 uppercase tracking-wider border-r border-slate-200 last:border-0 truncate max-w-[150px]"
-                          >
-                            {fieldMapping[h] !== "ignore" ? (
-                              SYSTEM_FIELDS.find(
-                                (f) => f.id === fieldMapping[h],
-                              )?.label || h
-                            ) : (
-                              <span className="text-slate-300">IGNORADO</span>
-                            )}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {parsedData.slice(0, 50).map((row) => {
-                        const isExcluded = excludedRows.includes(
-                          row._originalIndex,
-                        );
-                        return (
-                          <tr
-                            key={row._originalIndex}
-                            className={cn(
-                              "transition-colors",
-                              isExcluded ? "bg-white/40" : "hover:bg-orange-50/60",
-                            )}
-                          >
-                            <td className="px-3 py-2 text-center border-r border-slate-100 bg-gradient-soft border border-orange-100 shadow-glass">
-                              <input
-                                type="checkbox"
-                                checked={!isExcluded}
-                                onChange={(e) => {
-                                  if (e.target.checked)
-                                    setExcludedRows((prev) =>
-                                      prev.filter(
-                                        (id) => id !== row._originalIndex,
-                                      ),
-                                    );
-                                  else
-                                    setExcludedRows((prev) => [
-                                      ...prev,
-                                      row._originalIndex,
-                                    ]);
-                                }}
-                                className="rounded border-slate-300 text-orange-600 focus:ring-orange-500 cursor-pointer w-4 h-4"
-                              />
-                            </td>
-                            <td className="px-4 py-2 border-r border-slate-100">
-                              {aiSuggestions[row._originalIndex] ? (
-                                <span className={cn(
-                                  "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shadow-sm",
-                                  aiSuggestions[row._originalIndex] === 'FULL' ? "bg-emerald-100 text-emerald-700" :
-                                    aiSuggestions[row._originalIndex] === 'PHONE_ONLY' ? "bg-blue-100 text-blue-700" :
-                                      aiSuggestions[row._originalIndex] === 'EMAIL_ONLY' ? "bg-purple-100 text-purple-700" :
-                                        "bg-amber-100 text-amber-700"
-                                )}>
-                                  {aiSuggestions[row._originalIndex]}
-                                </span>
-                              ) : (
-                                <span className="text-[10px] text-slate-300 italic">Pendente</span>
-                              )}
-                            </td>
-                            {parsedHeaders.map((h) => (
-                              <td
-                                key={h}
-                                className={cn(
-                                  "px-4 py-2 text-xs truncate max-w-[200px] border-r border-slate-100 last:border-0",
-                                  isExcluded
-                                    ? "text-slate-600"
-                                    : "text-slate-600",
-                                )}
-                              >
-                                {row[h] || "-"}
-                              </td>
-                            ))}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                {parsedData.length > 50 && (
-                  <div className="p-2 text-center text-[10px] font-bold text-slate-600 bg-gradient-to-t from-orange-50/60 to-transparent border-t border-orange-100/60 shrink-0">
-                    Exibindo os primeiros 50 registros. A importação fará o processamento de todos os {parsedData.length} leads.
-                  </div>
-                )}
-              </div>
-
-              {/* Right: Live Preview Card */}
-              <div className="w-[300px] shrink-0 bg-slate-50 border border-slate-200 rounded-2xl shadow-inner overflow-hidden flex flex-col relative">
-                <div className="p-4 border-b border-slate-200 bg-white flex justify-between items-center shrink-0">
-                  <h4 className="font-bold text-slate-700 text-sm flex items-center gap-2">
-                    <Sparkles size={14} className="text-orange-500" /> Card Preview
-                  </h4>
-                  {/* Template Switcher */}
-                  <select
-                    value={previewModel}
-                    onChange={(e) => setPreviewModel(e.target.value)}
-                    className="text-[10px] font-black uppercase bg-slate-100 border-none rounded focus:ring-0 cursor-pointer px-2 py-1"
-                  >
-                    <option value="FULL">FULL</option>
-                    <option value="COMPACT">COMPACT</option>
-                    <option value="PHONE_ONLY">PHONE ONLY</option>
-                    <option value="EMAIL_ONLY">EMAIL ONLY</option>
-                  </select>
-                </div>
-                <div className="flex-1 overflow-auto p-4 flex items-start justify-center custom-scrollbar bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-opacity-20 pointer-events-none">
-                  <div className="w-full relative scale-[0.85] origin-top">
-                    {generatePreviewLead() && (
-                      <LeadCard lead={generatePreviewLead()!} />
+              <div className="flex items-center gap-3">
+                 <div className="px-4 py-2 bg-white/40 border border-slate-200/80 shadow-glass rounded-xl flex items-center gap-3">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Leads Detectados</span>
+                    <span className="text-sm font-black text-slate-900">{parsedData.length}</span>
+                 </div>
+                 <button
+                    onClick={handleAIStructure}
+                    disabled={isAIStructuring}
+                    className={cn(
+                      "px-6 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg active:scale-95",
+                      isAIStructuring
+                        ? "bg-slate-100 text-slate-400 cursor-wait"
+                        : "bg-gradient-to-r from-[#FF6B00] to-[#FF8C00] text-white hover:shadow-orange-200 hover:-translate-y-0.5"
                     )}
-                  </div>
-                </div>
+                  >
+                    {isAIStructuring ? (
+                      <div className="flex items-center gap-2">
+                        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+                          <Sparkles size={14} />
+                        </motion.div>
+                        Processando...
+                      </div>
+                    ) : (
+                      <>
+                        <Sparkles size={14} />
+                        Classificar com IA
+                      </>
+                    )}
+                  </button>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3 shrink-0 pt-4 mt-auto">
-              <button
-                onClick={() => setCurrentStep("upload")}
-                className="px-6 py-3 text-slate-600 font-bold hover:text-slate-700"
-              >
-                Voltar
-              </button>
-              <button
-                onClick={() => setCurrentStep("sanitization")}
-                className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-bold flex items-center gap-2 shadow-lg hover:shadow-xl hover:translate-y-[-1px] transition-all"
-              >
-                Confirmar e Avançar <ChevronRight size={18} />
-              </button>
-            </div>
+            {/* Main 3-Column Layout with DND Context */}
+            <DndContext
+              sensors={sensors}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="flex gap-6 overflow-hidden flex-1 pb-4">
+                
+                {/* 1. Fluid Mapping Interface (Left) */}
+                <div className="w-[340px] shrink-0 flex flex-col gap-4">
+                  
+                  {/* Draggable Source: Excel Columns */}
+                  <div className="h-[240px] bg-white/40 border border-white/60 shadow-glass rounded-[32px] overflow-hidden flex flex-col backdrop-blur-md">
+                    <div className="p-5 border-b border-orange-100/40 bg-white/20 shrink-0 flex items-center justify-between">
+                      <h4 className="font-black text-slate-800 text-[13px] tracking-tight uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                        Planilha
+                      </h4>
+                      <div className="px-2 py-0.5 rounded-full bg-orange-100 text-[#FF6B00] text-[9px] font-black">
+                        {parsedHeaders.filter(h => !Object.keys(fieldMapping).includes(h) || fieldMapping[h] === "ignore").length} LIVRES
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-4 custom-scrollbar flex-1">
+                      <div className="flex flex-col gap-2">
+                        {parsedHeaders.map((header) => {
+                          const isMapped = fieldMapping[header] && fieldMapping[header] !== "ignore";
+                          if (isMapped) return null;
+                          return <DraggableColumn key={header} header={header} />;
+                        })}
+                      </div>
+                    </div>
+                  </div>
 
-            {/* Expandable Modal for Selection */}
+                  {/* Droppable Targets: System Fields */}
+                  <div className="flex-1 bg-white/40 border border-white/60 shadow-glass rounded-[32px] overflow-hidden flex flex-col backdrop-blur-md">
+                    <div className="p-5 border-b border-orange-100/40 bg-white/20 shrink-0 flex items-center justify-between">
+                      <h4 className="font-black text-slate-800 text-[13px] tracking-tight uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                        Alvos
+                      </h4>
+                      <Database size={14} className="text-slate-300" />
+                    </div>
+                    <div className="overflow-y-auto p-4 custom-scrollbar flex-1">
+                      <div className="grid grid-cols-1 gap-2.5">
+                        {SYSTEM_FIELDS.filter(f => f.id !== "ignore" && f.id !== "custom_field").map((field) => (
+                          <DroppableField 
+                            key={field.id} 
+                            field={field} 
+                            mappedHeader={getMappedHeaderForField(field.id)}
+                            onDrop={onHandleDrop}
+                            isAIStructuring={isAIStructuring}
+                            availableHeaders={parsedHeaders.filter(h => !Object.keys(fieldMapping).includes(h) || fieldMapping[h] === "ignore")}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <DragOverlay>
+                  {activeId ? (
+                    <div className="p-3 rounded-2xl bg-white border-2 border-orange-400 shadow-2xl flex items-center justify-between w-[280px] cursor-grabbing">
+                      <div className="flex items-center gap-2">
+                        <ChevronRight size={14} className="text-orange-400" />
+                        <span className="text-[12px] font-bold text-slate-800">{activeId.replace("col-", "")}</span>
+                      </div>
+                    </div>
+                  ) : null}
+                </DragOverlay>
+
+                {/* 2. Data Table (Middle) */}
+                <div className="flex-1 bg-white/40 border border-white/60 shadow-glass rounded-[32px] overflow-hidden flex flex-col backdrop-blur-md">
+                  <div className="p-6 border-b border-orange-100/40 bg-white/20 shrink-0 flex justify-between items-center">
+                    <div>
+                      <h5 className="font-black text-slate-800 text-sm tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                        Preview dos Dados
+                      </h5>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Primeiros registros filtrados</p>
+                    </div>
+                    <div className="px-3 py-1 bg-white/80 border border-slate-100 shadow-sm rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                      {parsedData.length - excludedRows.length} SELECIONADOS
+                    </div>
+                  </div>
+                  
+                  <div className="overflow-auto flex-1 custom-scrollbar">
+                    <table className="w-full text-left whitespace-nowrap border-separate border-spacing-0">
+                      <thead className="bg-[#fcf8f4]/80 backdrop-blur-md sticky top-0 z-10 border-b border-slate-100">
+                        <tr>
+                          <th className="p-4 w-12 text-center border-b border-slate-100">
+                             <input 
+                              type="checkbox" 
+                              checked={excludedRows.length === 0}
+                              onChange={(e) => setExcludedRows(e.target.checked ? [] : parsedData.map(r => r._originalIndex))}
+                              className="w-4 h-4 rounded border-slate-200 text-[#FF6B00] focus:ring-[#FF6B00]"
+                             />
+                          </th>
+                          <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">IA Model</th>
+                          {parsedHeaders.map((h) => (
+                            <th
+                              key={h}
+                              className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 border-l border-slate-50 min-w-[120px]"
+                            >
+                              {fieldMapping[h] && fieldMapping[h] !== "ignore" ? (
+                                SYSTEM_FIELDS.find((f) => f.id === fieldMapping[h])?.label || h
+                              ) : (
+                                <span className="opacity-30">IGNORADO</span>
+                              )}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100/60">
+                        {parsedData.slice(0, 10).map((row) => {
+                          const isExcluded = excludedRows.includes(row._originalIndex);
+                          const suggestedModel = aiSuggestions[row._originalIndex];
+
+                          return (
+                            <tr
+                              key={row._originalIndex}
+                              className={cn(
+                                "transition-all",
+                                isExcluded ? "bg-slate-50/30 opacity-60" : "hover:bg-white group"
+                              )}
+                            >
+                              <td className="p-4 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={!isExcluded}
+                                  onChange={(e) => {
+                                    if (e.target.checked)
+                                      setExcludedRows((p) => p.filter((id) => id !== row._originalIndex));
+                                    else
+                                      setExcludedRows((p) => [...p, row._originalIndex]);
+                                  }}
+                                  className="w-4 h-4 rounded border-slate-200 text-[#FF6B00] focus:ring-[#FF6B00] cursor-pointer"
+                                />
+                              </td>
+                              <td className="px-4 py-2">
+                                {suggestedModel ? (
+                                  <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider bg-orange-50 text-orange-600 border border-orange-100">
+                                    {suggestedModel}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-bold text-slate-300 italic">-</span>
+                                )}
+                              </td>
+                              {parsedHeaders.map((h) => (
+                                <td
+                                  key={h}
+                                  className={cn(
+                                    "px-6 py-4 text-[11px] font-medium border-l border-slate-50/50 truncate max-w-[200px]",
+                                    isExcluded ? "text-slate-400" : "text-slate-600"
+                                  )}
+                                >
+                                  {row[h] || "-"}
+                                </td>
+                              ))}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* 3. Card Preview (Right) */}
+                <div className="w-[300px] shrink-0 flex flex-col gap-4">
+                  <div className="flex-1 bg-white/40 border border-white/60 shadow-glass rounded-[32px] overflow-hidden flex flex-col backdrop-blur-md">
+                    <div className="p-6 border-b border-orange-100/40 bg-white/20 shrink-0 flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={16} className="text-[#FF6B00]" />
+                        <h4 className="font-black text-slate-800 text-sm tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                          Preview
+                        </h4>
+                      </div>
+                      
+                      <select
+                        value={previewModel}
+                        onChange={(e) => setPreviewModel(e.target.value)}
+                        className="appearance-none pr-7 pl-3 py-1.5 text-[9px] font-black uppercase tracking-wider bg-white/80 border border-slate-200 rounded-xl focus:ring-[#FF6B00] focus:border-[#FF6B00] cursor-pointer shadow-sm outline-none"
+                      >
+                        <option value="MODERN_FULL">VISUAL: REFERÊNCIA</option>
+                        <option value="MODERN_COMPACT">VISUAL: DENSO</option>
+                        <option value="MODERN_MINIMAL">VISUAL: MINIMALISTA</option>
+                        <option value="MODERN_ACTION">VISUAL: PRODUTIVO</option>
+                      </select>
+                    </div>
+
+                    <div className="flex-1 p-4 flex flex-col items-center justify-start bg-[url('/bg-dots.png')] bg-repeat">
+                      <div className="w-full relative origin-top scale-[0.75]">
+                        {generatePreviewLead() && (
+                          <LeadCard lead={generatePreviewLead()!} />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Final Action Button Container */}
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={() => setCurrentStep("sanitization")}
+                      className="w-full py-4 bg-slate-900 text-white rounded-[24px] font-black text-sm shadow-xl hover:shadow-2xl hover:translate-y-[-2px] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                    >
+                      Processar Leads <ChevronRight size={18} />
+                    </button>
+                    <button
+                      onClick={() => setCurrentStep("upload")}
+                      className="w-full py-3 bg-white/40 border border-white/60 text-slate-500 rounded-[20px] font-bold text-xs hover:bg-white hover:text-slate-700 transition-all text-center"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </DndContext>
+
+            {/* Expandable Modal for Selection (Manual fallback) */}
             <AnimatePresence>
               {mappingModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm px-4">
@@ -780,7 +998,6 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
                     initial={{ scale: 0.95, opacity: 0, y: 10 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     className="bg-gradient-soft border border-orange-100 shadow-glass rounded-3xl p-6 w-full max-w-sm shadow-2xl relative"
                   >
                     <button
@@ -789,48 +1006,18 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
                     >
                       <X size={16} />
                     </button>
-                    <h3 className="text-lg font-black text-slate-800 mb-1">
-                      Mapear Coluna
-                    </h3>
-                    <p className="text-sm font-medium text-slate-600 mb-5">
-                      Coluna Original:{" "}
-                      <span className="text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded">
-                        {mappingModalOpen}
-                      </span>
-                    </p>
-
-                    <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-                      {SYSTEM_FIELDS.map((f) => {
-                        const isSelected =
-                          fieldMapping[mappingModalOpen] === f.id;
-                        return (
-                          <button
-                            key={f.id}
-                            onClick={() => {
-                              setFieldMapping((prev) => ({
-                                ...prev,
-                                [mappingModalOpen]: f.id,
-                              }));
-                              setMappingModalOpen(null);
-                            }}
-                            className={cn(
-                              "flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all text-left border-2",
-                              isSelected
-                                ? "bg-orange-50 text-orange-800 border-orange-500"
-                                : "bg-gradient-soft border border-orange-200/50 shadow-glass text-slate-600 hover:border-orange-300 hover:bg-white/40",
-                            )}
-                          >
-                            {f.label}
-                            {isSelected && (
-                              <CheckCircle2
-                                size={16}
-                                className="text-orange-500"
-                              />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
+                      {mappingModalOpen && SYSTEM_FIELDS.map((f) => (
+                        <button
+                          key={f.id}
+                          onClick={() => {
+                            setFieldMapping((prev) => ({ ...prev, [mappingModalOpen]: f.id }));
+                            setMappingModalOpen(null);
+                          }}
+                          className="flex items-center justify-between w-full p-3 rounded-xl text-xs font-bold bg-white/40 border border-slate-100 hover:border-orange-200 hover:bg-white transition-all mb-2"
+                        >
+                          {f.label}
+                        </button>
+                      ))}
                   </motion.div>
                 </div>
               )}
@@ -1249,7 +1436,7 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
               className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow border border-white/20 shrink-0"
               style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)' }}
             >
-              <Database size={28} strokeWidth={2.5} />
+              <TableIcon size={28} strokeWidth={2.5} />
             </div>
             <div>
               <h2 className="text-4xl font-black text-slate-800 tracking-tight flex items-center gap-2" style={{ fontFamily: 'Comfortaa, cursive' }}>
