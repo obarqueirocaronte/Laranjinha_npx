@@ -428,12 +428,17 @@ exports.initiateLeadCall = async (req, res, next) => {
         }
         
         // 2. Buscar telefone do lead
-        const lead = await leadsService.getLeadById(id);
-        if (!lead) {
-            return res.status(404).json({ success: false, error: 'Lead não encontrado' });
+        const isTestCall = id === '00000000-0000-0000-0000-000000000000' || req.body?.isTest;
+        let lead = null;
+        
+        if (!isTestCall) {
+            lead = await leadsService.getLeadById(id);
+            if (!lead) {
+                return res.status(404).json({ success: false, error: 'Lead não encontrado' });
+            }
         }
 
-        const phoneNumber = req.body?.phoneNumber || lead.phone;
+        const phoneNumber = req.body?.phoneNumber || (lead ? lead.phone : null);
 
         if (!phoneNumber) {
             return res.status(404).json({ success: false, error: 'Lead sem telefone cadastrado' });
@@ -489,7 +494,7 @@ exports.createTestLead = async (req, res, next) => {
             full_name: 'OLIVEIRA',
             company_name: 'Empresa Teste',
             email: `teste.oliveira.${Date.now()}@npx.com.br`,
-            phone: '85987662628',
+            phone: '85999950729',
             job_title: 'Contato Teste',
             state: 'CE',
             city: 'FORTALEZA',

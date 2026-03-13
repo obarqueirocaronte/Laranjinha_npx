@@ -436,32 +436,35 @@ const TestView = ({ users, setView }: any) => {
     const handleTestCall = async (_sdrId: string, sdrExtension: string) => {
         setLoading(true);
         try {
-            // First find the Oliveira test lead
-            const resLeads = await api.get('/leads/active');
-            let leads = [];
-            if (Array.isArray(resLeads.data)) leads = resLeads.data;
-            else if (resLeads.data && Array.isArray(resLeads.data.data)) leads = resLeads.data.data;
+            // Placeholder ID for testing without a real lead in the DB
+            const placeholderId = '00000000-0000-0000-0000-000000000000';
+            const testPhone = '85999950729';
 
-            const testLead = leads.find((l: any) => l.metadata?.is_test && l.metadata?.salesops_only);
-            
-            if (!testLead) {
-                alert('Lead Oliveira não encontrado. Gere ele primeiro no Dashboard (botão 🧪 Lead Teste).');
-                setLoading(false);
-                return;
-            }
+            // Initiate call passing the override extension and fixed test number
+            const res = await api.post(`/leads/${placeholderId}/call`, { 
+                extension: sdrExtension,
+                phoneNumber: testPhone,
+                isTest: true 
+            });
 
-            // Initiate call passing the override extension
-            const res = await api.post(`/leads/${testLead.id}/call`, { extension: sdrExtension });
             if (res.data?.success) {
-                setTestCallUrl(res.data.url);
-                alert('Chamada de teste disparada com sucesso para o ramal ' + sdrExtension);
+                const finalUrl = res.data.url;
+                setTestCallUrl(finalUrl);
+                // Open the URL directly to ensure the dialer starts, as requested
+                if (finalUrl) {
+                    window.open(finalUrl, '_blank');
+                }
+                alert('Chamada de teste disparada! (v7.9)');
             } else {
-                // Check if bypassed template error
                 const msg = res.data?.error || res.data?.message || '';
                 const msgStr = typeof msg === 'string' ? msg : JSON.stringify(msg);
                 if (msgStr.includes('Template Bypass') || msgStr.includes('iniciada com sucesso')) {
-                    setTestCallUrl(res.data.url || '');
-                    alert('Chamada de teste disparada com sucesso para o ramal ' + sdrExtension);
+                    const finalUrl = res.data.url || '';
+                    setTestCallUrl(finalUrl);
+                    if (finalUrl) {
+                        window.open(finalUrl, '_blank');
+                    }
+                    alert('Chamada de teste disparada! (v7.9)');
                     return;
                 }
                 alert('Erro ao testar ramal: ' + msgStr);
@@ -487,8 +490,8 @@ const TestView = ({ users, setView }: any) => {
                         <Phone size={28} />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Tester de Ramal SDR</h2>
-                        <p className="text-slate-600 font-medium">Use o Lead Oliveira para testar a configuração de todos os ramais da operação.</p>
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Tester de Ramal SDR (v7.9)</h2>
+                        <p className="text-slate-600 font-medium">Teste direto via API sem necessidade de lead no banco de dados.</p>
                     </div>
                 </div>
                 <button onClick={() => setView('list')} className="w-10 h-10 bg-white border border-slate-200 shadow-sm text-slate-600 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center justify-center">
@@ -528,7 +531,7 @@ const TestView = ({ users, setView }: any) => {
                                 </div>
                                 {selectedUser?.id === u.id && testCallUrl && (
                                     <div className="mt-2 p-3 bg-sky-50 rounded-xl border border-sky-100 relative group">
-                                        <label className="block text-[9px] font-black text-sky-600 mb-1.5 uppercase tracking-widest">URL Gerada (Com Oliveira)</label>
+                                        <label className="block text-[9px] font-black text-sky-600 mb-1.5 uppercase tracking-widest">URL de Teste Gerada</label>
                                         <code className="block w-full text-[10px] text-slate-500 font-mono bg-white p-2 rounded-lg border border-sky-100 break-all select-all">
                                             {testCallUrl}
                                         </code>

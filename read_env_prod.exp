@@ -5,9 +5,7 @@ spawn ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no -o PreferredAut
 expect "password:" { send "Esseanoemeu@2026\r" }
 expect "$ "
 
-send "find /etc -name Caddyfile 2>/dev/null\r"
-expect "$ "
-send "cat /etc/caddy/Caddyfile 2>/dev/null || echo NO_CADDYFILE_IN_ETC\r"
+send "cat /opt/laranjinha/.env\r"
 expect "$ "
 
 send "exit\r"

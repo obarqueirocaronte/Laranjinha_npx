@@ -228,7 +228,7 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
                     {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -240,10 +240,11 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
 
                     {/* Modal Container */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        initial={{ opacity: 0, scale: 0.92, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative w-full max-w-4xl bg-[#FCFAF7] shadow-[0_32px_80px_rgba(0,0,0,0.15)] rounded-[48px] overflow-hidden flex flex-col ring-1 ring-white/50"
+                        exit={{ opacity: 0, scale: 0.92, y: 10 }}
+                        transition={{ type: 'spring', damping: 30, stiffness: 500 }}
+                        className="relative w-full max-w-4xl bg-[#FCFAF7] shadow-[0_32px_80px_rgba(0,0,0,0.15)] rounded-[48px] overflow-hidden flex flex-col ring-1 ring-white/50 z-[10001]"
                         style={{ maxHeight: 'calc(100vh - 80px)' }}
                     >
                         {/* Dynamic Glow */}

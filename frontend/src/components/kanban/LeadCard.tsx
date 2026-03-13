@@ -345,16 +345,18 @@ export const LeadCard: React.FC<LeadCardProps> = ({
             {/* 1. Header: Company Info and Quick Actions */}
             <div className="flex items-start justify-between">
                 <ExplorationBalloon title="Explorar Empresa" icon={Building2}>
-                    <div className="flex items-center gap-2.5 min-w-0 pointer-events-none">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1 pointer-events-none overflow-hidden">
                         <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0 border border-emerald-100 shadow-sm">
                             <Building2 size={16} className="text-[#10B981]" {...ICON_BOLD} />
                         </div>
-                        <div className="flex flex-col min-w-0">
-                            <h4 className="font-bold text-[#334155] text-[13px] leading-tight truncate tracking-tight" style={{ fontFamily: 'Quicksand, sans-serif' }}>
-                                {lead.company_name}
-                            </h4>
+                        <div className="flex flex-col min-w-0 flex-1">
+                            <div className="marquee-container group">
+                                <h4 className="font-bold text-[#334155] text-[13px] leading-tight tracking-tight marquee-text group-hover:marquee-hover-active" style={{ fontFamily: 'Quicksand, sans-serif' }}>
+                                    {lead.company_name}
+                                </h4>
+                            </div>
                             {cnpj && (
-                                <div className="mt-0.5 px-1.5 py-0.5 rounded bg-white/40 border border-white/50 text-slate-400 text-[7px] font-black tracking-widest inline-flex w-fit shadow-xs uppercase">
+                                <div className="mt-0.5 px-1.5 py-0.5 rounded bg-white/40 border border-white/50 text-slate-400 text-[7px] font-black tracking-widest inline-flex w-fit shadow-xs uppercase shrink-0">
                                     {cnpj}
                                 </div>
                             )}
@@ -374,12 +376,14 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                                 <div className="w-7 h-7 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
                                     <User size={12} className="text-slate-400" {...ICON_BASE} />
                                 </div>
-                                <div className="flex flex-col min-w-0">
-                                    <p className="font-bold text-[#475569] text-[11px] truncate tracking-tight">
-                                        {lead.full_name || 'Sem Contato'}
-                                    </p>
+                                <div className="flex flex-col min-w-0 flex-1">
+                                    <div className="marquee-container group">
+                                        <p className="font-bold text-[#475569] text-[11px] tracking-tight marquee-text group-hover:marquee-hover-active">
+                                            {lead.full_name || 'Sem Contato'}
+                                        </p>
+                                    </div>
                                     {jobTitle && (
-                                        <p className="text-[#94A3B8] text-[7px] font-black uppercase tracking-wider truncate mt-0.5 opacity-80">
+                                        <p className="text-[#94A3B8] text-[7px] font-black uppercase tracking-wider truncate mt-0.5 opacity-80 shrink-0">
                                             {jobTitle}
                                         </p>
                                     )}

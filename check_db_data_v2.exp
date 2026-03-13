@@ -1,0 +1,20 @@
+#!/usr/bin/expect -f
+set timeout 30
+
+spawn ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no -o PreferredAuthentications=password -p 55535 rodrigo@178.156.234.198
+expect "password:" { send "Esseanoemeu@2026\r" }
+expect "$ "
+
+set db_url "postgresql://laranjinha:laranjinha-npx-tech@localhost:5432/inside_sales_pipeline"
+
+# Usar psql com a URL completa
+send "psql \"$db_url\" -c \"SELECT 'call_logs' as table, count(*) FROM call_logs UNION ALL SELECT 'schedules' as table, count(*) FROM schedules UNION ALL SELECT 'cadence_completions' as table, count(*) FROM cadence_completions;\"\r"
+expect "$ "
+
+send "psql \"$db_url\" -c \"SELECT * FROM call_logs ORDER BY created_at DESC LIMIT 3;\"\r"
+expect "$ "
+send "psql \"$db_url\" -c \"SELECT * FROM schedules ORDER BY created_at DESC LIMIT 3;\"\r"
+expect "$ "
+
+send "exit\r"
+expect eof

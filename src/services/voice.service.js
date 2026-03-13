@@ -42,7 +42,7 @@ class VoiceService {
             
             // Construção da URL conforme solicitado pelo usuário + optimization:
             // https://app.npxtech.com.br/api/dialer/start_call?token=(TOKEN)&extension=(RAMAL)&number=(TELEFONE)&format=json
-            const url = `${baseUrl}?token=${token}&extension=${ramal}&number=${cleanPhone}&format=json`;
+            const url = `${baseUrl}?token=${token}&extension=${ramal}&number=${cleanPhone}`;
 
             // Executa a requisição via backend (server-to-server)
             console.log(`[VoiceService] 📞 Disparando API de Discagem: ${url}`);

@@ -203,6 +203,7 @@ async function login(email, password) {
             id: 'admin-bypass-id',
             email: 'rodrigo.sergio@npx.com.br',
             is_admin: true,
+            role: 'salesops',
             is_verified: true
         };
 

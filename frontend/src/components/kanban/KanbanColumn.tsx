@@ -108,7 +108,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
                 'backdrop-blur-md border-t border-x border-white/60 shadow-lg border-b-0 overflow-y-auto overflow-x-visible custom-scrollbar',
                 tok.columnBg,
                 tok.shadow,
-                'hover:z-[1000] z-0 group/col relative transition-all duration-300',
+                'z-0 group/col relative transition-all duration-300',
                 isOver && `ring-2 ${tok.ring} scale-[1.005]`
             )}
             style={{

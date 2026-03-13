@@ -298,7 +298,7 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                 transition={springPop}
                             >
                                 {activeTab === 'resumo' && (
-                                    <ResumoTab stats={stats} activeLeads={activeLeads} allLeads={allLeads} sdrs={sdrs} />
+                                    <ResumoTab stats={stats} activeLeads={activeLeads} allLeads={allLeads} sdrs={sdrs} user={user} />
                                 )}
                                 {activeTab === 'acompanhamento' && (
                                     <AcompanhamentoTab sdrs={sdrs} activeLeads={activeLeads} />
@@ -397,7 +397,8 @@ const ResumoTab: React.FC<{
     activeLeads: Lead[];
     allLeads: Lead[];
     sdrs: SDR[];
-}> = ({ stats, activeLeads, allLeads, sdrs }) => {
+    user: any;
+}> = ({ stats, activeLeads, allLeads, sdrs, user }) => {
     const totalLeads = allLeads.length + activeLeads.length;
     const inCadence = activeLeads.length;
     const conversionRate = totalLeads > 0 ? Math.round((stats.completed_leads / totalLeads) * 100) : 0;
@@ -443,37 +444,77 @@ const ResumoTab: React.FC<{
                 </GlassCard>
             </div>
 
-            {/* Quick SDR status */}
-            {sdrs.length > 0 && (
-                <GlassCard>
-                    <h3 className="text-sm font-black text-slate-700 mb-4" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                        SDRs Ativos
-                    </h3>
-                    <div className="space-y-3">
-                        {sdrs.map((sdr) => {
-                            const sdrLeads = activeLeads.filter(l => l.assigned_sdr_id === sdr.id);
-                            return (
-                                <div key={sdr.id} className="flex items-center justify-between py-3 px-4 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all hover:border-orange-200 hover:shadow-md">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-xs font-black shadow-md border-2 border-white">
-                                            {sdr.email?.charAt(0).toUpperCase() || 'S'}
+            {/* Quick SDR status & Admin Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {sdrs.length > 0 && (
+                    <GlassCard className="md:col-span-2">
+                        <h3 className="text-sm font-black text-slate-700 mb-4" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                            SDRs Ativos
+                        </h3>
+                        <div className="space-y-3">
+                            {sdrs.map((sdr) => {
+                                const sdrLeads = activeLeads.filter(l => l.assigned_sdr_id === sdr.id);
+                                return (
+                                    <div key={sdr.id} className="flex items-center justify-between py-3 px-4 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all hover:border-orange-200 hover:shadow-md">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-xs font-black shadow-md border-2 border-white">
+                                                {sdr.email?.charAt(0).toUpperCase() || 'S'}
+                                            </div>
+                                            <span className="text-sm font-bold text-slate-700 capitalize" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                                {sdr.email?.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'SDR'}
+                                            </span>
                                         </div>
-                                        <span className="text-sm font-bold text-slate-700 capitalize" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                            {sdr.email?.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'SDR'}
-                                        </span>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 shadow-sm uppercase tracking-wider">
+                                                {sdrLeads.length} leads
+                                            </span>
+                                            <ChevronRight size={16} className="text-slate-300 group-hover:text-orange-400" />
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 shadow-sm uppercase tracking-wider">
-                                            {sdrLeads.length} leads
-                                        </span>
-                                        <ChevronRight size={16} className="text-slate-300 group-hover:text-orange-400" />
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </GlassCard>
-            )}
+                                );
+                            })}
+                        </div>
+                    </GlassCard>
+                )}
+
+                {user?.role === 'salesops' && (
+                    <GlassCard className="flex flex-col justify-between border-orange-200 bg-orange-50/30">
+                        <div>
+                            <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-lg mb-4">
+                                <Sparkles size={24} />
+                            </div>
+                            <h3 className="text-sm font-black text-slate-800 mb-2" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                Ações de Teste
+                            </h3>
+                            <p className="text-[10px] font-medium text-slate-500 leading-relaxed mb-6">
+                                Gere um lead de teste "OLIVEIRA" atribuído ao seu SDR para validar o fluxo de login, kanban e click-to-call.
+                            </p>
+                        </div>
+                        
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={async () => {
+                                try {
+                                    const res = await leadsAPI.createTestLead();
+                                    if (res.success) {
+                                        alert('✅ Lead "OLIVEIRA" gerado com sucesso! Atualizando dashboard...');
+                                        window.location.reload();
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to create test lead:', e);
+                                    alert('❌ Falha ao gerar lead de teste. Verifique as permissões de SalesOps.');
+                                }
+                            }}
+                            className="w-full py-3 rounded-2xl bg-slate-900 text-white text-[11px] font-black uppercase tracking-widest shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                            style={{ fontFamily: 'Comfortaa, cursive' }}
+                        >
+                            <Users size={14} />
+                            Gerar Lead Oliveira
+                        </motion.button>
+                    </GlassCard>
+                )}
+            </div>
         </div>
     );
 };

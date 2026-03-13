@@ -156,3 +156,30 @@ label {
 #root {
   height: 100vh;
 }
+/* Marquee Effect for long text on hover */
+.marquee-container {
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  width: 100%;
+}
+
+.marquee-text {
+  display: inline-block;
+  transition: transform 0.3s ease-in-out;
+}
+
+.group:hover .marquee-hover-active {
+  animation: marquee 10s linear infinite;
+  padding-right: 50px;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Ensure data doesn't push others out */
+.shrink-none {
+  flex-shrink: 0;
+}

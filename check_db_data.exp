@@ -1,0 +1,22 @@
+#!/usr/bin/expect -f
+set timeout 30
+
+spawn ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no -o PreferredAuthentications=password -p 55535 rodrigo@178.156.234.198
+expect {
+    "password:" { send "Esseanoemeu@2026\r" }
+    "Permission denied" { exit 1 }
+}
+expect "$ "
+
+# Usar psql para pesquisar as quantidades de registros
+send "psql -d laranjinha -c \"SELECT 'call_logs' as table, count(*) FROM call_logs UNION ALL SELECT 'schedules' as table, count(*) FROM schedules UNION ALL SELECT 'cadence_completions' as table, count(*) FROM cadence_completions;\"\r"
+expect "$ "
+
+# Listar os últimos 3 registros de cada para conferência visual rápida
+send "psql -d laranjinha -c \"SELECT * FROM call_logs ORDER BY created_at DESC LIMIT 3;\"\r"
+expect "$ "
+send "psql -d laranjinha -c \"SELECT * FROM schedules ORDER BY created_at DESC LIMIT 3;\"\r"
+expect "$ "
+
+send "exit\r"
+expect eof
