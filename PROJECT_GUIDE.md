@@ -133,13 +133,14 @@ Dependendo de como você roda o sistema (se no terminal com `npm run dev` ou usa
 
 Para garantir a estabilidade do sistema, separamos rigorosamente o que é **Teste** do que é **Produção**.
 
-- **Consulte o guia completo em**: [docs/ENVIRONMENT_GUIDE.md](file:///Users/rodrigodantas/Antigravity - Projetos/inside-sales-pipeline-beta/docs/ENVIRONMENT_GUIDE.md)
+- **Guia de Ambientes (Portas, .env)**: [docs/ENVIRONMENT_GUIDE.md](file:///Users/rodrigodantas/Antigravity - Projetos/inside-sales-pipeline-beta/docs/ENVIRONMENT_GUIDE.md)
+- **Guia do Servidor de Produção (SSH, Caminhos, Deploy)**: [docs/PRODUCTION_SERVER_GUIDE.md](file:///Users/rodrigodantas/Antigravity - Projetos/inside-sales-pipeline-beta/docs/PRODUCTION_SERVER_GUIDE.md)
 
 ### Resumo de Fluxo:
 1. Altere o código localmente.
 2. Teste no Mac (`localhost:3000`).
 3. Suba para o GitHub (`git push`).
-4. Execute o deploy no servidor de produção (`git pull`).
+4. Execute o deploy no servidor de produção seguindo o [Guia de Produção](file:///Users/rodrigodantas/Antigravity - Projetos/inside-sales-pipeline-beta/docs/PRODUCTION_SERVER_GUIDE.md).
 
 ---
 

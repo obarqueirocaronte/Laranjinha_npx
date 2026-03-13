@@ -26,9 +26,12 @@ inside-sales-pipeline/
 │   └── seed-data.sql        # Sample data for testing
 ├── docs/
 │   ├── api-contracts.md     # REST API specifications
+│   ├── environment-guide.md # Environment & Port configuration
+│   ├── production-guide.md  # Production Server & Deploy guide
 │   ├── erd.md              # Entity Relationship Diagram
 │   ├── integration-guide.md # Developer setup guide
 │   └── manager-guide.md     # Manager configuration guide
+├── PROJECT_GUIDE.md        # Quick Setup & Deploy Entry Point
 └── README.md               # This file
 ```
 

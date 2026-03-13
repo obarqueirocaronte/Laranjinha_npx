@@ -51,12 +51,34 @@ Para rodar a aplicação localmente e realizar validações (por exemplo, testar
 
 ---
 
-## 🔑 3. Arquivos de Configuração (.env)
+## ⚙️ 4. Configuração de Portas (Port Mapping)
+
+Se você desejar rodar o sistema em uma porta diferente da padrão, siga estas instruções:
+
+### Backend (API)
+A porta do backend é controlada pela variável de ambiente `PORT` ou pelo padrão `3001`.
+- **Como mudar**: No arquivo `.env`, adicione ou altere:
+  ```bash
+  PORT=4000
+  ```
+- **Importante**: Se mudar a porta do backend, você **também** deve atualizar o frontend para que ele saiba onde chamar a API. No `.env` do frontend (ou root), altere `VITE_API_URL` (ou `API_BASE_URL` - verifique qual está em uso).
+
+### Frontend (Vite)
+O frontend usa a porta `3000` por padrão via Vite.
+- **Como mudar**: No arquivo `frontend/package.json`, altere o script `dev`:
+  ```json
+  "dev": "vite --port 5000"
+  ```
+- Alternativamente, você pode rodar via terminal: `npm run dev -- --port 5000`.
+
+---
+
+## 🔑 5. Arquivos de Configuração (.env)
 
 | Variável | Teste (Local) | Produção (Remoto) |
 | :--- | :--- | :--- |
 | `NODE_ENV` | `development` | `production` |
-| `API_BASE_URL` | `http://localhost:3001` | `https://laranjinha.npx.com.br` |
+| `API_BASE_URL` | `http://localhost:3001` | `https://laranjinha.npx.com.br/api/v1` |
 | `FRONTEND_URL` | `http://localhost:3000` | `https://laranjinha.npx.com.br` |
 | `DATABASE_URL` | `postgresql://localhost:5432/...` | `postgresql://localhost:5432/inside_sales_pipeline` |
 
