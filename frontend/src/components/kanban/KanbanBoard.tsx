@@ -84,23 +84,36 @@ export const KanbanBoard = ({
                     )
                 ]);
 
-                if (colsRes.success && colsRes.data?.length > 0) {
+                if (colsRes.success && Array.isArray(colsRes.data) && colsRes.data.length > 0) {
                     setColumns(colsRes.data);
+                } else if (!columns.length) {
+                    // Fallback to minimal default columns if DB is empty to avoid white screen
+                    setColumns([
+                        { id: 'col-1', name: 'Novo', position: 1, color: '#f1f5f9' },
+                        { id: 'col-2', name: 'Qualificado', position: 2, color: '#f1f5f9' }
+                    ]);
                 }
                 
-                if (leadsRes.success && leadsRes.data) {
+                if (leadsRes.success && Array.isArray(leadsRes.data)) {
                     setLeads(leadsRes.data);
+                } else {
+                    setLeads([]);
                 }
             } catch (err) {
                 console.error('Ops! Falha ao carregar o quadro:', err);
                 addNotification('Não conseguimos carregar alguns dados. Tente atualizar.', 'error');
+                if (!columns.length) {
+                    setColumns([{ id: 'fallback', name: 'Board', position: 1, color: '#f1f5f9' }]);
+                }
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchBoardData();
-    }, []);
+        if (user?.id) {
+            fetchBoardData();
+        }
+    }, [user?.id]);
 
     const addNotification = useCallback((message: string, type: NotificationType = 'info') => {
         const id = Math.random().toString(36).substring(2, 9);
