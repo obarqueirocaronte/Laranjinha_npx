@@ -7,6 +7,10 @@ expect "$ "
 
 send "cd /opt/laranjinha\r"
 expect "$ "
+send "git fetch origin main\r"
+expect "$ "
+send "git reset --hard origin/main\r"
+expect "$ "
 send "node scripts/check-user.js\r"
 expect "$ "
 

@@ -314,3 +314,42 @@ exports.updateUserRole = async (req, res) => {
         res.status(500).json({ error: 'Erro ao atualizar role.' });
     }
 };
+
+exports.getTestSettings = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const result = await db.query(
+            `SELECT config FROM user_integrations WHERE user_id = $1 AND type = 'test_settings'`,
+            [userId]
+        );
+
+        if (result.rows.length > 0) {
+            res.json({ success: true, data: result.rows[0].config });
+        } else {
+            // Default settings
+            res.json({ success: true, data: { testPhone: '85999950729' } });
+        }
+    } catch (error) {
+        console.error('Error fetching test settings:', error);
+        res.status(500).json({ error: 'Erro ao buscar configurações de teste.' });
+    }
+};
+
+exports.saveTestSettings = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { testPhone } = req.body;
+
+        await db.query(`
+            INSERT INTO user_integrations (user_id, type, config, is_active)
+            VALUES ($1, 'test_settings', $2, true)
+            ON CONFLICT (user_id, type) DO UPDATE 
+            SET config = EXCLUDED.config, updated_at = CURRENT_TIMESTAMP
+        `, [userId, { testPhone }]);
+
+        res.json({ success: true, message: 'Configurações de teste salvas com sucesso' });
+    } catch (error) {
+        console.error('Error saving test settings:', error);
+        res.status(500).json({ error: 'Erro ao salvar configurações de teste.' });
+    }
+};

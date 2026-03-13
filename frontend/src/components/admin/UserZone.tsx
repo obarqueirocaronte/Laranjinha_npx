@@ -427,20 +427,46 @@ const ProfileView = ({ selectedUser, setUsers, setSelectedUser, setView }: any) 
         </div>
     );
 };
-
 const TestView = ({ users, setView }: any) => {
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [testCallUrl, setTestCallUrl] = useState('');
     const [loading, setLoading] = useState(false);
+    const [testPhone, setTestPhone] = useState('85999950729');
+    const [savingSettings, setSavingSettings] = useState(false);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const res = await api.get('/users/test-config');
+                if (res.data?.success && res.data.data?.testPhone) {
+                    setTestPhone(res.data.data.testPhone);
+                }
+            } catch (err) {
+                console.error('Error fetching test settings:', err);
+            }
+        };
+        fetchSettings();
+    }, []);
+
+    const handleSaveSettings = async () => {
+        setSavingSettings(true);
+        try {
+            await api.post('/users/test-config', { testPhone });
+            alert('Configuração salva com sucesso!');
+        } catch (err) {
+            console.error('Error saving test settings:', err);
+            alert('Erro ao salvar configuração.');
+        } finally {
+            setSavingSettings(false);
+        }
+    };
 
     const handleTestCall = async (_sdrId: string, sdrExtension: string) => {
         setLoading(true);
         try {
             // Placeholder ID for testing without a real lead in the DB
             const placeholderId = '00000000-0000-0000-0000-000000000000';
-            const testPhone = '85999950729';
-
-            // Initiate call passing the override extension and fixed test number
+            // Initiate call passing the override extension and dynamic test number
             const res = await api.post(`/leads/${placeholderId}/call`, { 
                 extension: sdrExtension,
                 phoneNumber: testPhone,
@@ -490,13 +516,36 @@ const TestView = ({ users, setView }: any) => {
                         <Phone size={28} />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Tester de Ramal SDR (v8.1)</h2>
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Tester de Ramal SDR</h2>
                         <p className="text-slate-600 font-medium">Teste direto via API sem necessidade de lead no banco de dados.</p>
                     </div>
                 </div>
-                <button onClick={() => setView('list')} className="w-10 h-10 bg-white border border-slate-200 shadow-sm text-slate-600 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center justify-center">
-                    <ArrowRight size={18} className="rotate-180" />
-                </button>
+                <div className="flex items-center gap-4">
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Telefone de Destino</label>
+                        <div className="flex items-center gap-2">
+                            <input 
+                                type="text"
+                                value={testPhone}
+                                onChange={(e) => setTestPhone(e.target.value)}
+                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:border-sky-400 focus:ring-0 transition-all w-36 shadow-sm"
+                                placeholder="85999999999"
+                            />
+                            <button 
+                                onClick={handleSaveSettings}
+                                disabled={savingSettings}
+                                className="p-2.5 bg-sky-500 text-white rounded-xl hover:bg-sky-600 transition-all shadow-md shadow-sky-500/20 disabled:opacity-50"
+                                title="Salvar Configuração"
+                            >
+                                {savingSettings ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="h-10 w-px bg-slate-200 mx-2" />
+                    <button onClick={() => setView('list')} className="w-10 h-10 bg-white border border-slate-200 shadow-sm text-slate-600 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center justify-center">
+                        <ArrowRight size={18} className="rotate-180" />
+                    </button>
+                </div>
             </div>
 
             <div className="flex gap-6 flex-1 min-h-0">
@@ -531,7 +580,7 @@ const TestView = ({ users, setView }: any) => {
                                 </div>
                                 {selectedUser?.id === u.id && testCallUrl && (
                                     <div className="mt-2 p-3 bg-sky-50 rounded-xl border border-sky-100 relative group">
-                                        <label className="block text-[9px] font-black text-sky-600 mb-1.5 uppercase tracking-widest">URL de Teste (v8.1)</label>
+                                        <label className="block text-[9px] font-black text-sky-600 mb-1.5 uppercase tracking-widest">URL de Teste</label>
                                         <code className="block w-full text-[10px] text-slate-500 font-mono bg-white p-2 rounded-lg border border-sky-100 break-all select-all">
                                             {testCallUrl}
                                         </code>

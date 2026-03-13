@@ -11,6 +11,11 @@ router.get('/:id/voice-config', usersController.getUserVoiceConfig);
 // Save user integration config
 router.post('/:id/integrations', usersController.saveUserIntegration);
 
+// Test settings
+const { authenticate } = require('../middleware/auth.middleware');
+router.get('/test-config', authenticate, usersController.getTestSettings);
+router.post('/test-config', authenticate, usersController.saveTestSettings);
+
 // Update user role
 router.put('/:id/role', usersController.updateUserRole);
 
