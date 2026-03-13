@@ -74,67 +74,6 @@ export const KanbanBoard = ({
 
     useEffect(() => {
         const fetchBoardData = async () => {
-            const MOCK_COLUMNS: PipelineColumn[] = [
-                { id: 'mock-col-1', name: 'Leads', position: 1, color: '#F97316' },
-                { id: 'mock-col-2', name: 'Chamada', position: 2, color: '#3B82F6' },
-                { id: 'mock-col-3', name: 'Email', position: 3, color: '#8B5CF6' },
-                { id: 'mock-col-4', name: 'WhatsApp', position: 4, color: '#10B981' },
-                { id: 'mock-col-5', name: 'Cadência', position: 5, color: '#EF4444' },
-            ];
-
-            // Mock leads to test all adaptive layout scenarios
-            const MOCK_LEADS: Lead[] = [
-                {
-                    id: 'mock-1',
-                    full_name: 'Ana Rodrigues',
-                    company_name: 'TechBrasil Soluções Digitais LTDA',
-                    email: 'ana@techbrasil.com.br',
-                    phone: '11999990001',
-                    current_column_id: 'mock-col-2',
-                    assigned_sdr_id: 'mock-sdr',
-                    cadence_progress: 70,
-                    tags: ['Enterprise', 'Prioritário', 'Lead Quente', 'Norte'],
-                    metadata: {
-                        cnpj: '12.345.678/0001-90',
-                        job_title: 'DIRETORA COMERCIAL',
-                        location: 'São Paulo, SP',
-                        next_contact_at: new Date(Date.now() + 86400000).toISOString(),
-                        linkedin_url: 'https://linkedin.com/in/ana'
-                    },
-                    created_at: new Date().toISOString()
-                },
-                {
-                    id: 'mock-2',
-                    full_name: 'Carlos Mendes',
-                    company_name: 'Distribuidora Sul',
-                    email: 'sem_email_carlos@placeholder.com',
-                    phone: '41988880002',
-                    current_column_id: 'mock-col-1',
-                    assigned_sdr_id: 'mock-sdr',
-                    cadence_progress: 25,
-                    tags: ['Oportunidade', 'Frio'],
-                    metadata: {
-                        location: 'Curitiba, PR'
-                    },
-                    created_at: new Date().toISOString()
-                },
-                {
-                    id: 'mock-3',
-                    full_name: '',
-                    company_name: 'Indústria Nacional S.A.',
-                    email: 'sem_email_placeholder@lead.com',
-                    phone: '21977770003',
-                    current_column_id: 'mock-col-3',
-                    assigned_sdr_id: 'mock-sdr',
-                    cadence_progress: 0,
-                    tags: ['Sem Contato'],
-                    metadata: {
-                        cnpj: '98.765.432/0001-11'
-                    },
-                    created_at: new Date().toISOString()
-                }
-            ];
-
             try {
                 setIsLoading(true);
                 const [colsRes, leadsRes] = await Promise.all([
@@ -147,20 +86,14 @@ export const KanbanBoard = ({
 
                 if (colsRes.success && colsRes.data?.length > 0) {
                     setColumns(colsRes.data);
-                } else {
-                    setColumns(MOCK_COLUMNS);
                 }
-
-                if (leadsRes && leadsRes.success && leadsRes.data?.length > 0) {
+                
+                if (leadsRes.success && leadsRes.data) {
                     setLeads(leadsRes.data);
-                } else {
-                    // Use mock data when no real data available
-                    setLeads(MOCK_LEADS);
                 }
             } catch (err) {
-                console.error("Failed to fetch Kanban data:", err);
-                setColumns(MOCK_COLUMNS);
-                setLeads(MOCK_LEADS);
+                console.error('Ops! Falha ao carregar o quadro:', err);
+                addNotification('Não conseguimos carregar alguns dados. Tente atualizar.', 'error');
             } finally {
                 setIsLoading(false);
             }
