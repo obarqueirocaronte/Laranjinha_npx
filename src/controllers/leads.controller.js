@@ -456,7 +456,7 @@ exports.initiateLeadCall = async (req, res, next) => {
 
         // 3. Chamar serviço de voz
         const voiceService = require('../services/voice.service');
-        const result = await voiceService.initiateCall(finalExtension, phoneNumber);
+        const result = await voiceService.initiateCall(targetExtension, phoneNumber);
         
         if (result.success) {
             return res.json({ 

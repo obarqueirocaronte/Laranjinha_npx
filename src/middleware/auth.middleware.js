@@ -43,12 +43,12 @@ async function authenticate(req, res, next) {
 
         // Check if user exists and is verified
         let user;
-        if (decoded.userId === 'admin-bypass-id' || decoded.userId === 'visitor-bypass-id') {
+        if (decoded.userId === '00000000-0000-0000-0000-000000000001' || decoded.userId === '00000000-0000-0000-0000-000000000002') {
             user = {
                 id: decoded.userId,
-                email: decoded.userId === 'admin-bypass-id' ? 'rodrigo.sergio@npx.com.br' : 'visitante@npx.com.br',
+                email: decoded.userId === '00000000-0000-0000-0000-000000000001' ? 'rodrigo.sergio@npx.com.br' : 'visitante@npx.com.br',
                 is_verified: true,
-                is_admin: decoded.userId === 'admin-bypass-id'
+                is_admin: decoded.userId === '00000000-0000-0000-0000-000000000001'
             };
         } else {
             const userResult = await pool.query(
@@ -132,12 +132,12 @@ async function optionalAuth(req, res, next) {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
             let user;
-            if (decoded.userId === 'admin-bypass-id' || decoded.userId === 'visitor-bypass-id') {
+            if (decoded.userId === '00000000-0000-0000-0000-000000000001' || decoded.userId === '00000000-0000-0000-0000-000000000002') {
                 user = {
                     id: decoded.userId,
-                    email: decoded.userId === 'admin-bypass-id' ? 'rodrigo.sergio@npx.com.br' : 'visitante@npx.com.br',
+                    email: decoded.userId === '00000000-0000-0000-0000-000000000001' ? 'rodrigo.sergio@npx.com.br' : 'visitante@npx.com.br',
                     is_verified: true,
-                    is_admin: decoded.userId === 'admin-bypass-id'
+                    is_admin: decoded.userId === '00000000-0000-0000-0000-000000000001'
                 };
             } else {
                 const userResult = await pool.query(
@@ -175,7 +175,7 @@ async function authorizeSalesOps(req, res, next) {
     }
     // Re-query the user role since req.user only has id/email/isAdmin
     try {
-        if (req.user.id === 'admin-bypass-id') {
+        if (req.user.id === '00000000-0000-0000-0000-000000000001') {
              return next();
         }
 
