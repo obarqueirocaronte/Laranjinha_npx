@@ -16,7 +16,12 @@ async function checkUser() {
         const checkRes = await client.query('SELECT id, email, role FROM users WHERE email = $1', [email]);
         
         if (checkRes.rows.length === 0) {
-            console.log('User not found.');
+            console.log('User not found. Creating bypass user...');
+            await client.query(
+                'INSERT INTO users (id, email, name, role, is_admin, is_verified) VALUES ($1, $2, $3, $4, $5, $6)',
+                ['00000000-0000-0000-0000-000000000001', email, 'Rodrigo Sergio', 'salesops', true, true]
+            );
+            console.log('Bypass user created.');
             return;
         }
         
