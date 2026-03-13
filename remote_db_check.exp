@@ -1,0 +1,18 @@
+#!/usr/bin/expect -f
+set timeout 60
+
+spawn ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no -o PreferredAuthentications=password -p 55535 rodrigo@178.156.234.198
+expect "password:" { send "Esseanoemeu@2026\r" }
+expect "$ "
+
+send "cd /opt/laranjinha\r"
+expect "$ "
+send "git fetch origin main\r"
+expect "$ "
+send "git reset --hard origin/main\r"
+expect "$ "
+send "node scripts/db-cleanup-check.js\r"
+expect "$ "
+
+send "exit\r"
+expect eof
