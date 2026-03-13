@@ -428,22 +428,35 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                 </div>
             </div>
 
-            {/* Cadence controls (overlay) */}
+            {/* Cadence controls (Floating lateral zone) */}
             <AnimatePresence>
                 {isCadenceColumn && (
                     <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        className="absolute inset-x-0 -bottom-1 flex items-center justify-center gap-2 pb-2 z-10"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        className="absolute -right-3 top-1/2 -translate-y-1/2 flex flex-col gap-2.5 z-[100]"
                         onPointerDown={e => e.stopPropagation()}
                     >
-                        <button onClick={e => { e.stopPropagation(); onReturn?.(lead); }} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl shadow-md text-[10px] font-bold flex items-center gap-1">
-                            <Undo2 size={10} /> Voltar
-                        </button>
-                        <button onClick={e => { e.stopPropagation(); onFinish?.(lead); }} className="px-3 py-1.5 bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-200 text-[10px] font-bold flex items-center gap-1">
-                            <Check size={10} /> Concluir
-                        </button>
+                        <motion.button 
+                            whileHover={{ scale: 1.1, backgroundColor: '#f8fafc' }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={e => { e.stopPropagation(); onReturn?.(lead); }} 
+                            className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-500 rounded-full shadow-lg ring-4 ring-white/50 transition-all"
+                            title="Voltar"
+                        >
+                            <Undo2 size={14} {...ICON_BOLD} />
+                        </motion.button>
+                        
+                        <motion.button 
+                            whileHover={{ scale: 1.1, filter: 'brightness(1.1)' }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={e => { e.stopPropagation(); onFinish?.(lead); }} 
+                            className="w-8 h-8 flex items-center justify-center bg-emerald-500 text-white rounded-full shadow-lg shadow-emerald-200/50 ring-4 ring-emerald-500/20 transition-all font-bold"
+                            title="Concluir"
+                        >
+                            <Check size={14} {...ICON_BOLD} />
+                        </motion.button>
                     </motion.div>
                 )}
             </AnimatePresence>
