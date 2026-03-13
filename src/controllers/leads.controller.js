@@ -418,19 +418,30 @@ exports.initiateLeadCall = async (req, res, next) => {
 
         let extension = sdrExtensionRes.rows[0]?.extension;
 
-        // Se não houver ramal do SDR dono, ou lead sem dono, buscar ramal do usuário logado
-        if (!extension) {
-            const userInteg = await db.query(
-                `SELECT config->>'extension' as extension FROM user_integrations WHERE user_id = $1 AND type = 'voice' AND is_active = true`,
-                [userId]
-            );
-            extension = userInteg.rows[0]?.extension;
+        const isTestCall = id === '00000000-0000-0000-0000-000000000000' || req.body?.isTest;
+        let targetExtension = req.body?.extension;
+
+        // Se não houver ramal via body e não for teste, buscar ramal do dono do lead ou do usuário logado
+        if (!targetExtension && !isTestCall) {
+            // Se já buscaram o ramal do dono (SDR)
+            if (extension) {
+                targetExtension = extension;
+            } else {
+                const userId = req.user.id;
+                const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId);
+                
+                if (isUuid) {
+                    const userInteg = await db.query(
+                        `SELECT config->>'extension' as extension FROM user_integrations WHERE user_id = $1 AND type = 'voice' AND is_active = true`,
+                        [userId]
+                    );
+                    targetExtension = userInteg.rows[0]?.extension;
+                }
+            }
         }
         
         // 2. Buscar telefone do lead
-        const isTestCall = id === '00000000-0000-0000-0000-000000000000' || req.body?.isTest;
         let lead = null;
-        
         if (!isTestCall) {
             lead = await leadsService.getLeadById(id);
             if (!lead) {
@@ -439,15 +450,13 @@ exports.initiateLeadCall = async (req, res, next) => {
         }
 
         const phoneNumber = req.body?.phoneNumber || (lead ? lead.phone : null);
-
         if (!phoneNumber) {
             return res.status(404).json({ success: false, error: 'Lead sem telefone cadastrado' });
         }
 
         // 3. Chamar serviço de voz
         const voiceService = require('../services/voice.service');
-        const overrideExtension = req.body?.extension; 
-        const result = await voiceService.initiateCall(overrideExtension || extension, phoneNumber);
+        const result = await voiceService.initiateCall(finalExtension, phoneNumber);
         
         if (result.success) {
             return res.json({ 

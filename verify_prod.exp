@@ -1,0 +1,18 @@
+#!/usr/bin/expect -f
+set timeout 60
+
+spawn ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no -o PreferredAuthentications=password -p 55535 rodrigo@178.156.234.198
+expect "password:" { send "Esseanoemeu@2026\r" }
+expect "$ "
+
+send "ps aux | grep node\r"
+expect "$ "
+
+send "netstat -tuln | grep 3001\r"
+expect "$ "
+
+send "tail -n 20 /opt/laranjinha/nohup.out\r"
+expect "$ "
+
+send "exit\r"
+expect eof

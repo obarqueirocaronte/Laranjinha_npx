@@ -454,7 +454,7 @@ const TestView = ({ users, setView }: any) => {
                 if (finalUrl) {
                     window.open(finalUrl, '_blank');
                 }
-                alert('Chamada de teste disparada! (v7.9)');
+                alert('Chamada de teste disparada! (v8.0)');
             } else {
                 const msg = res.data?.error || res.data?.message || '';
                 const msgStr = typeof msg === 'string' ? msg : JSON.stringify(msg);
@@ -464,7 +464,7 @@ const TestView = ({ users, setView }: any) => {
                     if (finalUrl) {
                         window.open(finalUrl, '_blank');
                     }
-                    alert('Chamada de teste disparada! (v7.9)');
+                    alert('Chamada de teste disparada! (v8.0)');
                     return;
                 }
                 alert('Erro ao testar ramal: ' + msgStr);
@@ -490,7 +490,7 @@ const TestView = ({ users, setView }: any) => {
                         <Phone size={28} />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Tester de Ramal SDR (v7.9)</h2>
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Tester de Ramal SDR (v8.0)</h2>
                         <p className="text-slate-600 font-medium">Teste direto via API sem necessidade de lead no banco de dados.</p>
                     </div>
                 </div>
@@ -531,7 +531,7 @@ const TestView = ({ users, setView }: any) => {
                                 </div>
                                 {selectedUser?.id === u.id && testCallUrl && (
                                     <div className="mt-2 p-3 bg-sky-50 rounded-xl border border-sky-100 relative group">
-                                        <label className="block text-[9px] font-black text-sky-600 mb-1.5 uppercase tracking-widest">URL de Teste Gerada</label>
+                                        <label className="block text-[9px] font-black text-sky-600 mb-1.5 uppercase tracking-widest">URL de Teste (v8.0)</label>
                                         <code className="block w-full text-[10px] text-slate-500 font-mono bg-white p-2 rounded-lg border border-sky-100 break-all select-all">
                                             {testCallUrl}
                                         </code>
