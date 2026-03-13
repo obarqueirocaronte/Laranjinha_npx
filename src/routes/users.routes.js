@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const usersController = require('../controllers/users.controller');
+const { authenticate } = require('../middleware/auth.middleware');
 
 // List all users
 router.get('/', usersController.getUsers);
@@ -12,7 +13,6 @@ router.get('/:id/voice-config', usersController.getUserVoiceConfig);
 router.post('/:id/integrations', usersController.saveUserIntegration);
 
 // Test settings
-const { authenticate } = require('../middleware/auth.middleware');
 router.get('/test-config', authenticate, usersController.getTestSettings);
 router.post('/test-config', authenticate, usersController.saveTestSettings);
 
@@ -20,7 +20,6 @@ router.post('/test-config', authenticate, usersController.saveTestSettings);
 router.put('/:id/role', usersController.updateUserRole);
 
 // Update user profile
-const { authenticate } = require('../middleware/auth.middleware');
 router.put('/:id/profile', authenticate, usersController.updateUserProfile);
 
 // Delete user
