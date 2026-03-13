@@ -11,19 +11,34 @@ async function checkSeedData() {
         console.log('Leads found:', leads.rows);
 
         console.log('\n--- Checking all schedules (Top 20) ---');
-        const schedules = await db.query(`
-            SELECT s.*, l.full_name as lead_name, u.name as user_name
-            FROM schedules s 
-            LEFT JOIN leads l ON s.lead_id = l.id 
-            LEFT JOIN users u ON s.user_id = u.id
-            ORDER BY s.scheduled_at DESC
-            LIMIT 20
+        // Check for column existence first
+        const scheduleSchema = await db.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'schedules'
         `);
-        console.table(schedules.rows);
+        const scheduleCols = scheduleSchema.rows.map(r => r.column_name);
+        console.log('Columns in schedules table:', scheduleCols);
+
+        const sdrCol = scheduleCols.includes('sdr_id') ? 'sdr_id' : (scheduleCols.includes('user_id') ? 'user_id' : null);
+
+        if (sdrCol) {
+            const schedules = await db.query(`
+                SELECT s.*, l.full_name as lead_name, u.name as user_name
+                FROM schedules s 
+                LEFT JOIN leads l ON s.lead_id = l.id 
+                LEFT JOIN users u ON s.${sdrCol} = u.id
+                ORDER BY s.scheduled_at DESC
+                LIMIT 20
+            `);
+            console.table(schedules.rows);
+        } else {
+            console.log('No user/sdr column found in schedules table.');
+        }
 
         console.log('\n--- Checking for leads with "seed" in ID or metadata ---');
-        const seedLeads = await db.query("SELECT id, full_name, email FROM leads WHERE id::text LIKE 'seed-%' OR metadata::text ILIKE '%seed%'");
-        console.log('Seed leads found:', seedLeads.rows);
+        const seedLeads = await db.query("SELECT id, full_name, email FROM leads WHERE id::text LIKE 'seed-%' OR metadata::text ILIKE '%seed%' OR email ILIKE '%teste%'");
+        console.log('Potential seed leads:', seedLeads.rows);
 
     } catch (err) {
         console.error('Error checking seed data:', err);
