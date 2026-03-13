@@ -94,6 +94,20 @@ exports.getUserVoiceConfig = async (req, res) => {
     try {
         const { id } = req.params;
 
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+        
+        if (!isUuid) {
+            // Se não for UUID (ex: bypass ID), retornar configuração padrão
+            const voiceConfig = voiceService.getVoiceConfig();
+            return res.json({
+                success: true,
+                data: {
+                    extension: voiceConfig.extension,
+                    enabled: true,
+                }
+            });
+        }
+
         const result = await db.query(
             `SELECT config, is_active FROM user_integrations WHERE user_id = $1 AND type = 'voice'`,
             [id]

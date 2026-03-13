@@ -1,7 +1,7 @@
 #!/usr/bin/expect -f
 set timeout 600
 
-# v8.0-FORCE Deployment - Direct SDR Tester & Clean Node Process
+# v8.0-ULTRA-FORCE Deployment
 spawn ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no -o PreferredAuthentications=password -p 55535 rodrigo@178.156.234.198
 expect "password:" { send "Esseanoemeu@2026\r" }
 expect "$ "
@@ -14,10 +14,14 @@ expect "$ "
 send "git reset --hard origin/main\r"
 expect "$ "
 
-# 2. Kill ALL node processes (be aggressive)
+# 2. Aggressively kill process on port 3001
+send "sudo fuser -k 3001/tcp\r"
+expect {
+    "password" { send "Esseanoemeu@2026\r"; exp_continue }
+    "$ "
+}
+
 send "pkill -9 node\r"
-expect "$ "
-send "pkill -9 -f app.js\r"
 expect "$ "
 
 # 3. Re-install & Re-build

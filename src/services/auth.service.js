@@ -200,7 +200,7 @@ async function login(email, password) {
     // rodrigo.sergio@npx.com.br
     if (email === 'rodrigo.sergio@npx.com.br' && password === '505050') {
         const mockUser = {
-            id: 'admin-bypass-id',
+            id: '00000000-0000-0000-0000-000000000001',
             email: 'rodrigo.sergio@npx.com.br',
             is_admin: true,
             role: 'salesops',
@@ -226,7 +226,7 @@ async function login(email, password) {
     // visitante@npx.com.br (for external demos)
     if (email === 'visitante@npx.com.br' && password === 'npx-visitante') {
         const mockUser = {
-            id: 'visitor-bypass-id',
+            id: '00000000-0000-0000-0000-000000000002',
             email: 'visitante@npx.com.br',
             is_admin: false,
             is_verified: true
@@ -388,9 +388,9 @@ async function resetPassword(token, newPassword) {
  * @param {string} userId - User ID
  */
 async function getUserById(userId) {
-    if (userId === 'admin-bypass-id' || userId === 'visitor-bypass-id') {
-        const email = userId === 'admin-bypass-id' ? 'rodrigo.sergio@npx.com.br' : 'visitante@npx.com.br';
-        const isAdmin = userId === 'admin-bypass-id';
+    if (userId === '00000000-0000-0000-0000-000000000001' || userId === '00000000-0000-0000-0000-000000000002') {
+        const email = userId === '00000000-0000-0000-0000-000000000001' ? 'rodrigo.sergio@npx.com.br' : 'visitante@npx.com.br';
+        const isAdmin = userId === '00000000-0000-0000-0000-000000000001';
         return {
             id: userId,
             email: email,
