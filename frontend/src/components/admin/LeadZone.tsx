@@ -382,8 +382,8 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
           lower.startsWith("estado_")
         )
           mapping[h] = "tag_value";
-        // Anything unrecognized becomes a custom field (saves as metadata key = column name)
-        else mapping[h] = "custom_field";
+        // Anything unrecognized becomes ignored (stay as free columns in UI)
+        else mapping[h] = "ignore";
       });
 
       setParsedHeaders(headers);
