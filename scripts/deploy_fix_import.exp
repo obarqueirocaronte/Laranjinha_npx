@@ -1,0 +1,51 @@
+#!/usr/bin/expect -f
+
+set timeout 600
+set ip "178.156.234.198"
+set port "55535"
+set user "rodrigo"
+set pass "Esseanoemeu@2026"
+
+spawn ssh -p $port $user@$ip
+expect {
+    "password:" { send "$pass\r"; exp_continue }
+    "yes/no" { send "yes\r"; exp_continue }
+    "$ " { 
+        send "cd /opt/laranjinha\r"
+        expect "$ "
+        
+        send "git pull origin main\r"
+        expect "$ "
+        
+        send "npm install\r"
+        expect "$ "
+        
+        send "cd frontend\r"
+        expect "$ "
+        
+        send "npm install\r"
+        expect "$ "
+        
+        send "npm run build\r"
+        expect "$ "
+        
+        send "cd ..\r"
+        expect "$ "
+        
+        send "node scripts/fix_sdrs_sync.js\r"
+        expect "$ "
+        
+        # Reiniciar o serviço
+        send "ps aux | grep node\r"
+        expect "$ "
+        
+        # Procurar o processo principal - src/app.js
+        # Como o usuário disse que reinicia automaticamente, vamos apenas matar o processo do app.js
+        send "pkill -f 'node src/app.js'\r"
+        expect "$ "
+        
+        puts "Deployment finished successfully!"
+        send "exit\r"
+    }
+}
+expect eof

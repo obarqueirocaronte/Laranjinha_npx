@@ -350,8 +350,8 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                             <Building2 size={16} className="text-[#10B981]" {...ICON_BOLD} />
                         </div>
                         <div className="flex flex-col min-w-0 flex-1">
-                            <div className="marquee-container group">
-                                <h4 className="font-bold text-[#334155] text-[13px] leading-tight tracking-tight marquee-text group-hover:marquee-hover-active" style={{ fontFamily: 'Quicksand, sans-serif' }}>
+                            <div className="marquee-container group min-w-0 flex-1">
+                                <h4 className="font-bold text-[#334155] text-[13px] leading-tight tracking-tight marquee-text group-hover:marquee-hover-active truncate" style={{ fontFamily: 'Quicksand, sans-serif' }}>
                                     {lead.company_name}
                                 </h4>
                             </div>
@@ -377,8 +377,8 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                                     <User size={12} className="text-slate-400" {...ICON_BASE} />
                                 </div>
                                 <div className="flex flex-col min-w-0 flex-1">
-                                    <div className="marquee-container group">
-                                        <p className="font-bold text-[#475569] text-[11px] tracking-tight marquee-text group-hover:marquee-hover-active">
+                                    <div className="marquee-container group min-w-0 flex-1">
+                                        <p className="font-bold text-[#475569] text-[11px] tracking-tight marquee-text group-hover:marquee-hover-active truncate">
                                             {lead.full_name || 'Sem Contato'}
                                         </p>
                                     </div>

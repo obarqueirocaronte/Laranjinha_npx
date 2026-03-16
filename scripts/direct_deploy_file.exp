@@ -1,0 +1,36 @@
+#!/usr/bin/expect -f
+
+set timeout 300
+set ip "178.156.234.198"
+set port "55535"
+set user "rodrigo"
+set pass "Esseanoemeu@2026"
+set local_file "/Users/rodrigodantas/Antigravity - Projetos/inside-sales-pipeline-beta/frontend/src/components/admin/LeadZone.tsx"
+set remote_path "/opt/laranjinha/frontend/src/components/admin/LeadZone.tsx"
+
+# 1. Upload the file
+spawn scp -P $port $local_file $user@$ip:$remote_path
+expect {
+    "password:" { send "$pass\r"; exp_continue }
+    "yes/no" { send "yes\r"; exp_continue }
+    eof
+}
+
+# 2. Rebuild frontend on server
+spawn ssh -p $port $user@$ip
+expect {
+    "password:" { send "$pass\r"; exp_continue }
+    "yes/no" { send "yes\r"; exp_continue }
+    "$ " { 
+        send "cd /opt/laranjinha/frontend\r"
+        expect "$ "
+        send "npm run build\r"
+        expect {
+            timeout { puts "Build taking too long, continuing..."; exp_continue }
+            "✓" { puts "Build finished!"; exp_continue }
+            "$ " { puts "Build command finished context"; }
+        }
+        send "exit\r"
+    }
+}
+expect eof

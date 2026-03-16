@@ -836,7 +836,7 @@ class LeadsService {
 
     async getLeadInteractions(id) {
         const sql = `
-            SELECT 'call' as type, outcome as result, notes, created_at, s.full_name as author_name
+            SELECT 'call' as type, outcome as result, notes, cl.created_at, s.full_name as author_name
             FROM call_logs cl
             LEFT JOIN sdrs s ON cl.sdr_id = s.id
             WHERE cl.lead_id = $1
@@ -846,7 +846,7 @@ class LeadsService {
             LEFT JOIN sdrs s ON cc.sdr_id = s.id
             WHERE cc.lead_id = $1
             UNION ALL
-            SELECT 'schedule' as type, status as result, notes, created_at, s.full_name as author_name
+            SELECT 'schedule' as type, status as result, notes, sch.created_at, s.full_name as author_name
             FROM schedules sch
             LEFT JOIN sdrs s ON sch.sdr_id = s.id
             WHERE sch.lead_id = $1

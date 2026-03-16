@@ -167,6 +167,10 @@ label {
 .marquee-text {
   display: inline-block;
   transition: transform 0.3s ease-in-out;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .group:hover .marquee-hover-active {

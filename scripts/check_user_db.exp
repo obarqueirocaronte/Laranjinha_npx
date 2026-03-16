@@ -1,0 +1,23 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set ip "178.156.234.198"
+set port "55535"
+set user "rodrigo"
+set pass "Esseanoemeu@2026"
+
+spawn ssh -p $port $user@$ip
+expect {
+    "password:" { send "$pass\r"; exp_continue }
+    "yes/no" { send "yes\r"; exp_continue }
+    "$ " { 
+        send "psql -d inside_sales_pipeline -c \"SELECT id, name, email, role FROM sdrs WHERE email ILIKE '%rodrigo%';\"\r"
+        expect "$ "
+        
+        send "psql -d inside_sales_pipeline -c \"SELECT id, name, email FROM users WHERE email ILIKE '%rodrigo%';\"\r"
+        expect "$ "
+
+        send "exit\r"
+    }
+}
+expect eof

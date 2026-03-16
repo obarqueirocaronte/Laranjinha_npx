@@ -57,7 +57,7 @@ exports.resetStats = async (req, res, next) => {
 
 exports.incrementCompleted = async (req, res, next) => {
     try {
-        const sdrId = req.body.sdr_id || 'default-sdr';
+        const sdrId = req.body?.sdr_id || 'default-sdr';
         const stats = await statsService.incrementCompletedLeads(sdrId);
         res.json({ success: true, data: stats });
     } catch (err) {
