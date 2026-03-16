@@ -233,7 +233,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                 onMouseLeave={() => setIsVisible(false)}
             >
                 <div className={clsx(
-                    "cursor-pointer transition-transform duration-200",
+                    "cursor-pointer transition-transform duration-200 min-w-0 flex-1",
                     isVisible && hasContent && "scale-110"
                 )}>
                     {children}
@@ -344,7 +344,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
         >
             {/* 1. Header: Company Info and Quick Actions */}
             <div className="flex items-start justify-between">
-                <ExplorationBalloon title="Explorar Empresa" icon={Building2}>
+                <ExplorationBalloon title="Explorar Empresa" icon={Building2} position="top">
                     <div className="flex items-center gap-2.5 min-w-0 flex-1 pointer-events-none overflow-hidden">
                         <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0 border border-emerald-100 shadow-sm">
                             <Building2 size={16} className="text-[#10B981]" {...ICON_BOLD} />
@@ -370,8 +370,8 @@ export const LeadCard: React.FC<LeadCardProps> = ({
             </div>
 
                 <div className="flex-1">
-                    <ExplorationBalloon title="Explorar Contato" icon={User}>
-                        <div className="bg-white/80 rounded-[20px] p-2.5 shadow-sm border border-white/90 flex items-center justify-between gap-2 backdrop-blur-sm transition-all hover:bg-white group/contact pointer-events-auto">
+                    <ExplorationBalloon title="Explorar Contato" icon={User} position="top">
+                        <div className="bg-white/80 rounded-[20px] p-2.5 shadow-sm border border-white/90 flex items-center justify-between gap-2 backdrop-blur-sm transition-all hover:bg-white group/contact pointer-events-auto min-w-0 flex-1">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <div className="w-7 h-7 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
                                     <User size={12} className="text-slate-400" {...ICON_BASE} />
