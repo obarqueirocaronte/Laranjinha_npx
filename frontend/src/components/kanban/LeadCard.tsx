@@ -1,4 +1,4 @@
-import React, { useRef, useState, useLayoutEffect } from 'react';
+import React, { useRef, useState, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
@@ -125,13 +125,25 @@ export const LeadCard: React.FC<LeadCardProps> = ({
 
     // ── Unified macOS-style spring config for all popovers ──
     const POPOVER_SPRING = { type: 'spring' as const, stiffness: 500, damping: 30, mass: 0.8 };
+    const HOVER_DELAY_MS = 300; // Delay before showing popovers to avoid drag interference
 
     const ActionButton = ({ icon: Icon, color, text, previewText, onClick: btnClick, isMini }: any) => {
         const [isHovered, setIsHovered] = useState(false);
         const [coords, setCoords] = useState({ top: 0, left: 0 });
         const triggerRef = useRef<HTMLButtonElement>(null);
+        const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
         const hasData = text || previewText;
+
+        const handleMouseEnter = useCallback(() => {
+            if (isDragging) return;
+            hoverTimer.current = setTimeout(() => setIsHovered(true), HOVER_DELAY_MS);
+        }, [isDragging]);
+
+        const handleMouseLeave = useCallback(() => {
+            if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null; }
+            setIsHovered(false);
+        }, []);
 
         useLayoutEffect(() => {
             if (isHovered && triggerRef.current && hasData) {
@@ -147,8 +159,8 @@ export const LeadCard: React.FC<LeadCardProps> = ({
             <div className="relative flex items-center h-full">
                 <motion.button
                     ref={triggerRef}
-                    onMouseEnter={() => setIsHovered(true)}
-                    onMouseLeave={() => setIsHovered(false)}
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
                     whileHover={{ scale: 1.12 }}
                     whileTap={{ scale: 0.92 }}
                     transition={POPOVER_SPRING}
@@ -235,12 +247,24 @@ export const LeadCard: React.FC<LeadCardProps> = ({
             }
         }, [isVisible, position, hasContent]);
 
+        const balloonTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+        const handleBalloonEnter = useCallback(() => {
+            if (isDragging) return;
+            balloonTimer.current = setTimeout(() => setIsVisible(true), HOVER_DELAY_MS);
+        }, [isDragging]);
+
+        const handleBalloonLeave = useCallback(() => {
+            if (balloonTimer.current) { clearTimeout(balloonTimer.current); balloonTimer.current = null; }
+            setIsVisible(false);
+        }, []);
+
         return (
             <div 
                 ref={triggerRef}
                 className="relative group flex items-center h-full min-w-0 flex-1"
-                onMouseEnter={() => setIsVisible(true)}
-                onMouseLeave={() => setIsVisible(false)}
+                onMouseEnter={handleBalloonEnter}
+                onMouseLeave={handleBalloonLeave}
             >
                 <motion.div
                     animate={{ scale: isVisible && hasContent ? 1.06 : 1 }}
