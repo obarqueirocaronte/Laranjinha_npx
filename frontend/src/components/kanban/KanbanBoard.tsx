@@ -276,6 +276,9 @@ export const KanbanBoard = ({
                 addNotification(`Atenção: Nenhum template de Email selecionado para ${movedLead.full_name}.`, 'warning');
             }
             if (onActivity) onActivity('email');
+            
+            // Add stat counting for email
+            await statsAPI.updateActivity('email');
         }
 
         // ── Column 4: WhatsApp ──
@@ -286,6 +289,9 @@ export const KanbanBoard = ({
                 addNotification(`Atenção: Nenhum template de WhatsApp selecionado para ${movedLead.full_name}.`, 'warning');
             }
             if (onActivity) onActivity('whatsapp');
+            
+            // Add stat counting for whatsapp
+            await statsAPI.updateActivity('whatsapp');
         }
 
         // ── Column 5: Cadência completa ──

@@ -123,6 +123,9 @@ export const LeadCard: React.FC<LeadCardProps> = ({
         };
     }, [transform, accentColor]);
 
+    // ── Unified macOS-style spring config for all popovers ──
+    const POPOVER_SPRING = { type: 'spring' as const, stiffness: 500, damping: 30, mass: 0.8 };
+
     const ActionButton = ({ icon: Icon, color, text, previewText, onClick: btnClick, isMini }: any) => {
         const [isHovered, setIsHovered] = useState(false);
         const [coords, setCoords] = useState({ top: 0, left: 0 });
@@ -146,9 +149,11 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                     ref={triggerRef}
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.12 }}
+                    whileTap={{ scale: 0.92 }}
+                    transition={POPOVER_SPRING}
                     className={clsx(
-                        "relative flex items-center justify-center rounded-full bg-white/60 shadow-sm border border-white/80 transition-all gap-2 px-0",
+                        "relative flex items-center justify-center rounded-full bg-white/60 shadow-sm border border-white/80 gap-2 px-0",
                         isMini ? "h-6 min-w-[24px]" : "h-7 min-w-[28px]",
                         isHovered && hasData && "bg-white z-[100] shadow-md ring-1 ring-white/50",
                         color
@@ -165,15 +170,10 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                     <div className="fixed inset-0 pointer-events-none z-[99999]">
                         <AnimatePresence mode="wait">
                             <motion.div
-                                initial={{ opacity: 0, scale: 0 }}
+                                initial={{ opacity: 0, scale: 0.5, y: '-50%' }}
                                 animate={{ opacity: 1, scale: 1, y: '-50%' }}
-                                exit={{ opacity: 0, scale: 0 }}
-                                transition={{ 
-                                    type: 'spring', 
-                                    stiffness: 650, 
-                                    damping: 40,
-                                    mass: 0.3
-                                }}
+                                exit={{ opacity: 0, scale: 0.5, y: '-50%' }}
+                                transition={POPOVER_SPRING}
                                 style={{ 
                                     position: 'fixed',
                                     top: coords.top,
@@ -184,13 +184,23 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                                 className="px-4 py-2.5 bg-orange-50/90 backdrop-blur-[50px] border border-orange-200/50 rounded-2xl shadow-2xl flex flex-col group"
                             >
                                 <div className="absolute inset-0 rounded-2xl border border-white/40 pointer-events-none" />
-                                <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest whitespace-nowrap drop-shadow-[0_1px_1px_rgba(255,255,255,0.5)]">
+                                <motion.span
+                                    initial={{ opacity: 0, y: 4 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ ...POPOVER_SPRING, delay: 0.04 }}
+                                    className="text-[11px] font-black text-slate-800 uppercase tracking-widest whitespace-nowrap drop-shadow-[0_1px_1px_rgba(255,255,255,0.5)]"
+                                >
                                     {text || 'Ação'}
-                                </span>
+                                </motion.span>
                                 {previewText && (
-                                    <span className="text-[13px] font-bold text-slate-900 tracking-tight whitespace-nowrap mt-1 drop-shadow-[0_1px_1px_rgba(255,255,255,0.5)]">
+                                    <motion.span
+                                        initial={{ opacity: 0, y: 4 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ ...POPOVER_SPRING, delay: 0.08 }}
+                                        className="text-[13px] font-bold text-slate-900 tracking-tight whitespace-nowrap mt-1 drop-shadow-[0_1px_1px_rgba(255,255,255,0.5)]"
+                                    >
                                         {previewText}
-                                    </span>
+                                    </motion.span>
                                 )}
                             </motion.div>
                         </AnimatePresence>
@@ -232,30 +242,26 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                 onMouseEnter={() => setIsVisible(true)}
                 onMouseLeave={() => setIsVisible(false)}
             >
-                <div className={clsx(
-                    "cursor-pointer transition-transform duration-200 min-w-0 flex-1 origin-left",
-                    isVisible && hasContent && "scale-110"
-                )}>
+                <motion.div
+                    animate={{ scale: isVisible && hasContent ? 1.06 : 1 }}
+                    transition={POPOVER_SPRING}
+                    className="cursor-pointer min-w-0 flex-1 origin-left"
+                >
                     {children}
-                </div>
+                </motion.div>
                 {isVisible && hasContent && createPortal(
                     <div className="fixed inset-0 pointer-events-none z-[99999]">
                         <AnimatePresence mode="wait">
                             <motion.div
-                                initial={{ opacity: 0, scale: 0 }}
+                                initial={{ opacity: 0, scale: 0.5 }}
                                 animate={{ 
                                     opacity: 1, 
                                     scale: 1, 
                                     x: '-50%',
                                     y: position === 'top' ? '-100%' : '0%'
                                 }}
-                                exit={{ opacity: 0, scale: 0 }}
-                                transition={{ 
-                                    type: 'spring', 
-                                    stiffness: 650, 
-                                    damping: 40,
-                                    mass: 0.3
-                                }}
+                                exit={{ opacity: 0, scale: 0.5 }}
+                                transition={POPOVER_SPRING}
                                 style={{ 
                                     position: 'fixed',
                                     top: coords.top,
@@ -267,7 +273,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                                     originY: position === 'top' ? 1 : 0
                                 }}
                                 className={clsx(
-                                    "bg-orange-50/90 backdrop-blur-[50px] border border-orange-200/50 rounded-2xl p-4 shadow-2xl transition-all duration-300",
+                                    "bg-orange-50/90 backdrop-blur-[50px] border border-orange-200/50 rounded-2xl p-4 shadow-2xl",
                                     "shadow-[0_20px_50px_-12px_rgba(251,146,60,0.15)]"
                                 )}
                             >
@@ -275,26 +281,28 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                                 <div className="flex flex-col gap-3">
                                     {title === 'Explorar Empresa' && (
                                         <div className="flex flex-col gap-2.5">
-                                            <div className="flex flex-col">
+                                            <motion.div className="flex flex-col" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...POPOVER_SPRING, delay: 0.03 }}>
                                                 <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">CNPJ</span>
                                                 <span className="text-[13px] font-bold text-slate-900 tracking-tight mt-0.5">{lead.metadata?.cnpj || '-'}</span>
-                                            </div>
-                                            <div className="flex flex-col border-t border-orange-100/30 pt-2">
+                                            </motion.div>
+                                            <motion.div className="flex flex-col border-t border-orange-100/30 pt-2" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...POPOVER_SPRING, delay: 0.06 }}>
                                                 <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">Cidade</span>
                                                 <span className="text-[13px] font-bold text-slate-900 tracking-tight mt-0.5">{lead.metadata?.city || '-'}</span>
-                                            </div>
+                                            </motion.div>
                                         </div>
                                     )}
                                     {title === 'Explorar Contato' && (
                                         <div className="flex flex-col gap-2.5">
-                                            <div className="flex flex-col">
+                                            <motion.div className="flex flex-col" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...POPOVER_SPRING, delay: 0.03 }}>
                                                 <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">Telefone</span>
                                                 <span className="text-[13px] font-bold text-slate-900 tracking-tight mt-0.5">{lead.phone || '-'}</span>
-                                            </div>
-                                            <div className="flex flex-col border-t border-orange-100/30 pt-2">
-                                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">Email</span>
-                                                <span className="text-[12px] font-bold text-slate-900 tracking-tight mt-0.5 truncate">{lead.email || '-'}</span>
-                                            </div>
+                                            </motion.div>
+                                            {lead.email && (
+                                                <motion.div className="flex flex-col border-t border-orange-100/30 pt-2" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...POPOVER_SPRING, delay: 0.06 }}>
+                                                    <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">Email</span>
+                                                    <span className="text-[12px] font-bold text-slate-900 tracking-tight mt-0.5 truncate">{lead.email}</span>
+                                                </motion.div>
+                                            )}
                                         </div>
                                     )}
                                     {title === 'Explorar Tags' && (
@@ -302,9 +310,15 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                                             <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70 mb-1">Tags</span>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {(lead.tags || []).map((t, i) => (
-                                                    <div key={i} className="px-3 py-1 rounded-full bg-orange-100/50 border border-orange-200/50">
+                                                    <motion.div
+                                                        key={i}
+                                                        initial={{ opacity: 0, scale: 0.6 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        transition={{ ...POPOVER_SPRING, delay: 0.03 + i * 0.04 }}
+                                                        className="px-3 py-1 rounded-full bg-orange-100/50 border border-orange-200/50"
+                                                    >
                                                         <span className="text-orange-700 text-[10px] font-black uppercase tracking-tight">{t}</span>
-                                                    </div>
+                                                    </motion.div>
                                                 ))}
                                             </div>
                                         </div>
@@ -365,7 +379,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                 </ExplorationBalloon>
                 <div className="flex items-center gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
                     <ActionButton icon={Phone} color="text-emerald-500" text="Ligar" previewText={lead.phone} onClick={() => !voip.isCallActive && lead.phone && voip.initiateCall(String(lead.phone), lead.id, lead.full_name)} />
-                    <ActionButton icon={Mail} color="text-blue-500" text="Email" previewText={lead.email} />
+                    {lead.email && <ActionButton icon={Mail} color="text-blue-500" text="Email" previewText={lead.email} />}
                 </div>
             </div>
 
@@ -391,7 +405,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                             </div>
                             <div className="flex items-center gap-1 shrink-0" onPointerDown={e => e.stopPropagation()}>
                                  <ActionButton icon={Phone} color="text-emerald-500" text="Ligar" previewText={lead.phone} isMini onClick={() => !voip.isCallActive && lead.phone && voip.initiateCall(String(lead.phone), lead.id, lead.full_name)} />
-                                 <ActionButton icon={Mail} color="text-blue-500" text="Email" previewText={lead.email} isMini />
+                                 {lead.email && <ActionButton icon={Mail} color="text-blue-500" text="Email" previewText={lead.email} isMini />}
                                  {hasLinkedin && <ActionButton icon={Linkedin} color="text-sky-500" text="LinkedIn" isMini />}
                             </div>
                         </div>

@@ -196,9 +196,11 @@ async function verifyEmail(token) {
  * @param {string} password - User password
  */
 async function login(email, password) {
+    console.log(`[Auth] Attempting login for email: ${email}`);
     // --- TEMPORARY DEV BYPASSES ---
     // rodrigo.sergio@npx.com.br
     if (email === 'rodrigo.sergio@npx.com.br' && password === '505050') {
+        console.log(`[Auth] Bypass hit for ${email}`);
         const mockUser = {
             id: '00000000-0000-0000-0000-000000000001',
             email: 'rodrigo.sergio@npx.com.br',

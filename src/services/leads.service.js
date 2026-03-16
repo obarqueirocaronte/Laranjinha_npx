@@ -794,13 +794,13 @@ class LeadsService {
 
                 updateSql = `
                     UPDATE leads 
-                    SET current_column_id = COALESCE($4, current_column_id),
+                    SET current_column_id = COALESCE($3, current_column_id),
                         metadata = metadata || $1::jsonb,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = $2
                     RETURNING id, metadata
                 `;
-                params = [JSON.stringify(updateProps), leadId, type, firstColId];
+                params = [JSON.stringify(updateProps), leadId, firstColId];
             } else {
                 updateSql = `
                     UPDATE leads 

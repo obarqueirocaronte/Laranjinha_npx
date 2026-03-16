@@ -93,6 +93,16 @@ SELECT full_name, company_name, email FROM leads LIMIT 5;
 - **Managers**: See [Manager Guide](docs/manager-guide.md) for configuration
 - **Architects**: See [ERD Documentation](docs/erd.md) for schema details
 
+### 4. Deploying to Production (Cleanup)
+
+Before pushing any code to a production environment, you **must** perform a repository cleanup. The development environment uses many `.exp` (Expect) scripts, root `.js` files, and dummy seed files for tests that present security and clutter risks in production.
+
+**Pre-Commit Cleanup Checklist:**
+- [ ] Ensure `scripts/` only contains `init-db.js`.
+- [ ] Remove all `.exp` SSH automated deployment scripts.
+- [ ] Delete `seed_*.js` or `check_*.js` scripts in the root directory.
+- [ ] Ensure only essential `.md` documentation remains (like this `README.md` and the `docs/` folder).
+
 ---
 
 ## 🏗️ Architecture Highlights
