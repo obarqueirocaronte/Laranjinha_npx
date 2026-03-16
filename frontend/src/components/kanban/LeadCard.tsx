@@ -228,12 +228,12 @@ export const LeadCard: React.FC<LeadCardProps> = ({
         return (
             <div 
                 ref={triggerRef}
-                className="relative group flex items-center h-full"
+                className="relative group flex items-center h-full min-w-0 flex-1"
                 onMouseEnter={() => setIsVisible(true)}
                 onMouseLeave={() => setIsVisible(false)}
             >
                 <div className={clsx(
-                    "cursor-pointer transition-transform duration-200 min-w-0 flex-1",
+                    "cursor-pointer transition-transform duration-200 min-w-0 flex-1 origin-left",
                     isVisible && hasContent && "scale-110"
                 )}>
                     {children}
