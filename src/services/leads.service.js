@@ -298,7 +298,7 @@ class LeadsService {
             LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
             LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
             LEFT JOIN users u ON s.user_id = u.id
-            WHERE 1=1
+            WHERE (l.status = 'active' OR l.status IS NULL)
         `;
         const params = [];
 
