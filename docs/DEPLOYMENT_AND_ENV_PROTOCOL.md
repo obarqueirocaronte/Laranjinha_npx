@@ -5,6 +5,8 @@ Este documento define oficialmente a separação entre os ambientes de **Produç
 ---
 
 ## 🏗️ 1. Ambiente de Produção (Live)
+<span style="color: red; font-weight: bold;">⚠️ O AMBIENTE DE PRODUÇÃO É EXTERNO E O DEPLOY DEVE SER FEITO REMOTAMENTE ⚠️</span>
+
 Onde o sistema oficial roda e onde os clientes acessam. **Não altere código diretamente aqui sem antes testar localmente.**
 
 - **Domínio**: [https://laranjinha.npx.com.br](https://laranjinha.npx.com.br)
