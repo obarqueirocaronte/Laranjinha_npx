@@ -149,26 +149,29 @@ class StatsService {
      * Get raw history logs for dashboard analysis (day/week/month).
      */
     async getStatsHistory() {
-        // Fetch interactions (calls, emails, whatsapp)
+        // Fetch interactions (calls, emails, whatsapp) - last 30 days
         const interactionsSql = `
             SELECT action_type, created_at, sdr_id
             FROM interactions_log
+            WHERE created_at >= NOW() - INTERVAL '30 days'
             ORDER BY created_at DESC
         `;
         const interactionsRes = await db.query(interactionsSql);
 
-        // Fetch pipeline movements
+        // Fetch pipeline movements - last 30 days
         const pipelineSql = `
             SELECT from_column_id, to_column_id, moved_at, moved_by_sdr_id
             FROM lead_pipeline_history
+            WHERE moved_at >= NOW() - INTERVAL '30 days'
             ORDER BY moved_at DESC
         `;
         const pipelineRes = await db.query(pipelineSql);
 
-        // Fetch cadence completions
+        // Fetch cadence completions - last 30 days
         const completionSql = `
             SELECT final_outcome, completed_at, sdr_id
             FROM cadence_completions
+            WHERE completed_at >= NOW() - INTERVAL '30 days'
             ORDER BY completed_at DESC
         `;
         const completionRes = await db.query(completionSql);
