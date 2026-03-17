@@ -6,19 +6,15 @@ class StatsService {
      * For now, we'll return aggregate stats or per-SDR stats.
      */
     async getStats(sdrId) {
-        // Find if stats already exist
+        // Query logs for accurate activity counts for this specific SDR
         const sql = `
-            SELECT calls, emails, whatsapp, completed_leads
-            FROM sdr_stats
-            WHERE sdr_id = $1
+            SELECT 
+                (SELECT COUNT(*)::integer FROM call_logs WHERE sdr_id = $1) as calls,
+                (SELECT COUNT(*)::integer FROM interactions_log WHERE sdr_id = $1 AND action_type = 'EMAIL_SENT') as emails,
+                (SELECT COUNT(*)::integer FROM interactions_log WHERE sdr_id = $1 AND action_type = 'WHATSAPP_SENT') as whatsapp,
+                (SELECT COUNT(*)::integer FROM cadence_completions WHERE sdr_id = $1) as completed_leads
         `;
         const res = await db.query(sql, [sdrId]);
-
-        if (res.rows.length === 0) {
-            // Return defaults if no entry exists
-            return { calls: 0, emails: 0, whatsapp: 0, completed_leads: 0 };
-        }
-
         return res.rows[0];
     }
 
@@ -74,14 +70,13 @@ class StatsService {
      * Now includes individual breakdown with goals, active leads, and pipeline moves.
      */
     async getGlobalStats() {
-        // 1. Get activity stats from sdr_stats
+        // 1. Get activity stats from logs (more accurate than incremental counters)
         const activitySql = `
             SELECT 
-                COALESCE(SUM(calls), 0)::integer as total_calls,
-                COALESCE(SUM(emails), 0)::integer as total_emails,
-                COALESCE(SUM(whatsapp), 0)::integer as total_whatsapp,
-                COALESCE(SUM(completed_leads), 0)::integer as total_completed
-            FROM sdr_stats
+                (SELECT COUNT(*)::integer FROM call_logs) as total_calls,
+                (SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'EMAIL_SENT') as total_emails,
+                (SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'WHATSAPP_SENT') as total_whatsapp,
+                (SELECT COUNT(*)::integer FROM cadence_completions) as total_completed
         `;
         const activityRes = await db.query(activitySql);
 
@@ -100,7 +95,7 @@ class StatsService {
         const activeLeadsRes = await db.query(activeLeadsSql);
         const totalActiveLeads = activeLeadsRes.rows[0].count;
 
-        // 4. Get individual SDR breakdown (stats + goals + leads + movement)
+        // 4. Get individual SDR breakdown (stats from logs + goals + leads + movement)
         const sdrSql = `
             WITH movement_counts AS (
                 SELECT moved_by_sdr_id, COUNT(id) as movements
@@ -118,16 +113,15 @@ class StatsService {
                 s.total_leads_assigned,
                 COALESCE(ac.pending_leads, 0)::integer as pending_leads,
                 COALESCE(mc.movements, 0)::integer as pipeline_movements,
-                COALESCE(ss.calls, 0)::integer as calls,
-                COALESCE(ss.emails, 0)::integer as emails,
-                COALESCE(ss.whatsapp, 0)::integer as whatsapp,
-                COALESCE(ss.completed_leads, 0)::integer as completed,
+                (SELECT COUNT(*)::integer FROM call_logs cl WHERE cl.sdr_id = s.id) as calls,
+                (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'EMAIL_SENT') as emails,
+                (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'WHATSAPP_SENT') as whatsapp,
+                (SELECT COUNT(*)::integer FROM cadence_completions cc WHERE cc.sdr_id = s.id) as completed,
                 s.goal_calls,
                 s.goal_emails,
                 s.goal_whatsapp,
                 s.goal_completed
             FROM sdrs s
-            LEFT JOIN sdr_stats ss ON s.id = ss.sdr_id
             LEFT JOIN movement_counts mc ON s.id = mc.moved_by_sdr_id
             LEFT JOIN active_counts ac ON s.id = ac.assigned_sdr_id
             WHERE s.is_active = true
