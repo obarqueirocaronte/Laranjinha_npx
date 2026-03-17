@@ -182,6 +182,47 @@ class StatsService {
             completions: completionRes.rows
         };
     }
+
+    /**
+     * Get the management report configuration.
+     */
+    async getReportConfig() {
+        const sql = `SELECT * FROM management_report_config LIMIT 1`;
+        const res = await db.query(sql);
+        return res.rows[0] || null;
+    }
+
+    /**
+     * Update the management report configuration.
+     */
+    async updateReportConfig(config) {
+        const { webhook_url, schedule_times, is_active, last_sent_at } = config;
+        
+        // Since there's only one row, we can just update all
+        const sql = `
+            UPDATE management_report_config
+            SET webhook_url = $1, 
+                schedule_times = $2, 
+                is_active = $3, 
+                last_sent_at = $4,
+                updated_at = CURRENT_TIMESTAMP
+            RETURNING *
+        `;
+        const res = await db.query(sql, [webhook_url, schedule_times, is_active, last_sent_at]);
+        
+        if (res.rows.length === 0) {
+            // If somehow deleted, re-insert
+            const insertSql = `
+                INSERT INTO management_report_config (webhook_url, schedule_times, is_active)
+                VALUES ($1, $2, $3)
+                RETURNING *
+            `;
+            const insertRes = await db.query(insertSql, [webhook_url, schedule_times, is_active]);
+            return insertRes.rows[0];
+        }
+
+        return res.rows[0];
+    }
 }
 
 module.exports = new StatsService();
