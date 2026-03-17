@@ -537,7 +537,7 @@ const ResumoTab: React.FC<{
                             SDRs Ativos no Período
                         </h3>
                         <div className="space-y-3">
-                            {enrichedSdrs.map((sdr) => {
+                            {enrichedSdrs.map((sdr: SDR) => {
                                 const sdrLeadsCount = sdr.leads ?? 0;
                                 return (
                                     <div key={sdr.id} className="flex items-center justify-between py-3 px-4 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all hover:border-orange-200 hover:shadow-md">
