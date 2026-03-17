@@ -21,8 +21,8 @@ import { motion } from 'framer-motion';
 import { ProfileZone } from '../profile/ProfileZone';
 
 export function Dashboard() {
-    const [view, setView] = useState<'pipeline' | 'admin' | 'manager-dashboard'>('pipeline');
     const { user, logout } = useAuth();
+    const [view, setView] = useState<'pipeline' | 'admin' | 'manager-dashboard'>(user?.role === 'manager' || user?.role === 'salesops' ? 'manager-dashboard' : 'pipeline');
     const [showProfile, setShowProfile] = useState(false);
     const [showSchedulePreview, setShowSchedulePreview] = useState(false);
     const [completedCount, setCompletedCount] = useState(0);

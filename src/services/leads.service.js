@@ -608,6 +608,11 @@ class LeadsService {
     }
 
     async deleteLead(id) {
+        // Handle foreign key constraints by deleting related records first
+        await db.query('DELETE FROM interactions_log WHERE lead_id = $1', [id]);
+        await db.query('DELETE FROM cadence_completions WHERE lead_id = $1', [id]);
+        await db.query('DELETE FROM lead_pipeline_history WHERE lead_id = $1', [id]);
+        await db.query('DELETE FROM scheduled_contacts WHERE lead_id = $1', [id]);
         const sql = 'DELETE FROM leads WHERE id = $1';
         return db.query(sql, [id]);
     }

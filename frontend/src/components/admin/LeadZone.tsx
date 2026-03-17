@@ -320,66 +320,76 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
 
       headers.forEach((h) => {
         const lower = h.toLowerCase().trim();
-        if (lower.includes("cnpj")) mapping[h] = "cnpj";
+        // Ignore specific control columns usually found in CRMs
+        if (lower === "id" || lower.includes("criado em") || lower.includes("created")) mapping[h] = "ignore";
+        else if (lower.includes("cnpj")) mapping[h] = "cnpj";
         else if (
           lower.includes("razão") ||
           lower.includes("razao") ||
-          lower === "empresa" ||
-          lower === "company"
-        )
-          mapping[h] = "company_name";
+          lower.includes("empresa") ||
+          lower.includes("company") ||
+          lower.includes("organização") ||
+          lower.includes("organizacao")
+        ) {
+          if (lower.includes("fantasia")) mapping[h] = "display_name";
+          else mapping[h] = "company_name";
+        }
         else if (lower.includes("fantasia")) mapping[h] = "display_name";
         else if (
           lower.includes("email") ||
           lower.includes("e-mail") ||
-          lower.includes("e_mail")
+          lower.includes("e_mail") ||
+          lower.includes("correio")
         )
           mapping[h] = "email";
         else if (
           lower.includes("telefone") ||
-          lower === "phone" ||
+          lower.includes("phone") ||
           lower.includes("celular") ||
           lower.includes("fone") ||
-          lower.includes("whats")
+          lower.includes("whatsapp") ||
+          lower.includes("whats") ||
+          lower.includes("contato_tel")
         )
           mapping[h] = "phone";
         else if (
-          lower === "cargo" ||
-          lower === "title" ||
-          lower === "job_title" ||
-          lower === "function"
+          lower.includes("cargo") ||
+          lower.includes("title") ||
+          lower.includes("função") ||
+          lower.includes("funcao") ||
+          lower.includes("papel") ||
+          lower.includes("role")
         )
           mapping[h] = "job_title";
         else if (lower.includes("linkedin")) mapping[h] = "linkedin_url";
         else if (
-          lower === "nome" ||
-          lower === "name" ||
-          lower === "nome_contato" ||
-          lower === "full_name" ||
-          lower === "contact_name" ||
-          lower.startsWith("nome_") ||
-          lower.startsWith("contato")
+          lower.includes("nome") ||
+          lower.includes("name") ||
+          lower.includes("contato") ||
+          lower.includes("first_name") ||
+          lower.includes("last_name")
         )
           mapping[h] = "full_name";
         else if (
           lower.includes("func") ||
           lower.includes("empregados") ||
-          lower === "employees"
+          lower.includes("tamanho") ||
+          lower.includes("size") ||
+          lower.includes("funcionários")
         )
           mapping[h] = "employee_count";
         // Estado e Cidade viram tags automaticamente
         else if (
-          lower === "estado" ||
+          lower.includes("estado") ||
           lower === "uf" ||
-          lower === "state" ||
-          lower === "cidade" ||
-          lower === "city" ||
-          lower === "municipio" ||
-          lower === "municipio" ||
-          lower === "regiao" ||
-          lower === "region" ||
-          lower.startsWith("cidade_") ||
-          lower.startsWith("estado_")
+          lower.includes("state") ||
+          lower.includes("cidade") ||
+          lower.includes("city") ||
+          lower.includes("municipio") ||
+          lower.includes("município") ||
+          lower.includes("região") ||
+          lower.includes("regiao") ||
+          lower.includes("region")
         )
           mapping[h] = "tag_value";
         // Anything unrecognized becomes ignored (stay as free columns in UI)
