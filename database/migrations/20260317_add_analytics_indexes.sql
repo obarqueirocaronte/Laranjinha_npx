@@ -20,4 +20,4 @@ CREATE INDEX IF NOT EXISTS idx_leads_qualification_status ON leads(qualification
 CREATE INDEX IF NOT EXISTS idx_pipeline_history_moved_by_sdr ON lead_pipeline_history(moved_by_sdr_id);
 
 -- Melhora busca de histórico de interações por SDR
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_interactions_log_sdr_id ON interactions_log(sdr_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_interactions_log_sdr_id ON interactions_log(sdr_id, created_at DESC);
