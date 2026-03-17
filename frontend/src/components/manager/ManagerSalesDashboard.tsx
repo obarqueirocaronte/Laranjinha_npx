@@ -20,6 +20,13 @@ import { ProfileZone } from '../profile/ProfileZone';
    Types
    ───────────────────────────────────────────── */
 type TabId = 'resumo' | 'acompanhamento' | 'leads' | 'cadencias' | 'conquistas' | 'preview' | 'assistente';
+type PeriodId = 'hoje' | 'semana' | 'mes' | 'tudo';
+
+interface StatsHistory {
+    interactions: { action_type: string; created_at: string; sdr_id: string }[];
+    movements: { from_column_id: string; to_column_id: string; moved_at: string; moved_by_sdr_id: string }[];
+    completions: { final_outcome: string; completed_at: string; sdr_id: string }[];
+}
 
 interface SDR {
     id: string;
@@ -31,6 +38,7 @@ interface SDR {
     completed_leads?: number;
     pending_leads?: number;
     pipeline_movements?: number;
+    leads?: number;
 }
 
 interface TabItem {
@@ -74,15 +82,53 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
     const [activeLeads, setActiveLeads] = useState<Lead[]>([]);
     const [columns, setColumns] = useState<PipelineColumn[]>([]);
     const [stats, setStats] = useState({ calls: 0, emails: 0, whatsapp: 0, completed_leads: 0 });
+    const [period, setPeriod] = useState<PeriodId>('tudo');
+    const [history, setHistory] = useState<StatsHistory | null>(null);
+
+    const filterByPeriod = useCallback((dateStr: string) => {
+        if (period === 'tudo') return true;
+        const date = new Date(dateStr);
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        if (period === 'hoje') {
+            return date >= startOfToday;
+        }
+        if (period === 'semana') {
+            const startOfWeek = new Date(startOfToday);
+            startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+            return date >= startOfWeek;
+        }
+        if (period === 'mes') {
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            return date >= startOfMonth;
+        }
+        return true;
+    }, [period]);
+
+    const filteredStats = React.useMemo(() => {
+        if (!history) return stats;
+        
+        const interactions = history.interactions.filter(i => filterByPeriod(i.created_at));
+        const completions = history.completions.filter(c => filterByPeriod(c.completed_at));
+        
+        return {
+            calls: interactions.filter(i => i.action_type === 'call' || i.action_type === 'CALL_MADE').length,
+            emails: interactions.filter(i => i.action_type === 'email' || i.action_type === 'EMAIL_SENT').length,
+            whatsapp: interactions.filter(i => i.action_type === 'whatsapp' || i.action_type === 'WHATSAPP_SENT').length,
+            completed_leads: completions.length
+        };
+    }, [history, filterByPeriod, stats]);
 
     const fetchData = useCallback(async () => {
         try {
-            const [sdrsRes, activeRes, pendingRes, colsRes, statsRes] = await Promise.allSettled([
+            const [sdrsRes, activeRes, pendingRes, colsRes, statsRes, historyRes] = await Promise.allSettled([
                 leadsAPI.getAllSDRs(),
                 leadsAPI.getActiveLeads(),
                 leadsAPI.getSegments('status', 'Novo'),
                 leadsAPI.getColumns(),
                 statsAPI.getGlobalStats(),
+                statsAPI.getStatsHistory(),
             ]);
 
             if (statsRes.status === 'fulfilled' && statsRes.value?.success) {
@@ -121,6 +167,8 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                     setSdrs(fetchedSdrs);
                 }
             }
+
+            if (historyRes.status === 'fulfilled' && historyRes.value?.success) setHistory(historyRes.value.data);
 
             if (activeRes.status === 'fulfilled' && activeRes.value?.success) setActiveLeads(activeRes.value.data || []);
             if (pendingRes.status === 'fulfilled' && pendingRes.value?.success) setAllLeads(pendingRes.value.data || []);
@@ -286,6 +334,25 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                     </p>
                                 </div>
                             </div>
+
+                            {/* Period Filter */}
+                            <div className="flex bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50 shadow-inner">
+                                {(['hoje', 'semana', 'mes', 'tudo'] as PeriodId[]).map((p) => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setPeriod(p)}
+                                        className={cn(
+                                            "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                            period === p 
+                                                ? "bg-white text-orange-600 shadow-sm border border-slate-200/50" 
+                                                : "text-slate-400 hover:text-slate-600"
+                                        )}
+                                        style={{ fontFamily: 'Comfortaa, cursive' }}
+                                    >
+                                        {p === 'hoje' ? 'Hoje' : p === 'semana' ? 'Semana' : p === 'mes' ? 'Mês' : 'Total'}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {/* Tab Content */}
@@ -298,10 +365,12 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                 transition={springPop}
                             >
                                 {activeTab === 'resumo' && (
-                                    <ResumoTab stats={stats} activeLeads={activeLeads} allLeads={allLeads} sdrs={sdrs} user={user} />
+                                    <ResumoTab stats={filteredStats} activeLeads={activeLeads} allLeads={allLeads} sdrs={sdrs} user={user} history={history} periodFilter={filterByPeriod} />
+                                )}
+                                {activeTab ... history={history} periodFilter={filterByPeriod} />
                                 )}
                                 {activeTab === 'acompanhamento' && (
-                                    <AcompanhamentoTab sdrs={sdrs} activeLeads={activeLeads} />
+                                    <AcompanhamentoTab sdrs={enrichedSdrs} activeLeads={activeLeads} />
                                 )}
                                 {activeTab === 'leads' && (
                                     <LeadsTab allLeads={allLeads} activeLeads={activeLeads} />
@@ -310,7 +379,7 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                     <CadenciasTab activeLeads={activeLeads} />
                                 )}
                                 {activeTab === 'conquistas' && (
-                                    <ConquistasTab stats={stats} sdrs={sdrs} activeLeads={activeLeads} />
+                                    <ConquistasTab stats={filteredStats} sdrs={enrichedSdrs} activeLeads={activeLeads} />
                                 )}
                                 {activeTab === 'preview' && (
                                     <PreviewTab sdrs={sdrs} activeLeads={activeLeads} columns={columns} />
@@ -398,10 +467,31 @@ const ResumoTab: React.FC<{
     allLeads: Lead[];
     sdrs: SDR[];
     user: any;
-}> = ({ stats, activeLeads, allLeads, sdrs, user }) => {
+    history?: StatsHistory | null;
+    periodFilter?: (date: string) => boolean;
+}> = ({ stats, activeLeads, allLeads, sdrs, user, history, periodFilter }) => {
     const totalLeads = allLeads.length + activeLeads.length;
     const inCadence = activeLeads.length;
     const conversionRate = totalLeads > 0 ? Math.round((stats.completed_leads / totalLeads) * 100) : 0;
+
+    // Filter SDRs dynamically based on activity in the period
+    const enrichedSdrs = React.useMemo(() => {
+        if (!history || !periodFilter) return sdrs;
+        
+        return sdrs.map(sdr => {
+            const sdrInteractions = history.interactions.filter(i => i.sdr_id === sdr.id && periodFilter(i.created_at));
+            const sdrCompletions = history.completions.filter(c => c.sdr_id === sdr.id && periodFilter(c.completed_at));
+            
+            return {
+                ...sdr,
+                calls: sdrInteractions.filter(i => i.action_type === 'call' || i.action_type === 'CALL_MADE').length,
+                emails: sdrInteractions.filter(i => i.action_type === 'email' || i.action_type === 'EMAIL_SENT').length,
+                whatsapp: sdrInteractions.filter(i => i.action_type === 'whatsapp' || i.action_type === 'WHATSAPP_SENT').length,
+                completed: sdrCompletions.length,
+                leads: activeLeads.filter(l => l.assigned_sdr_id === sdr.id).length
+            };
+        });
+    }, [sdrs, history, periodFilter, activeLeads]);
 
     return (
         <div className="space-y-6">
@@ -449,24 +539,29 @@ const ResumoTab: React.FC<{
                 {sdrs.length > 0 && (
                     <GlassCard className="md:col-span-2">
                         <h3 className="text-sm font-black text-slate-700 mb-4" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                            SDRs Ativos
+                            SDRs Ativos no Período
                         </h3>
                         <div className="space-y-3">
-                            {sdrs.map((sdr) => {
-                                const sdrLeads = activeLeads.filter(l => l.assigned_sdr_id === sdr.id);
+                            {enrichedSdrs.map((sdr) => {
+                                const sdrLeadsCount = sdr.leads ?? 0;
                                 return (
                                     <div key={sdr.id} className="flex items-center justify-between py-3 px-4 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all hover:border-orange-200 hover:shadow-md">
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-xs font-black shadow-md border-2 border-white">
                                                 {sdr.email?.charAt(0).toUpperCase() || 'S'}
                                             </div>
-                                            <span className="text-sm font-bold text-slate-700 capitalize" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                                {sdr.email?.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'SDR'}
-                                            </span>
+                                            <div>
+                                                <span className="text-sm font-bold text-slate-700 capitalize block" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                                    {sdr.email?.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'SDR'}
+                                                </span>
+                                                <span className="text-[10px] text-slate-400 font-bold">
+                                                    {sdr.calls} lig. • {sdr.emails} emails • {sdr.whatsapp} wpp
+                                                </span>
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 shadow-sm uppercase tracking-wider">
-                                                {sdrLeads.length} leads
+                                                {sdrLeadsCount} leads
                                             </span>
                                             <ChevronRight size={16} className="text-slate-300 group-hover:text-orange-400" />
                                         </div>

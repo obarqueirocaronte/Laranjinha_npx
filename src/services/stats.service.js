@@ -167,9 +167,9 @@ class StatsService {
 
         // Fetch cadence completions
         const completionSql = `
-            SELECT final_outcome, created_at, sdr_id
+            SELECT final_outcome, completed_at, sdr_id
             FROM cadence_completions
-            ORDER BY created_at DESC
+            ORDER BY completed_at DESC
         `;
         const completionRes = await db.query(completionSql);
 

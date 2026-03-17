@@ -220,6 +220,9 @@ export const statsAPI = {
 
     updateReportConfig: (data: any) =>
         api.put('/stats/config', data).then(res => res.data),
+
+    getStatsHistory: () =>
+        api.get('/stats/history').then(res => res.data),
 };
 
 // Aurora Chat API
