@@ -120,6 +120,24 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
         };
     }, [history, filterByPeriod, stats]);
 
+    const enrichedSdrs = React.useMemo(() => {
+        if (!history) return sdrs;
+        
+        return sdrs.map((sdr: SDR) => {
+            const sdrInteractions = history.interactions.filter(i => i.sdr_id === sdr.id && filterByPeriod(i.created_at));
+            const sdrCompletions = history.completions.filter(c => c.sdr_id === sdr.id && filterByPeriod(c.completed_at));
+            
+            return {
+                ...sdr,
+                calls: sdrInteractions.filter(i => i.action_type === 'call' || i.action_type === 'CALL_MADE').length,
+                emails: sdrInteractions.filter(i => i.action_type === 'email' || i.action_type === 'EMAIL_SENT').length,
+                whatsapp: sdrInteractions.filter(i => i.action_type === 'whatsapp' || i.action_type === 'WHATSAPP_SENT').length,
+                completed: sdrCompletions.length,
+                leads: activeLeads.filter(l => l.assigned_sdr_id === sdr.id).length
+            };
+        });
+    }, [sdrs, history, filterByPeriod, activeLeads]);
+
     const fetchData = useCallback(async () => {
         try {
             const [sdrsRes, activeRes, pendingRes, colsRes, statsRes, historyRes] = await Promise.allSettled([
@@ -365,9 +383,7 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                 transition={springPop}
                             >
                                 {activeTab === 'resumo' && (
-                                    <ResumoTab stats={filteredStats} activeLeads={activeLeads} allLeads={allLeads} sdrs={sdrs} user={user} history={history} periodFilter={filterByPeriod} />
-                                )}
-                                {activeTab ... history={history} periodFilter={filterByPeriod} />
+                                    <ResumoTab stats={filteredStats} activeLeads={activeLeads} allLeads={allLeads} sdrs={enrichedSdrs} user={user} />
                                 )}
                                 {activeTab === 'acompanhamento' && (
                                     <AcompanhamentoTab sdrs={enrichedSdrs} activeLeads={activeLeads} />
@@ -467,31 +483,10 @@ const ResumoTab: React.FC<{
     allLeads: Lead[];
     sdrs: SDR[];
     user: any;
-    history?: StatsHistory | null;
-    periodFilter?: (date: string) => boolean;
-}> = ({ stats, activeLeads, allLeads, sdrs, user, history, periodFilter }) => {
+}> = ({ stats, activeLeads, allLeads, sdrs, user }) => {
     const totalLeads = allLeads.length + activeLeads.length;
     const inCadence = activeLeads.length;
     const conversionRate = totalLeads > 0 ? Math.round((stats.completed_leads / totalLeads) * 100) : 0;
-
-    // Filter SDRs dynamically based on activity in the period
-    const enrichedSdrs = React.useMemo(() => {
-        if (!history || !periodFilter) return sdrs;
-        
-        return sdrs.map(sdr => {
-            const sdrInteractions = history.interactions.filter(i => i.sdr_id === sdr.id && periodFilter(i.created_at));
-            const sdrCompletions = history.completions.filter(c => c.sdr_id === sdr.id && periodFilter(c.completed_at));
-            
-            return {
-                ...sdr,
-                calls: sdrInteractions.filter(i => i.action_type === 'call' || i.action_type === 'CALL_MADE').length,
-                emails: sdrInteractions.filter(i => i.action_type === 'email' || i.action_type === 'EMAIL_SENT').length,
-                whatsapp: sdrInteractions.filter(i => i.action_type === 'whatsapp' || i.action_type === 'WHATSAPP_SENT').length,
-                completed: sdrCompletions.length,
-                leads: activeLeads.filter(l => l.assigned_sdr_id === sdr.id).length
-            };
-        });
-    }, [sdrs, history, periodFilter, activeLeads]);
 
     return (
         <div className="space-y-6">
