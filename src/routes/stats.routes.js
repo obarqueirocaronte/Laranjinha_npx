@@ -18,5 +18,6 @@ router.post('/complete', statsController.incrementCompleted);
 router.get('/config', statsController.getReportConfig);
 router.put('/config', statsController.updateReportConfig);
 router.get('/global', statsController.getGlobalStats);
+router.get('/history', statsController.getStatsHistory);
 
 module.exports = router;

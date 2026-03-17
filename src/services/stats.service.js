@@ -146,29 +146,38 @@ class StatsService {
     }
 
     /**
-     * Get management report configuration.
+     * Get raw history logs for dashboard analysis (day/week/month).
      */
-    async getReportConfig() {
-        const sql = `SELECT * FROM management_report_config LIMIT 1`;
-        const res = await db.query(sql);
-        return res.rows[0];
-    }
-
-    /**
-     * Update management report configuration.
-     */
-    async updateReportConfig(config) {
-        const { webhook_url, schedule_times, is_active } = config;
-        const sql = `
-            UPDATE management_report_config
-            SET webhook_url = $1, 
-                schedule_times = $2, 
-                is_active = $3, 
-                updated_at = CURRENT_TIMESTAMP
-            RETURNING *
+    async getStatsHistory() {
+        // Fetch interactions (calls, emails, whatsapp)
+        const interactionsSql = `
+            SELECT action_type, created_at, sdr_id
+            FROM interactions_log
+            ORDER BY created_at DESC
         `;
-        const res = await db.query(sql, [webhook_url, schedule_times, is_active]);
-        return res.rows[0];
+        const interactionsRes = await db.query(interactionsSql);
+
+        // Fetch pipeline movements
+        const pipelineSql = `
+            SELECT from_column_id, to_column_id, moved_at, moved_by_sdr_id
+            FROM lead_pipeline_history
+            ORDER BY moved_at DESC
+        `;
+        const pipelineRes = await db.query(pipelineSql);
+
+        // Fetch cadence completions
+        const completionSql = `
+            SELECT final_outcome, created_at, sdr_id
+            FROM cadence_completions
+            ORDER BY created_at DESC
+        `;
+        const completionRes = await db.query(completionSql);
+
+        return {
+            interactions: interactionsRes.rows,
+            movements: pipelineRes.rows,
+            completions: completionRes.rows
+        };
     }
 }
 

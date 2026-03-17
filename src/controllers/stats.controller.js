@@ -91,3 +91,12 @@ exports.getGlobalStats = async (req, res, next) => {
         next(err);
     }
 };
+
+exports.getStatsHistory = async (req, res, next) => {
+    try {
+        const history = await statsService.getStatsHistory();
+        res.json({ success: true, data: history });
+    } catch (err) {
+        next(err);
+    }
+};
