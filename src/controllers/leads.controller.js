@@ -249,14 +249,14 @@ exports.getAllSDRs = async (req, res, next) => {
 
 exports.bulkAssignWithCadence = async (req, res, next) => {
     try {
-        const { cadence_name, filter_type, filter_value, sdr_assignments, scheduling_rule } = req.body;
+        const { cadence_name, filter_type, filter_value, sdr_assignments, scheduling_rule, total_steps } = req.body;
         if (!cadence_name || !filter_type || !sdr_assignments?.length) {
             return res.status(400).json({
                 success: false,
                 error: { code: 'VALIDATION_ERROR', message: 'cadence_name, filter_type, and sdr_assignments are required' }
             });
         }
-        const result = await leadsService.bulkAssignWithCadence(cadence_name, filter_type, filter_value, sdr_assignments, scheduling_rule);
+        const result = await leadsService.bulkAssignWithCadence(cadence_name, filter_type, filter_value, sdr_assignments, scheduling_rule, { total_steps });
         res.json({ success: true, data: result });
     } catch (err) {
         next(err);
