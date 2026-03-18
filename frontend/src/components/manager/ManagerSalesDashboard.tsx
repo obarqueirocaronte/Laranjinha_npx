@@ -12,7 +12,7 @@ import { cn } from '../../lib/utils';
 import { leadsAPI, statsAPI, aiAPI } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Lead, PipelineColumn } from '../../types';
-import { DndContext } from '@dnd-kit/core';
+import { DndContext, useDroppable } from '@dnd-kit/core';
 import { LeadCard } from '../kanban/LeadCard';
 import { ProfileZone } from '../profile/ProfileZone';
 
@@ -31,11 +31,13 @@ interface StatsHistory {
 interface SDR {
     id: string;
     email: string;
+    full_name?: string;
     role?: string;
     calls?: number;
     emails?: number;
     whatsapp?: number;
     completed_leads?: number;
+    completed?: number; // Added for convenience in ranking
     pending_leads?: number;
     pipeline_movements?: number;
     leads?: number;
@@ -75,6 +77,7 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<TabId>('resumo');
     const [showProfile, setShowProfile] = useState(false);
+    const [showStats, setShowStats] = useState(false);
 
     // ── Shared data ──
     const [sdrs, setSdrs] = useState<SDR[]>([]);
@@ -89,22 +92,35 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
         if (period === 'tudo') return true;
         const date = new Date(dateStr);
         const now = new Date();
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        // Normalize today to midnight for clear comparison
+        const todayAtMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         
         if (period === 'hoje') {
-            return date >= startOfToday;
+            return date >= todayAtMidnight;
         }
         if (period === 'semana') {
-            const startOfWeek = new Date(startOfToday);
-            startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+            // Start of week (Sunday)
+            const startOfWeek = new Date(todayAtMidnight);
+            startOfWeek.setDate(todayAtMidnight.getDate() - todayAtMidnight.getDay());
             return date >= startOfWeek;
         }
         if (period === 'mes') {
+            // Start of month
             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
             return date >= startOfMonth;
         }
         return true;
     }, [period]);
+    
+    // ── Filtered data memos ──
+    const filteredActiveLeads = React.useMemo(() => {
+        return activeLeads.filter(l => filterByPeriod(l.created_at));
+    }, [activeLeads, filterByPeriod]);
+
+    const filteredAllLeads = React.useMemo(() => {
+        return allLeads.filter(l => filterByPeriod(l.created_at));
+    }, [allLeads, filterByPeriod]);
 
     const filteredStats = React.useMemo(() => {
         if (!history) return stats;
@@ -133,10 +149,10 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                 emails: sdrInteractions.filter(i => i.action_type === 'email' || i.action_type === 'EMAIL_SENT').length,
                 whatsapp: sdrInteractions.filter(i => i.action_type === 'whatsapp' || i.action_type === 'WHATSAPP_SENT').length,
                 completed: sdrCompletions.length,
-                leads: activeLeads.filter(l => l.assigned_sdr_id === sdr.id).length
+                leads: filteredActiveLeads.filter(l => l.assigned_sdr_id === sdr.id).length
             };
         });
-    }, [sdrs, history, filterByPeriod, activeLeads]);
+    }, [sdrs, history, filterByPeriod, filteredActiveLeads]);
 
     const fetchData = useCallback(async () => {
         try {
@@ -383,19 +399,26 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                 transition={springPop}
                             >
                                 {activeTab === 'resumo' && (
-                                    <ResumoTab stats={filteredStats} activeLeads={activeLeads} allLeads={allLeads} sdrs={enrichedSdrs} user={user} />
+                                    <ResumoTab 
+                                        stats={filteredStats} 
+                                        activeLeads={filteredActiveLeads} 
+                                        allLeads={filteredAllLeads} 
+                                        sdrs={enrichedSdrs} 
+                                        user={user} 
+                                        onOpenStats={() => setShowStats(true)}
+                                    />
                                 )}
                                 {activeTab === 'acompanhamento' && (
-                                    <AcompanhamentoTab sdrs={enrichedSdrs} activeLeads={activeLeads} />
+                                    <AcompanhamentoTab sdrs={enrichedSdrs} activeLeads={filteredActiveLeads} />
                                 )}
                                 {activeTab === 'leads' && (
-                                    <LeadsTab allLeads={allLeads} activeLeads={activeLeads} />
+                                    <LeadsTab allLeads={filteredAllLeads} activeLeads={filteredActiveLeads} />
                                 )}
                                 {activeTab === 'cadencias' && (
-                                    <CadenciasTab activeLeads={activeLeads} />
+                                    <CadenciasTab activeLeads={filteredActiveLeads} />
                                 )}
                                 {activeTab === 'conquistas' && (
-                                    <ConquistasTab stats={filteredStats} sdrs={enrichedSdrs} activeLeads={activeLeads} />
+                                    <ConquistasTab stats={filteredStats} sdrs={enrichedSdrs} />
                                 )}
                                 {activeTab === 'preview' && (
                                     <PreviewTab sdrs={sdrs} activeLeads={activeLeads} columns={columns} />
@@ -408,6 +431,321 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                     </>
                 )}
             </main>
+
+            {/* ═══════ Stats Modal ═══════ */}
+            <AnimatePresence>
+                {showStats && (
+                    <StatsModal 
+                        onClose={() => setShowStats(false)} 
+                        sdrs={enrichedSdrs} 
+                        allLeads={allLeads}
+                    />
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+/* ─────────────────────────────────────────────
+   StatsModal Component
+   ───────────────────────────────────────────── */
+interface StatsModalProps {
+    onClose: () => void;
+    sdrs: SDR[];
+    allLeads: Lead[];
+}
+
+const StatsModal: React.FC<StatsModalProps> = ({ onClose, sdrs, allLeads }) => {
+    const [activeModalTab, setActiveModalTab] = useState<'produtividade' | 'campanhas' | 'imports' | 'visibilidade'>('produtividade');
+
+    const modalTabs = [
+        { id: 'produtividade', label: 'Produtividade', icon: Activity },
+        { id: 'campanhas', label: 'Campanhas', icon: Target },
+        { id: 'imports', label: 'Importações & Tags', icon: Zap },
+        { id: 'visibilidade', label: 'Visibilidade Full', icon: Eye },
+    ];
+
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12">
+            {/* Backdrop */}
+            <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={onClose}
+                className="absolute inset-0 bg-white/40 backdrop-blur-xl"
+            />
+
+            {/* Modal Container */}
+            <motion.div 
+                initial={{ scale: 0.9, opacity: 0, y: 40 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 40 }}
+                className="relative bg-white/80 backdrop-blur-3xl border border-white shadow-[0_32px_128px_rgba(0,0,0,0.1)] rounded-[3rem] w-full max-w-6xl h-full flex flex-col overflow-hidden"
+            >
+                {/* Modal Header */}
+                <div className="px-10 py-8 border-b border-orange-100/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                        <h2 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                            <div className="p-3 bg-gradient-to-br from-orange-400 to-amber-500 rounded-2xl text-white shadow-lg shadow-orange-200/50">
+                                <TrendingUp size={24} />
+                            </div>
+                            <span>Estatísticas Detalhadas</span>
+                        </h2>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-2 ml-14">
+                            Análise profunda de operação e base de dados
+                        </p>
+                    </div>
+
+                    {/* Modal Tab Switcher */}
+                    <div className="flex bg-slate-100 p-1.5 rounded-2xl shadow-inner border border-slate-200">
+                        {modalTabs.map((tab) => {
+                            const isActive = activeModalTab === tab.id;
+                            const Icon = tab.icon;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveModalTab(tab.id as any)}
+                                    className={cn(
+                                        "px-5 py-3 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                                        isActive 
+                                            ? "bg-white text-orange-600 shadow-md border border-slate-200/50" 
+                                            : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+                                    )}
+                                    style={{ fontFamily: 'Comfortaa, cursive' }}
+                                >
+                                    <Icon size={14} />
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <button 
+                        onClick={onClose}
+                        className="absolute top-8 right-8 w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all border border-slate-200"
+                    >
+                        <Zap size={20} className="rotate-45" />
+                    </button>
+                </div>
+
+                {/* Modal Content Area */}
+                <div className="flex-1 overflow-y-auto p-10 bg-slate-50/30">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={activeModalTab}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3 }}
+                            className="h-full"
+                        >
+                            {activeModalTab === 'produtividade' && (
+                                <StatsProductivityView sdrs={sdrs} />
+                            )}
+                            {activeModalTab === 'campanhas' && (
+                                <StatsCampaignView leads={allLeads} />
+                            )}
+                            {activeModalTab === 'imports' && (
+                                <StatsImportsView leads={allLeads} />
+                            )}
+                            {activeModalTab === 'visibilidade' && (
+                                <StatsVisibilityView leads={allLeads} />
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+            </motion.div>
+        </div>,
+        document.body
+    );
+};
+
+/* ─────────────────────────────────────────────
+   Stats Sub-Views (Skeleton components for now)
+   ───────────────────────────────────────────── */
+const StatsProductivityView: React.FC<{ sdrs: SDR[] }> = ({ sdrs }) => {
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sdrs.map(sdr => (
+                <div key={sdr.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 font-black">
+                            {sdr.email?.[0].toUpperCase()}
+                        </div>
+                        <div>
+                            <h4 className="font-black text-slate-800 text-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.email?.split('@')[0]}</h4>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{sdr.role}</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-50 p-3 rounded-2xl">
+                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Ligações</p>
+                            <p className="text-xl font-black text-slate-800">{sdr.calls || 0}</p>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-2xl">
+                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">E-mails</p>
+                            <p className="text-xl font-black text-slate-800">{sdr.emails || 0}</p>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-2xl">
+                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">WhatsApp</p>
+                            <p className="text-xl font-black text-slate-800">{sdr.whatsapp || 0}</p>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-2xl border border-orange-100">
+                            <p className="text-[10px] text-orange-400 font-bold uppercase mb-1">Gols</p>
+                            <p className="text-xl font-black text-orange-600">{sdr.completed || 0}</p>
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const StatsCampaignView: React.FC<{ leads: Lead[] }> = ({ leads }) => {
+    // Basic grouping by campaign (metadata.campaign or source)
+    const campaignMap = leads.reduce((acc: any, lead) => {
+        const campaign = lead.metadata?.campaign || lead.metadata?.source || 'Geral';
+        if (!acc[campaign]) acc[campaign] = { count: 0, qualified: 0 };
+        acc[campaign].count++;
+        if (lead.qualification_status === 'qualified') acc[campaign].qualified++;
+        return acc;
+    }, {});
+
+    const campaigns = Object.entries(campaignMap).map(([name, data]: [string, any]) => ({
+        name,
+        ...data,
+        conversion: data.count > 0 ? (data.qualified / data.count) * 100 : 0
+    }));
+
+    return (
+        <div className="space-y-6">
+            <h4 className="text-lg font-black text-slate-800 mb-4" style={{ fontFamily: 'Comfortaa, cursive' }}>Desempenho por Campanha</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {campaigns.map(camp => (
+                    <div key={camp.name} className="bg-white p-6 rounded-[2rem] border border-slate-200">
+                        <div className="flex justify-between items-center mb-4">
+                            <h5 className="font-black text-slate-700">{camp.name}</h5>
+                            <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">
+                                {camp.conversion.toFixed(1)}% Conv.
+                            </span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-2 rounded-full mb-4 overflow-hidden">
+                            <div 
+                                className="bg-gradient-to-r from-orange-400 to-rose-400 h-full rounded-full" 
+                                style={{ width: `${Math.min(camp.conversion * 2, 100)}%` }} 
+                            />
+                        </div>
+                        <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-tighter">
+                            <span>{camp.count} Leads totais</span>
+                            <span>{camp.qualified} Qualificados</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const StatsImportsView: React.FC<{ leads: Lead[] }> = ({ leads }) => {
+    const allTags = leads.flatMap(l => l.tags || []);
+    const tagCounts = allTags.reduce((acc: any, tag) => {
+        acc[tag] = (acc[tag] || 0) + 1;
+        return acc;
+    }, {});
+
+    const sortedTags = Object.entries(tagCounts)
+        .sort((a: any, b: any) => b[1] - a[1])
+        .slice(0, 15);
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div>
+                <h4 className="text-lg font-black text-slate-800 mb-6" style={{ fontFamily: 'Comfortaa, cursive' }}>Top Tags Utilizadas</h4>
+                <div className="flex flex-wrap gap-3">
+                    {sortedTags.map(([tag, count]) => (
+                        <div key={tag as string} className="bg-white px-4 py-2 rounded-2xl border border-slate-200 flex items-center gap-2 group hover:border-orange-200 transition-colors">
+                            <span className="text-xs font-black text-slate-600">{tag as string}</span>
+                            <span className="bg-slate-100 group-hover:bg-orange-100 text-[10px] font-black text-slate-400 group-hover:text-orange-600 w-6 h-6 rounded-lg flex items-center justify-center transition-colors">
+                                {count as number}
+                            </span>
+                        </div>
+                    ))}
+                    {sortedTags.length === 0 && <p className="text-slate-400 text-sm italic">Nenhuma tag encontrada.</p>}
+                </div>
+            </div>
+            
+            <div>
+                <h4 className="text-lg font-black text-slate-800 mb-6" style={{ fontFamily: 'Comfortaa, cursive' }}>Volume de Importações</h4>
+                <div className="space-y-4">
+                    {/* Simulated batch analysis from creation dates */}
+                    {[...new Set(leads.map(l => l.created_at.split('T')[0]))].slice(0, 5).map(date => {
+                        const batchCount = leads.filter(l => l.created_at.startsWith(date)).length;
+                        return (
+                            <div key={date} className="bg-white p-4 rounded-2xl border border-slate-200 flex justify-between items-center">
+                                <div>
+                                    <p className="text-xs font-black text-slate-700">{new Date(date).toLocaleDateString('pt-BR')}</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Batch de importação</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-lg font-black text-slate-800">{batchCount}</p>
+                                    <p className="text-[9px] text-slate-400 font-bold uppercase">Leads</p>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const StatsVisibilityView: React.FC<{ leads: Lead[] }> = ({ leads }) => {
+    return (
+        <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden">
+            <table className="w-full text-left border-collapse">
+                <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Lead</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Origem</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                    {leads.slice(0, 20).map(lead => (
+                        <tr key={lead.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4 text-[11px] font-bold text-slate-500">
+                                {new Date(lead.created_at).toLocaleDateString('pt-BR')}
+                            </td>
+                            <td className="px-6 py-4">
+                                <p className="text-[12px] font-black text-slate-800">{lead.full_name}</p>
+                                <p className="text-[10px] text-slate-400">{lead.company_name}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                                <span className="text-[10px] font-black text-slate-600 uppercase tracking-tighter">
+                                    {lead.metadata?.source || 'Import Externo'}
+                                </span>
+                            </td>
+                            <td className="px-6 py-4">
+                                <span className={cn(
+                                    "px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter",
+                                    lead.qualification_status === 'qualified' ? "bg-emerald-100 text-emerald-600" :
+                                    lead.qualification_status === 'disqualified' ? "bg-red-100 text-red-600" :
+                                    "bg-slate-100 text-slate-600"
+                                )}>
+                                    {lead.qualification_status || 'Pendente'}
+                                </span>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+            {leads.length > 20 && (
+                <div className="p-4 text-center border-t border-slate-100">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">Mostrando os últimos 20 de {leads.length} leads</p>
+                </div>
+            )}
         </div>
     );
 };
@@ -483,7 +821,8 @@ const ResumoTab: React.FC<{
     allLeads: Lead[];
     sdrs: SDR[];
     user: any;
-}> = ({ stats, activeLeads, allLeads, sdrs, user }) => {
+    onOpenStats?: () => void;
+}> = ({ stats, activeLeads, allLeads, sdrs, user, onOpenStats }) => {
     const totalLeads = allLeads.length + activeLeads.length;
     const inCadence = activeLeads.length;
     const conversionRate = totalLeads > 0 ? Math.round((stats.completed_leads / totalLeads) * 100) : 0;
@@ -531,7 +870,7 @@ const ResumoTab: React.FC<{
 
             {/* Quick SDR status & Admin Actions */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {sdrs.length > 0 && (
+                {sdrs.length > 0 ? (
                     <GlassCard className="md:col-span-2">
                         <h3 className="text-sm font-black text-slate-700 mb-4" style={{ fontFamily: 'Comfortaa, cursive' }}>
                             SDRs Ativos no Período
@@ -565,9 +904,18 @@ const ResumoTab: React.FC<{
                             })}
                         </div>
                     </GlassCard>
+                ) : (
+                    <div className="md:col-span-2 bg-white/40 animate-pulse rounded-[2.5rem] border border-white/60 p-8 flex flex-col gap-4">
+                        <div className="h-4 w-32 bg-slate-200/50 rounded-full" />
+                        <div className="space-y-3">
+                            <div className="h-16 bg-white/50 rounded-2xl" />
+                            <div className="h-16 bg-white/50 rounded-2xl" />
+                            <div className="h-16 bg-white/50 rounded-2xl" />
+                        </div>
+                    </div>
                 )}
 
-                {user?.role === 'salesops' && (
+                {user?.role === 'salesops' ? (
                     <GlassCard className="flex flex-col justify-between border-orange-200 bg-orange-50/30">
                         <div>
                             <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-lg mb-4">
@@ -603,6 +951,29 @@ const ResumoTab: React.FC<{
                             Gerar Lead Oliveira
                         </motion.button>
                     </GlassCard>
+                ) : (
+                    /* ── Standalone Stats Button ── */
+                    <motion.button
+                        onClick={onOpenStats}
+                        whileHover={{ scale: 1.02, y: -5 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="bg-white/80 backdrop-blur-2xl rounded-[2rem] border border-orange-200 shadow-xl shadow-orange-500/10 p-8 flex flex-col items-center justify-center gap-4 group transition-all"
+                    >
+                        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white shadow-2xl shadow-orange-500/40 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                            <TrendingUp size={40} strokeWidth={2.5} />
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                Estatísticas Full
+                            </h3>
+                            <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mt-1 opacity-80">
+                                Análise de Estratégias
+                            </p>
+                        </div>
+                        <div className="mt-2 px-4 py-1.5 rounded-full bg-orange-50 text-[10px] font-black text-orange-600 border border-orange-100 uppercase tracking-tighter">
+                            Acessar Dashboard Interno
+                        </div>
+                    </motion.button>
                 )}
             </div>
         </div>
@@ -833,74 +1204,203 @@ const CadenciasTab: React.FC<{
 /* ═══════════════════════════════════════════
    Tab: Conquistas
    ═══════════════════════════════════════════ */
+const PodiumItem: React.FC<{
+    sdr: any;
+    rank: number;
+}> = ({ sdr, rank }) => {
+    const config = {
+        1: {
+            height: 'h-[220px]',
+            gradient: ['#FFD700', '#FFA500'],
+            medal: '🥇',
+            glow: 'shadow-amber-500/40',
+            label: 'Campeão'
+        },
+        2: {
+            height: 'h-[180px]',
+            gradient: ['#E2E8F0', '#94A3B8'],
+            medal: '🥈',
+            glow: 'shadow-slate-400/30',
+            label: 'Vice-Líder'
+        },
+        3: {
+            height: 'h-[150px]',
+            gradient: ['#CD7F32', '#A0522D'],
+            medal: '🥉',
+            glow: 'shadow-orange-700/20',
+            label: 'Destaque'
+        }
+    }[rank as 1 | 2 | 3];
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...springPop, delay: rank * 0.1 }}
+            className="flex flex-col items-center group"
+        >
+            <div className="relative mb-4">
+                <div className={cn(
+                    "w-20 h-20 rounded-full border-4 border-white shadow-2xl relative z-10 overflow-hidden bg-white",
+                    rank === 1 ? "w-24 h-24 ring-4 ring-amber-100" : ""
+                )}>
+                    <img
+                        src={`https://api.dicebear.com/7.x/notionists/svg?seed=${sdr.email}&backgroundColor=transparent`}
+                        alt={sdr.full_name}
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+                <div className={cn(
+                    "absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center text-2xl z-20 border-2 border-slate-50",
+                    rank === 1 ? "w-12 h-12 -bottom-3 -right-3" : ""
+                )}>
+                    {config.medal}
+                </div>
+                {/* Glow behind */}
+                <div className={cn(
+                    "absolute inset-0 rounded-full blur-2xl opacity-40 group-hover:opacity-70 transition-opacity",
+                    config.glow,
+                    "bg-current"
+                )} style={{ color: config.gradient[0] }} />
+            </div>
+
+            <div
+                className={cn(
+                    "w-32 rounded-t-[2.5rem] flex flex-col items-center justify-end p-6 border border-white/40 shadow-2xl relative overflow-hidden",
+                    config.height
+                )}
+                style={{
+                    background: `linear-gradient(180deg, ${config.gradient[0]}dd, ${config.gradient[1]}ee)`,
+                    backdropFilter: 'blur(12px)'
+                }}
+            >
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IndoaXRlIiBmaWxsLW9wYWNpdHk9IjAuMiIvPjwvc3ZnPg==')] opacity-30" />
+                
+                <p className="text-white font-black text-3xl drop-shadow-lg mb-1" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                    {sdr.completed}
+                </p>
+                <p className="text-white/80 text-[10px] font-black uppercase tracking-widest">{config.label}</p>
+                
+                <div className="mt-4 w-full bg-white/20 h-1 rounded-full overflow-hidden">
+                    <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: '100%' }}
+                        transition={{ duration: 1, delay: 0.5 }}
+                        className="h-full bg-white shadow-[0_0_8px_white]" 
+                    />
+                </div>
+            </div>
+            
+            <div className="mt-4 text-center">
+                <p className="font-black text-slate-800 text-sm capitalize" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                    {sdr.email?.split('@')[0].replace(/[^a-zA-Z]/g, ' ')}
+                </p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
+                    {(sdr.calls || 0) + (sdr.emails || 0) + (sdr.whatsapp || 0)} atividades
+                </p>
+            </div>
+        </motion.div>
+    );
+};
+
 const ConquistasTab: React.FC<{
     stats: any;
     sdrs: SDR[];
-    activeLeads: Lead[];
-}> = ({ stats, sdrs, activeLeads }) => {
-    // Mock leaderboard based on distributed stats
-    const leaderboard = sdrs.map((sdr, i) => ({
-        ...sdr,
-        completed: Math.max(0, Math.floor(stats.completed_leads / Math.max(sdrs.length, 1)) + (i === 0 ? 2 : 0)),
-        leads: activeLeads.filter(l => l.assigned_sdr_id === sdr.id).length,
-    })).sort((a, b) => b.completed - a.completed);
+}> = ({ stats, sdrs }) => {
+    // Sort SDRs by completed leads (real data from enrichedSdrs)
+    const leaderboard = [...sdrs].sort((a, b) => (b.completed || 0) - (a.completed || 0));
+    
+    const podium = leaderboard.slice(0, 3);
+    const others = leaderboard.slice(3);
 
-    const medals = ['🥇', '🥈', '🥉'];
+    // Reorder for visual pódio: [2nd, 1st, 3rd]
+    const visualPodium = [
+        podium[1], // 2nd
+        podium[0], // 1st
+        podium[2]  // 3rd
+    ].filter(Boolean);
 
     return (
-        <div className="space-y-6">
-            {/* Trophy banner */}
-            <GlassCard gradient={['#FFD700', '#FFA500']} className="text-center relative overflow-hidden py-8">
-                <div className="absolute inset-0 bg-white/10 pointer-events-none" />
-                <div className="relative z-10">
-                    <Trophy size={48} className="mx-auto text-white/90 mb-3 drop-shadow-lg" />
-                    <h3 className="text-3xl font-black text-white drop-shadow-md" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                        {stats.completed_leads}
+        <div className="space-y-12 pb-20">
+            {/* Header section with total trophy */}
+            <div className="flex items-center justify-between gap-8 px-4">
+                <div className="max-w-md">
+                    <h3 className="text-2xl font-black text-slate-800 mb-2" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                        Copa de Performance
                     </h3>
-                    <p className="text-sm font-bold text-white/80 mt-1" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                        Leads Finalizados no Total
+                    <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                        Reconhecendo os SDRs que mais converteram leads e mantiveram a cadência ativa no período selecionado.
                     </p>
                 </div>
-            </GlassCard>
+                
+                <GlassCard gradient={['#FF8C00', '#FF5722']} className="min-w-[240px] py-4 px-8 text-center shadow-orange-500/20">
+                    <Trophy size={32} className="mx-auto text-white/90 mb-2 drop-shadow-md" />
+                    <p className="text-3xl font-black text-white" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                        {stats.completed_leads}
+                    </p>
+                    <p className="text-[10px] font-black text-white/80 uppercase tracking-widest mt-1">Gols da Equipe</p>
+                </GlassCard>
+            </div>
 
-            {/* Leaderboard */}
-            <GlassCard>
-                <h3 className="text-sm font-black text-slate-700 mb-4" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                    🏆 Ranking de SDRs
-                </h3>
-                <div className="space-y-3">
-                    {leaderboard.length === 0 ? (
-                        <p className="text-center text-slate-600 font-bold py-8">Nenhum SDR encontrado</p>
-                    ) : leaderboard.map((sdr, i) => (
-                        <motion.div
-                            key={sdr.id}
-                            whileHover={{ scale: 1.02, x: 4 }}
-                            className={cn(
-                                'flex items-center justify-between px-4 py-3 rounded-2xl border transition-all shadow-sm',
-                                i === 0 ? 'bg-gradient-to-r from-amber-100/80 to-amber-50/40 border-amber-300/60 shadow-amber-500/10' :
-                                    i === 1 ? 'bg-gradient-to-r from-slate-100/80 to-slate-50/40 border-slate-300/60' :
-                                        i === 2 ? 'bg-gradient-to-r from-orange-100/80 to-orange-50/40 border-orange-300/60' :
-                                            'bg-gradient-soft border-orange-100/60'
-                            )}
-                        >
-                            <div className="flex items-center gap-4">
-                                <span className="text-2xl leading-none">{medals[i] || `#${i + 1}`}</span>
-                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-xs font-black shadow-sm">
-                                    {sdr.email?.charAt(0).toUpperCase()}
+            {/* Pódio visual */}
+            <div className="flex items-end justify-center gap-0 md:gap-4 pt-10 min-h-[400px]">
+                {visualPodium.map((sdr, i) => {
+                    // Logic to map current index to real rank
+                    // Index 0 is 2nd place, 1 is 1st place, 2 is 3rd place
+                    const rank = i === 1 ? 1 : i === 0 ? 2 : 3;
+                    return (
+                        <PodiumItem key={sdr.id} sdr={sdr} rank={rank} />
+                    );
+                })}
+                {visualPodium.length === 0 && (
+                    <div className="flex flex-col items-center py-20 text-slate-400">
+                        <Trophy size={64} className="opacity-10 mb-4" />
+                        <p className="font-black" style={{ fontFamily: 'Comfortaa, cursive' }}>Aguardando o primeiro gol...</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Outros SDRs */}
+            {others.length > 0 && (
+                <div className="max-w-4xl mx-auto px-4">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-4">
+                        <div className="h-px flex-1 bg-slate-100" />
+                        Abaixo do Tops 3
+                        <div className="h-px flex-1 bg-slate-100" />
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {others.map((sdr, i) => (
+                            <motion.div
+                                key={sdr.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.1 }}
+                                className="flex items-center justify-between p-4 bg-white rounded-3xl border border-slate-100/80 shadow-sm hover:shadow-md transition-shadow"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <span className="text-xs font-black text-slate-300 min-w-[20px]">#{i + 4}</span>
+                                    <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
+                                        <img
+                                            src={`https://api.dicebear.com/7.x/notionists/svg?seed=${sdr.email}&backgroundColor=transparent`}
+                                            alt={sdr.full_name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div>
+                                        <p className="font-black text-slate-800 text-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.email?.split('@')[0]}</p>
+                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{(sdr.calls || 0) + (sdr.emails || 0) + (sdr.whatsapp || 0)} atividades</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="font-black text-sm text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.email?.split('@')[0]}</p>
-                                    <p className="text-[10px] text-slate-600 font-bold">{sdr.leads} leads ativos</p>
+                                <div className="text-right">
+                                    <p className="text-xl font-black text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.completed || 0}</p>
+                                    <p className="text-[9px] text-slate-400 font-bold uppercase">Gols</p>
                                 </div>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-2xl font-black text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.completed}</p>
-                                <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider">Finalizados</p>
-                            </div>
-                        </motion.div>
-                    ))}
+                            </motion.div>
+                        ))}
+                    </div>
                 </div>
-            </GlassCard>
+            )}
         </div>
     );
 };
@@ -914,6 +1414,37 @@ const PreviewTab: React.FC<{
     columns: PipelineColumn[];
 }> = ({ sdrs, activeLeads, columns }) => {
     const [selectedSdr, setSelectedSdr] = useState<SDR | null>(null);
+
+    const handleDragEnd = async (event: any) => {
+        const { active, over } = event;
+        if (!over || !selectedSdr) return;
+
+        const leadId = active.id;
+        const newColId = over.id;
+        const lead = activeLeads.find(l => l.id === leadId);
+
+        if (!lead || lead.current_column_id === newColId) return;
+
+        try {
+            // 1. Move lead in backend
+            await leadsAPI.moveLead(leadId, newColId);
+
+            // 2. Track productivity based on destination column
+            // Mapping column positions to activity types
+            const col = columns.find(c => c.id === newColId);
+            if (col) {
+                if (col.position === 2) await statsAPI.updateActivity('call', selectedSdr.id);
+                if (col.position === 3) await statsAPI.updateActivity('email', selectedSdr.id);
+                if (col.position === 4) await statsAPI.updateActivity('whatsapp', selectedSdr.id);
+            }
+
+            // 3. Update local state for immediate feedback (shortcut)
+            // In a real app, we'd refetch or use a setter from parent
+            // since we don't have the setter here, the next periodic fetch (fetchData) will refresh it.
+        } catch (err) {
+            console.error('Failed to move lead or update activity:', err);
+        }
+    };
 
     // Group leads for all active leads to distribute among SDRs
     const leadsBySdr = new Map<string, Lead[]>();
@@ -1034,62 +1565,60 @@ const PreviewTab: React.FC<{
                     </div>
 
                     {/* Detailed Kanban View */}
-                    <div className="flex-1 flex gap-4 md:gap-5 overflow-x-auto p-4 sm:p-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IiNlNGRlNTQiLz48L3N2Zz4=')] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                        {orderedColumns.map((col) => {
-                            const colLeads = myColumnMap.get(col.id) || [];
-                            const tok = COLUMN_IDENTITY[col.position] ?? COLUMN_IDENTITY[1];
-
-                            return (
-                                <div key={col.id} className={cn("w-[270px] shrink-0 flex flex-col h-full rounded-2xl p-1.5 transition-all duration-300 backdrop-blur-md border border-white/60 shadow-lg relative", tok.columnBg, tok.shadow)}>
-
-                                    {/* ── Header ── */}
-                                    <div className="relative mb-4 shrink-0 px-1">
-                                        <div
-                                            className="rounded-2xl px-4 py-3.5 flex items-center gap-3 bg-white/60 backdrop-blur-md border border-white/80 shadow-sm"
-                                        >
-                                            <div
-                                                className="w-9 h-9 rounded-xl flex items-center justify-center bg-white shadow-sm border border-slate-100"
-                                                style={{ color: tok.gradient[0] }}
-                                            >
-                                                <span className="text-lg leading-none select-none drop-shadow-sm">
-                                                    {tok.icon === 'wpp' ? <WppIconInline size={18} /> : tok.icon}
-                                                </span>
-                                            </div>
-                                            <div className="min-w-0">
-                                                <h3
-                                                    className="font-black text-xs text-slate-800 tracking-tight leading-none"
-                                                    style={{ fontFamily: 'Comfortaa, cursive' }}
-                                                >
-                                                    {col.name}
-                                                </h3>
-                                                <p className="text-[8px] text-slate-500 font-extrabold mt-1 tracking-wider uppercase truncate" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                                    {tok.subtitle}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <span
-                                            className="absolute -top-2 -right-1 min-w-[20px] h-[20px] px-1 flex items-center justify-center rounded-full text-[9px] font-black shadow-md border-[2px] border-white/60 text-white"
-                                            style={{ background: `linear-gradient(135deg, ${tok.gradient[0]}, ${tok.gradient[1]})`, fontFamily: 'Comfortaa, cursive' }}
-                                        >
-                                            {colLeads.length}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex-1 overflow-y-auto space-y-3 pb-3 px-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-300/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                                        <DndContext>
-                                            {colLeads.map(lead => (
-                                                <LeadCard key={lead.id} lead={lead} columnPosition={col.position} />
-                                            ))}
-                                        </DndContext>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                    <div className="flex-1 overflow-hidden">
+                        <DndContext onDragEnd={handleDragEnd}>
+                            <div className="h-full flex gap-4 md:gap-5 overflow-x-auto p-4 sm:p-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IiNlNGRlNTQiLz48L3N2Zz4=')] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+                                {orderedColumns.map((col) => {
+                                    const colLeads = myColumnMap.get(col.id) || [];
+                                    const tok = COLUMN_IDENTITY[col.position] ?? COLUMN_IDENTITY[1];
+                                    return (
+                                        <DroppableColumn key={col.id} col={col} colLeads={colLeads} tok={tok} />
+                                    );
+                                })}
+                            </div>
+                        </DndContext>
                     </div>
                 </motion.div>
             </motion.div>
         );
     };
+
+    const DroppableColumn = ({ col, colLeads, tok }: any) => {
+        const { setNodeRef } = useDroppable({ id: col.id });
+
+        return (
+            <div ref={setNodeRef} className={cn("w-[270px] shrink-0 flex flex-col h-full rounded-2xl p-1.5 transition-all duration-300 backdrop-blur-md border border-white/60 shadow-lg relative", tok.columnBg, tok.shadow)}>
+                {/* ── Header ── */}
+                <div className="relative mb-4 shrink-0 px-1">
+                    <div className="rounded-2xl px-4 py-3.5 flex items-center gap-3 bg-white/60 backdrop-blur-md border border-white/80 shadow-sm">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white shadow-sm border border-slate-100" style={{ color: tok.gradient[0] }}>
+                            <span className="text-lg leading-none select-none drop-shadow-sm">
+                                {tok.icon === 'wpp' ? <WppIconInline size={18} /> : tok.icon}
+                            </span>
+                        </div>
+                        <div className="min-w-0">
+                            <h3 className="font-black text-xs text-slate-800 tracking-tight leading-none" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                {col.name}
+                            </h3>
+                            <p className="text-[8px] text-slate-500 font-extrabold mt-1 tracking-wider uppercase truncate" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                {tok.subtitle}
+                            </p>
+                        </div>
+                    </div>
+                    <span className="absolute -top-2 -right-1 min-w-[20px] h-[20px] px-1 flex items-center justify-center rounded-full text-[9px] font-black shadow-md border-[2px] border-white/60 text-white" style={{ background: `linear-gradient(135deg, ${tok.gradient[0]}, ${tok.gradient[1]})`, fontFamily: 'Comfortaa, cursive' }}>
+                        {colLeads.length}
+                    </span>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-3 pb-3 px-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-300/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+                    {colLeads.map((lead: Lead) => (
+                        <LeadCard key={lead.id} lead={lead} columnPosition={col.position} />
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="space-y-6 relative h-full flex flex-col z-0">
             {/* Modal Overlay Render - Elevated Z-Index utilizing Portal */}

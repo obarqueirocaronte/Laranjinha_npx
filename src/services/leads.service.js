@@ -830,7 +830,7 @@ class LeadsService {
         }
     }
     async logCallInteraction(leadId, data) {
-        const { sdr_id, outcome, notes } = data;
+        const { sdr_id, outcome, notes = '' } = data;
         const sql = `
             INSERT INTO call_logs (lead_id, sdr_id, outcome, notes)
             VALUES ($1, $2, $3, $4)

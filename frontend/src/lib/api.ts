@@ -5,6 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 // Create axios instance
 const api = axios.create({
     baseURL: API_BASE_URL,
+    timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -200,10 +201,15 @@ export const statsAPI = {
     getStats: () =>
         api.get('/stats').then(res => res.data),
 
-    updateActivity: (type: 'call' | 'email' | 'whatsapp' | 'cycle_complete') => {
-        const userStr = localStorage.getItem('user');
-        const sdr_id = userStr ? JSON.parse(userStr).id : undefined;
-        return api.post('/stats/activity', { type, sdr_id }).then(res => res.data);
+    updateActivity: (type: 'call' | 'email' | 'whatsapp' | 'cycle_complete', sdr_id?: string) => {
+        const payload: any = { type };
+        if (sdr_id) {
+            payload.sdr_id = sdr_id;
+        } else {
+            const userStr = localStorage.getItem('user');
+            if (userStr) payload.sdr_id = JSON.parse(userStr).id;
+        }
+        return api.post('/stats/activity', payload).then(res => res.data);
     },
 
     incrementCompleted: () =>

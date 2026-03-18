@@ -23,8 +23,12 @@ exports.getStats = async (req, res, next) => {
 
 exports.updateActivity = async (req, res, next) => {
     try {
-        const { type } = req.body;
-        const sdrId = req.body.sdr_id || 'default-sdr';
+        const { type, sdr_id } = req.body;
+        const sdrId = sdr_id || (req.user ? req.user.id : null);
+
+        if (!sdrId) {
+            return res.status(400).json({ success: false, error: 'sdr_id is required' });
+        }
 
         // Map frontend type to backend column
         const columnMap = {

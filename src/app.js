@@ -75,6 +75,13 @@ app.get('/api/v1/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Remote Debug Logger
+app.post('/api/v1/debug-log', (req, res) => {
+    const { type, messages } = req.body;
+    console.log(`[REMOTE ${type?.toUpperCase()}]`, ...messages);
+    res.sendStatus(200);
+});
+
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
 app.use((req, res, next) => {

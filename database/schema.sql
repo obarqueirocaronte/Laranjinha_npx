@@ -35,6 +35,12 @@ CREATE TABLE IF NOT EXISTS sdrs (
     -- Lead assignment tracking
     total_leads_assigned INTEGER DEFAULT 0,
     last_lead_assigned_at TIMESTAMP WITH TIME ZONE,
+    -- Goals
+    goal_calls INTEGER DEFAULT 0,
+    goal_emails INTEGER DEFAULT 0,
+    goal_whatsapp INTEGER DEFAULT 0,
+    goal_completed INTEGER DEFAULT 0,
+    goal_points INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -200,30 +206,54 @@ END $$;
 -- 7. INTERACTIONS LOG (Complete History)
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS interactions_log (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
-    sdr_id UUID REFERENCES sdrs(id) ON DELETE SET NULL,
-    
-    -- Interaction Details
-    action_type VARCHAR(50) NOT NULL, -- EMAIL_SENT, WHATSAPP_SENT, CALL_MADE, NOTE_ADDED, etc.
-    template_id UUID REFERENCES templates(id) ON DELETE SET NULL,
-    content_snapshot TEXT, -- Actual content sent (after placeholder replacement)
-    
-    -- Engagement Tracking
-    was_opened BOOLEAN DEFAULT false,
-    was_clicked BOOLEAN DEFAULT false,
-    was_replied BOOLEAN DEFAULT false,
-    reply_content TEXT,
-    
-    -- Metadata
-    metadata JSONB DEFAULT '{}', -- Channel-specific data (email headers, WhatsApp message ID, etc.)
-    
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================================
--- 8. INDEXES FOR PERFORMANCE
+-- 8. PERFORMANCE & ACTIVITY TRACKING
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS call_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+    sdr_id UUID NOT NULL REFERENCES sdrs(id) ON DELETE CASCADE,
+    duration_seconds INTEGER,
+    status VARCHAR(50), -- completed, missed, busy
+    notes TEXT,
+    recording_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS cadence_completions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+    sdr_id UUID NOT NULL REFERENCES sdrs(id) ON DELETE CASCADE,
+    cadence_name VARCHAR(100),
+    final_outcome VARCHAR(50), -- converted, lost, recycled
+    completed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sdr_stats (
+    sdr_id UUID PRIMARY KEY REFERENCES sdrs(id) ON DELETE CASCADE,
+    calls INTEGER DEFAULT 0,
+    emails INTEGER DEFAULT 0,
+    whatsapp INTEGER DEFAULT 0,
+    completed_leads INTEGER DEFAULT 0,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS management_report_config (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    webhook_url TEXT,
+    schedule_times JSONB DEFAULT '["09:00", "18:00"]',
+    is_active BOOLEAN DEFAULT true,
+    last_sent_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
+-- 9. INDEXES FOR PERFORMANCE
 -- ============================================================================
 
 -- Lead search and filtering

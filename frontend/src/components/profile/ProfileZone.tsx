@@ -16,7 +16,14 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
     const [extension, setExtension] = useState('');
     const [showSuccess, setShowSuccess] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    
+    // Photo Editor State
+    const [tempImageUrl, setTempImageUrl] = useState<string | null>(null);
+    const [isEditingPhoto, setIsEditingPhoto] = useState(false);
+    const [zoom, setZoom] = useState(1);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const editorContainerRef = useRef<HTMLDivElement>(null);
 
     // Load voice/extension config on mount
     React.useEffect(() => {
@@ -41,7 +48,6 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Check file size (limit to 2MB)
             if (file.size > 2 * 1024 * 1024) {
                 alert('A imagem deve ter no máximo 2MB.');
                 return;
@@ -49,33 +55,76 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
 
             const reader = new FileReader();
             reader.onloadend = () => {
-                const base64String = reader.result as string;
-                setProfilePictureUrl(base64String);
-                
-                // Immediately upload the image
-                if (user?.id) {
-                    setIsSaving(true);
-                    import('../../lib/api').then(async ({ usersAPI }) => {
-                        try {
-                            const response = await usersAPI.updateProfile(user.id, { profile_picture_url: base64String });
-                            if (response.success) {
-                                const storedUser = localStorage.getItem('user');
-                                if (storedUser) {
-                                    const parsedUser = JSON.parse(storedUser);
-                                    const updatedUser = { ...parsedUser, ...response.data };
-                                    localStorage.setItem('user', JSON.stringify(updatedUser));
-                                    window.location.reload(); 
-                                }
-                            }
-                        } catch (error) {
-                            console.error('Failed to quick-save profile picture', error);
-                        } finally {
-                            setIsSaving(false);
-                        }
-                    });
-                }
+                setTempImageUrl(reader.result as string);
+                setIsEditingPhoto(true);
+                setZoom(1);
+                setPosition({ x: 0, y: 0 });
             };
             reader.readAsDataURL(file);
+        }
+    };
+
+    const handleConfirmPhoto = async () => {
+        if (!tempImageUrl || !user?.id) return;
+
+        setIsSaving(true);
+        
+        // Use canvas to crop/zoom
+        const canvas = document.createElement('canvas');
+        const img = new Image();
+        img.src = tempImageUrl;
+        
+        await new Promise((resolve) => { img.onload = resolve; });
+
+        const size = 400; // Final size
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        
+        if (ctx) {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, size, size);
+
+            // Calculate draw parameters
+            const aspectRatio = img.width / img.height;
+            let drawWidth, drawHeight;
+
+            if (aspectRatio > 1) {
+                drawHeight = size * zoom;
+                drawWidth = drawHeight * aspectRatio;
+            } else {
+                drawWidth = size * zoom;
+                drawHeight = drawWidth / aspectRatio;
+            }
+
+            // Center + Offset
+            const x = (size - drawWidth) / 2 + (position.x * (size / 160)); // factor based on UI size
+            const y = (size - drawHeight) / 2 + (position.y * (size / 160));
+
+            ctx.drawImage(img, x, y, drawWidth, drawHeight);
+        }
+
+        const croppedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+        setProfilePictureUrl(croppedBase64);
+        setIsEditingPhoto(false);
+
+        // Upload
+        try {
+            const { usersAPI } = await import('../../lib/api');
+            const response = await usersAPI.updateProfile(user.id, { profile_picture_url: croppedBase64 });
+            if (response.success) {
+                const storedUser = localStorage.getItem('user');
+                if (storedUser) {
+                    const parsedUser = JSON.parse(storedUser);
+                    const updatedUser = { ...parsedUser, ...response.data };
+                    localStorage.setItem('user', JSON.stringify(updatedUser));
+                    window.location.reload();
+                }
+            }
+        } catch (error) {
+            console.error('Failed to save cropped photo', error);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -199,6 +248,72 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
                                 </span>
                             </div>
                         </div>
+
+                        {/* Photo Editor UI */}
+                        {isEditingPhoto && tempImageUrl && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-6">
+                                <motion.div 
+                                    initial={{ scale: 0.9, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-white/20"
+                                >
+                                    <h3 className="text-xl font-black text-slate-800 mb-6 text-center" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                        Ajustar Foto de Perfil
+                                    </h3>
+                                    
+                                    <div className="relative w-64 h-64 mx-auto bg-slate-100 rounded-full border-4 border-slate-200 overflow-hidden cursor-move mb-8" ref={editorContainerRef}>
+                                        <motion.img 
+                                            src={tempImageUrl}
+                                            drag
+                                            dragConstraints={editorContainerRef}
+                                            onDrag={(_, info) => setPosition(p => ({ x: p.x + info.delta.x, y: p.y + info.delta.y }))}
+                                            style={{ 
+                                                scale: zoom,
+                                                x: position.x,
+                                                y: position.y,
+                                            }}
+                                            className="w-full h-full object-contain pointer-events-none"
+                                        />
+                                        {/* Viewport guide */}
+                                        <div className="absolute inset-0 rounded-full border-2 border-orange-500/30 pointer-events-none shadow-[0_0_0_100px_rgba(255,255,255,0.4)]" />
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <div className="px-4">
+                                            <div className="flex justify-between mb-2">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Zoom</span>
+                                                <span className="text-[10px] font-black text-orange-500">{(zoom * 100).toFixed(0)}%</span>
+                                            </div>
+                                            <input 
+                                                type="range"
+                                                min="1"
+                                                max="3"
+                                                step="0.01"
+                                                value={zoom}
+                                                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                                                className="w-full accent-orange-500 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                        </div>
+
+                                        <div className="flex gap-3">
+                                            <button 
+                                                onClick={() => setIsEditingPhoto(false)}
+                                                className="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-600 text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                            >
+                                                Cancelar
+                                            </button>
+                                            <button 
+                                                onClick={handleConfirmPhoto}
+                                                disabled={isSaving}
+                                                className="flex-1 py-4 rounded-2xl bg-orange-600 text-white text-xs font-black uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg shadow-orange-500/20"
+                                            >
+                                                {isSaving ? 'Salvando...' : 'Confirmar'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Right Column - Forms */}
