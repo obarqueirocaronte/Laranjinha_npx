@@ -48,11 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const isAdminFromGoogle = params.get('isAdmin') === 'true';
 
             if (tokenFromGoogle && emailFromGoogle) {
+                const roleParam = params.get('role') as 'manager' | 'sdr' | 'salesops' | null;
                 const googleUser: User = {
-                    id: 'google-auth',
+                    id: params.get('userId') || 'google-auth',
                     email: emailFromGoogle,
-                    role: isAdminFromGoogle ? 'manager' : 'sdr',
-                    isAdmin: isAdminFromGoogle,
+                    role: roleParam || (isAdminFromGoogle ? 'manager' : 'sdr'),
+                    isAdmin: isAdminFromGoogle || roleParam === 'salesops',
                     profile_picture_url: params.get('profile_picture_url')
                 };
                 localStorage.setItem('auth_token', tokenFromGoogle);

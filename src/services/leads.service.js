@@ -335,10 +335,18 @@ class LeadsService {
 
         // Filter by the current user's SDR ID if provided
         if (userId) {
-            const sdrRes = await db.query('SELECT id FROM sdrs WHERE user_id = $1 LIMIT 1', [userId]);
-            if (sdrRes.rows.length > 0) {
-                params.push(sdrRes.rows[0].id);
+            // First check if userId is already an SDR ID
+            const sdrById = await db.query('SELECT id FROM sdrs WHERE id = $1 LIMIT 1', [userId]);
+            if (sdrById.rows.length > 0) {
+                params.push(sdrById.rows[0].id);
                 queryStr += ` AND l.assigned_sdr_id = $${params.length}`;
+            } else {
+                // Otherwise check if it's a User ID
+                const sdrByUser = await db.query('SELECT id FROM sdrs WHERE user_id = $1 LIMIT 1', [userId]);
+                if (sdrByUser.rows.length > 0) {
+                    params.push(sdrByUser.rows[0].id);
+                    queryStr += ` AND l.assigned_sdr_id = $${params.length}`;
+                }
             }
         }
 

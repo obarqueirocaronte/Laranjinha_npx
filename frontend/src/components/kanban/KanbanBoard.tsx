@@ -42,13 +42,15 @@ export const KanbanBoard = ({
     onActivity,
     onScheduleCountChange,
     showSchedulePreview,
-    onCloseSchedulePreview
+    onCloseSchedulePreview,
+    selectedSdrId
 }: {
     onLeadComplete?: () => void;
     onActivity?: (type: 'call' | 'email' | 'whatsapp') => void;
     onScheduleCountChange?: (count: number) => void;
     showSchedulePreview?: boolean;
     onCloseSchedulePreview?: () => void;
+    selectedSdrId?: string;
 }) => {
     const { user } = useAuth();
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -78,9 +80,9 @@ export const KanbanBoard = ({
                 setIsLoading(true);
                 const [colsRes, leadsRes] = await Promise.all([
                     leadsAPI.getColumns(),
-                    // SDRs only see their own leads; managers see all
+                    // SDRs only see their own leads; managers see all or selected SDR
                     leadsAPI.getSegments('qualification_status', 'qualified', 
-                        user?.role === 'sdr' ? user?.id : undefined
+                        selectedSdrId || (user?.role === 'sdr' ? user?.id : undefined)
                     )
                 ]);
 
@@ -113,7 +115,7 @@ export const KanbanBoard = ({
         if (user?.id) {
             fetchBoardData();
         }
-    }, [user?.id]);
+    }, [user?.id, selectedSdrId]);
 
     const addNotification = useCallback((message: string, type: NotificationType = 'info') => {
         const id = Math.random().toString(36).substring(2, 9);

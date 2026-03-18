@@ -92,6 +92,22 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
     const [selectedAuditSdrIds, setSelectedAuditSdrIds] = useState<string[]>([]);
     const [isSendingAudit, setIsSendingAudit] = useState(false);
 
+    // Persist selectedAuditSdrIds
+    useEffect(() => {
+        const saved = localStorage.getItem('selectedAuditSdrIds');
+        if (saved) {
+            try {
+                setSelectedAuditSdrIds(JSON.parse(saved));
+            } catch (e) {
+                console.error('Failed to parse selectedAuditSdrIds', e);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('selectedAuditSdrIds', JSON.stringify(selectedAuditSdrIds));
+    }, [selectedAuditSdrIds]);
+
     const filterByPeriod = useCallback((dateStr: string) => {
         if (period === 'tudo') return true;
         const date = new Date(dateStr);
@@ -251,7 +267,7 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                         <div className="flex items-center justify-center gap-2 mt-3 bg-white/60 backdrop-blur-xl py-1.5 px-4 rounded-full border border-white/80 shadow-lg group-hover:bg-orange-50/50 transition-colors">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-[pulse_2s_infinite] shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                             <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600">
-                                {user?.role === 'manager' ? 'Gestor de Vendas' : 'SDR Specialist'}
+                                {user?.role === 'manager' ? 'Gestor de Vendas' : user?.role === 'salesops' ? 'Sales Ops Specialist' : 'SDR Specialist'}
                             </span>
                         </div>
                     </div>
@@ -404,7 +420,6 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                         activeLeads={filteredActiveLeads} 
                                         allLeads={filteredAllLeads} 
                                         sdrs={enrichedSdrs} 
-                                        user={user} 
                                         onOpenStats={() => setShowStats(true)}
                                         selectedAuditSdrIds={selectedAuditSdrIds}
                                         onToggleAuditSdr={(id) => {
@@ -418,7 +433,7 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                             try {
                                                 await statsAPI.sendManualReport(selectedAuditSdrIds);
                                                 alert('✅ Auditoria enviada para o Mattermost com sucesso!');
-                                                setSelectedAuditSdrIds([]);
+                                                // Don't clear selection as per user request "deixe os sdrs selecionados como salvos"
                                             } catch (e: any) {
                                                 console.error('Failed to send audit:', e);
                                                 alert('❌ Falha ao enviar auditoria: ' + (e.response?.data?.error || e.message));
@@ -841,13 +856,12 @@ const ResumoTab: React.FC<{
     activeLeads: Lead[];
     allLeads: Lead[];
     sdrs: SDR[];
-    user: any;
     onOpenStats?: () => void;
     selectedAuditSdrIds: string[];
     onToggleAuditSdr: (id: string) => void;
     onSendAudit: () => void;
     isSendingAudit: boolean;
-}> = ({ stats, activeLeads, allLeads, sdrs, user, onOpenStats, selectedAuditSdrIds, onToggleAuditSdr, onSendAudit, isSendingAudit }) => {
+}> = ({ stats, activeLeads, allLeads, sdrs, onOpenStats, selectedAuditSdrIds, onToggleAuditSdr, onSendAudit, isSendingAudit }) => {
     const totalLeads = allLeads.length + activeLeads.length;
     const inCadence = activeLeads.length;
     const conversionRate = totalLeads > 0 ? Math.round((stats.completed_leads / totalLeads) * 100) : 0;
@@ -964,66 +978,28 @@ const ResumoTab: React.FC<{
                     </div>
                 )}
 
-                {user?.role === 'salesops' ? (
-                    <GlassCard className="flex flex-col justify-between border-orange-200 bg-orange-50/30">
-                        <div>
-                            <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-lg mb-4">
-                                <Sparkles size={24} />
-                            </div>
-                            <h3 className="text-sm font-black text-slate-800 mb-2" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                Ações de Teste
-                            </h3>
-                            <p className="text-[10px] font-medium text-slate-500 leading-relaxed mb-6">
-                                Gere um lead de teste "OLIVEIRA" atribuído ao seu SDR para validar o fluxo de login, kanban e click-to-call.
-                            </p>
-                        </div>
-                        
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={async () => {
-                                try {
-                                    const res = await leadsAPI.createTestLead();
-                                    if (res.success) {
-                                        alert('✅ Lead "OLIVEIRA" gerado com sucesso! Atualizando dashboard...');
-                                        window.location.reload();
-                                    }
-                                } catch (e) {
-                                    console.error('Failed to create test lead:', e);
-                                    alert('❌ Falha ao gerar lead de teste. Verifique as permissões de SalesOps.');
-                                }
-                            }}
-                            className="w-full py-3 rounded-2xl bg-slate-900 text-white text-[11px] font-black uppercase tracking-widest shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
-                            style={{ fontFamily: 'Comfortaa, cursive' }}
-                        >
-                            <Users size={14} />
-                            Gerar Lead Oliveira
-                        </motion.button>
-                    </GlassCard>
-                ) : (
-                    /* ── Standalone Stats Button ── */
-                    <motion.button
-                        onClick={onOpenStats}
-                        whileHover={{ scale: 1.02, y: -5 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="bg-white/80 backdrop-blur-2xl rounded-[2rem] border border-orange-200 shadow-xl shadow-orange-500/10 p-8 flex flex-col items-center justify-center gap-4 group transition-all"
-                    >
-                        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white shadow-2xl shadow-orange-500/40 group-hover:scale-110 group-hover:rotate-3 transition-transform">
-                            <TrendingUp size={40} strokeWidth={2.5} />
-                        </div>
-                        <div className="text-center">
-                            <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                Estatísticas Full
-                            </h3>
-                            <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mt-1 opacity-80">
-                                Análise de Estratégias
-                            </p>
-                        </div>
-                        <div className="mt-2 px-4 py-1.5 rounded-full bg-orange-50 text-[10px] font-black text-orange-600 border border-orange-100 uppercase tracking-tighter">
-                            Acessar Dashboard Interno
-                        </div>
-                    </motion.button>
-                )}
+                <motion.button
+                    onClick={onOpenStats}
+                    whileHover={{ scale: 1.02, y: -5 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="bg-white/80 backdrop-blur-2xl rounded-[2rem] border border-orange-200 shadow-xl shadow-orange-500/10 p-8 flex flex-col items-center justify-center gap-4 group transition-all"
+                >
+                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white shadow-2xl shadow-orange-500/40 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                        <TrendingUp size={40} strokeWidth={2.5} />
+                    </div>
+                    <div className="text-center">
+                        <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                            Estatísticas Full
+                        </h3>
+                        <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mt-1 opacity-80">
+                            Análise de Estratégias
+                        </p>
+                    </div>
+                    <div className="mt-2 px-4 py-1.5 rounded-full bg-orange-50 text-[10px] font-black text-orange-600 border border-orange-100 uppercase tracking-tighter">
+                        Acessar Dashboard Interno
+                    </div>
+                </motion.button>
+
             </div>
         </div>
     );

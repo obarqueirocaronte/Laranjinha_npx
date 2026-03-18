@@ -476,59 +476,6 @@ exports.initiateLeadCall = async (req, res, next) => {
     }
 };
 
-exports.createTestLead = async (req, res, next) => {
-    try {
-        const userId = req.user?.id;
-        let sdrId = null;
-
-        if (userId) {
-            // Find SDR record for this user
-            const sdrRes = await db.query('SELECT id FROM sdrs WHERE user_id = $1 LIMIT 1', [userId]);
-            if (sdrRes.rows.length > 0) {
-                sdrId = sdrRes.rows[0].id;
-            } else {
-                // If user doesn't have an SDR profile, create a fake one for testing so they can see the board
-                const userRes = await db.query('SELECT name, email FROM users WHERE id = $1', [userId]);
-                if (userRes.rows.length > 0) {
-                    const newSdr = await db.query(
-                        'INSERT INTO sdrs (user_id, full_name, email) VALUES ($1, $2, $3) RETURNING id',
-                        [userId, userRes.rows[0].name || 'SalesOps Tester', userRes.rows[0].email]
-                    );
-                    sdrId = newSdr.rows[0].id;
-                }
-            }
-        }
-
-        const testLeadData = {
-            full_name: 'OLIVEIRA',
-            company_name: 'Empresa Teste',
-            email: `teste.oliveira.${Date.now()}@npx.com.br`,
-            phone: '85999950729',
-            job_title: 'Contato Teste',
-            state: 'CE',
-            city: 'FORTALEZA',
-            cadence_name: 'Sem Cadência',
-            metadata: {
-                is_test: true,
-                salesops_only: true,
-                notes: '4002-8922',
-                tags: ['[TESTE]', 'SalesOps']
-            }
-        };
-
-        const result = await leadsService.ingestLead(testLeadData);
-        
-        // Assign to the SDR if found
-        if (sdrId) {
-            await leadsService.assignLead(result.lead_id, sdrId, 'Sem Cadência');
-        }
-
-        console.log(`[TestLead] ✅ Lead de teste criado e atribuído ao SDR ${sdrId}: ${result.lead_id}`);
-        res.json({ success: true, message: 'Lead de teste criado', data: { lead_id: result.lead_id } });
-    } catch (err) {
-        next(err);
-    }
-};
 
 exports.getInteractions = async (req, res, next) => {
     try {

@@ -21,6 +21,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ProfileZone } from '../profile/ProfileZone';
 import { UserAvatar } from '../common/UserAvatar';
 import { cn } from '../../lib/utils';
+import { leadsAPI } from '../../lib/api';
+import { Search } from 'lucide-react';
+
+interface SDR {
+    id: string;
+    full_name: string;
+    email: string;
+}
 
 type TabType = 'Hoje' | 'Semana' | 'Mês';
 
@@ -38,14 +46,17 @@ export function Dashboard() {
         emails: 0,
         whatsapp: 0
     });
+    const [sdrs, setSdrs] = useState<SDR[]>([]);
+    const [selectedSdr, setSelectedSdr] = useState<SDR | null>(null);
+    const [isSdrListOpen, setIsSdrListOpen] = useState(false);
 
-    // Fetch stats when period or user changes
+    // Fetch stats when period or user or selectedSdr changes
     useEffect(() => {
         const fetchStats = async () => {
             try {
                 // Map 'Hoje' -> 'hoje', 'Semana' -> 'semana', 'Mês' -> 'mes'
                 const periodMap: Record<string, string> = { 'Hoje': 'hoje', 'Semana': 'semana', 'Mês': 'mes' };
-                const response = await statsAPI.getStats(undefined, periodMap[period]);
+                const response = await statsAPI.getStats(selectedSdr?.id, periodMap[period]);
                 if (response.success && response.data) {
                     setActivityStats({
                         calls: response.data.calls || 0,
@@ -59,7 +70,24 @@ export function Dashboard() {
             }
         };
         fetchStats();
-    }, [period, user]);
+    }, [period, user, selectedSdr]);
+
+    // Fetch SDRs if manager/salesops
+    useEffect(() => {
+        if (user?.role === 'manager' || user?.role === 'salesops') {
+            const fetchSdrs = async () => {
+                try {
+                    const res = await leadsAPI.getAllSDRs();
+                    if (res.success && Array.isArray(res.data)) {
+                        setSdrs(res.data);
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch SDRs:', err);
+                }
+            };
+            fetchSdrs();
+        }
+    }, [user?.role]);
 
     const handleLeadComplete = async () => {
         try {
@@ -141,6 +169,71 @@ export function Dashboard() {
                                     </h1>
                                     <div className="h-2" />
                                 </div>
+
+                                {/* SDR Selector for Managers/SalesOps */}
+                                {(user?.role === 'manager' || user?.role === 'salesops') && view === 'pipeline' && (
+                                    <div className="relative z-[200]">
+                                        <motion.button
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => setIsSdrListOpen(!isSdrListOpen)}
+                                            className="h-14 px-6 rounded-2xl bg-white/40 backdrop-blur-3xl border border-white/60 shadow-xl shadow-orange-500/5 flex items-center gap-4 group"
+                                        >
+                                            <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 group-hover:rotate-12 transition-transform">
+                                                <Search size={16} strokeWidth={3} />
+                                            </div>
+                                            <div className="flex flex-col items-start leading-none">
+                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Visualizando SDR</span>
+                                                <span className="text-sm font-black text-slate-700" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                                    {selectedSdr ? selectedSdr.full_name : 'Ver Todos (Geral)'}
+                                                </span>
+                                            </div>
+                                            <div className={cn("ml-2 transition-transform duration-300", isSdrListOpen ? "rotate-180" : "")}>
+                                                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M1 1L5 5L9 1" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
+                                            </div>
+                                        </motion.button>
+
+                                        <AnimatePresence>
+                                            {isSdrListOpen && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    className="absolute top-full left-0 mt-2 w-64 bg-white/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-orange-100 overflow-hidden py-2"
+                                                >
+                                                    <button
+                                                        onClick={() => { setSelectedSdr(null); setIsSdrListOpen(false); }}
+                                                        className={cn(
+                                                            "w-full px-4 py-3 text-left hover:bg-orange-50 transition-colors flex flex-col gap-0.5",
+                                                            !selectedSdr ? "bg-orange-50/50 border-r-4 border-orange-500" : ""
+                                                        )}
+                                                    >
+                                                        <span className="text-sm font-black text-slate-700" style={{ fontFamily: 'Comfortaa, cursive' }}>Ver Todos (Geral)</span>
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Visão Consolidada</span>
+                                                    </button>
+                                                    
+                                                    <div className="h-px bg-slate-100 mx-2 my-1" />
+                                                    
+                                                    {sdrs.map(sdr => (
+                                                        <button
+                                                            key={sdr.id}
+                                                            onClick={() => { setSelectedSdr(sdr); setIsSdrListOpen(false); }}
+                                                            className={cn(
+                                                                "w-full px-4 py-3 text-left hover:bg-orange-50 transition-colors flex flex-col gap-0.5",
+                                                                selectedSdr?.id === sdr.id ? "bg-orange-50/50 border-r-4 border-orange-500" : ""
+                                                            )}
+                                                        >
+                                                            <span className="text-sm font-black text-slate-700" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.full_name}</span>
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{sdr.email}</span>
+                                                        </button>
+                                                    ))}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                )}
 
                                 {/* 2. Right Side: Trophy, Actions & Profile */}
                                 <div className="flex items-center gap-4">
@@ -268,7 +361,7 @@ export function Dashboard() {
                                                     user?.role === 'manager' ? "bg-amber-500" : "bg-emerald-500"
                                                 )} />
                                                 <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">
-                                                    {user?.role === 'manager' ? 'Gestor de Vendas' : 'SDR Specialist'}
+                                                    {user?.role === 'manager' ? 'Gestor de Vendas' : user?.role === 'salesops' ? 'Sales Ops Specialist' : 'SDR Specialist'}
                                                 </span>
                                             </div>
                                         </div>
@@ -284,6 +377,7 @@ export function Dashboard() {
                                     onScheduleCountChange={setScheduleCount}
                                     showSchedulePreview={showSchedulePreview}
                                     onCloseSchedulePreview={() => setShowSchedulePreview(false)}
+                                    selectedSdrId={selectedSdr?.id}
                                 />
                             </div>
                         </div>

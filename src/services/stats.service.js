@@ -44,19 +44,58 @@ class StatsService {
 
     /**
      * Increment an activity counter.
+     * sdrOrUserId can be either the SDR UUID or the User UUID.
      */
-    async updateActivity(sdrId, type) {
-        const allowedTypes = ['calls', 'emails', 'whatsapp'];
-        if (!allowedTypes.includes(type)) throw new Error('Invalid activity type');
+    async updateActivity(sdrOrUserId, type) {
+        // Map frontend types to backend DB columns
+        const typeMap = {
+            'call': 'calls',
+            'email': 'emails',
+            'whatsapp': 'whatsapp',
+            'calls': 'calls',
+            'emails': 'emails'
+        };
+
+        const dbType = typeMap[type];
+        if (!dbType) {
+            console.log(`[StatsService] Skipping activity update for type: ${type}`);
+            return null;
+        }
+
+        // 1. Try to find the SDR by ID or user_id
+        let sdrRes = await db.query(
+            'SELECT id FROM sdrs WHERE id = $1 OR user_id = $1',
+            [sdrOrUserId]
+        );
+
+        let finalSdrId;
+
+        if (sdrRes.rows.length > 0) {
+            finalSdrId = sdrRes.rows[0].id;
+        } else {
+            // 2. If not found, check if it's a valid user_id
+            const userRes = await db.query('SELECT id, full_name, email FROM users WHERE id = $1', [sdrOrUserId]);
+            if (userRes.rows.length === 0) {
+                throw new Error('User not found and no SDR profile exists for tracking');
+            }
+
+            // 3. Create a minimal SDR profile for this user to enable tracking
+            const user = userRes.rows[0];
+            const insertSdr = await db.query(
+                'INSERT INTO sdrs (user_id, full_name, email) VALUES ($1, $2, $3) RETURNING id',
+                [user.id, user.full_name, user.email]
+            );
+            finalSdrId = insertSdr.rows[0].id;
+        }
 
         const sql = `
-            INSERT INTO sdr_stats (sdr_id, ${type})
+            INSERT INTO sdr_stats (sdr_id, ${dbType})
             VALUES ($1, 1)
             ON CONFLICT (sdr_id)
-            DO UPDATE SET ${type} = sdr_stats.${type} + 1, updated_at = CURRENT_TIMESTAMP
+            DO UPDATE SET ${dbType} = sdr_stats.${dbType} + 1, updated_at = CURRENT_TIMESTAMP
             RETURNING *
         `;
-        const res = await db.query(sql, [sdrId]);
+        const res = await db.query(sql, [finalSdrId]);
         return res.rows[0];
     }
 
@@ -131,36 +170,39 @@ class StatsService {
         const dateFilterMove = moveWhere.length > 0 ? `WHERE ${moveWhere.join(' AND ')}` : '';
 
         // Add SDR filtering if provided
-        let sdrFilter = '';
+        let sdrFilterLog = '';
+        let sdrFilterLeads = '';
         if (sdrIds && sdrIds.length > 0) {
-            sdrFilter = `AND s.id IN (${sdrIds.map((_, i) => `$${i + 1}`).join(',')})`;
+            const placeholders = sdrIds.map((_, i) => `$${i + 1}`).join(',');
+            sdrFilterLog = `AND sdr_id IN (${placeholders})`;
+            sdrFilterLeads = `AND assigned_sdr_id IN (${placeholders})`;
         }
 
         // 1. Get activity stats from logs
         const activitySql = `
             SELECT 
-                (SELECT COUNT(*)::integer FROM call_logs ${dateFilterCall}) as total_calls,
-                (SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'EMAIL_SENT' ${andFilterInt}) as total_emails,
-                (SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'WHATSAPP_SENT' ${andFilterInt}) as total_whatsapp,
-                (SELECT COUNT(*)::integer FROM cadence_completions ${dateFilterComp}) as total_completed
+                (SELECT COUNT(*)::integer FROM call_logs ${dateFilterCall} ${dateFilterCall ? sdrFilterLog : (sdrFilterLog ? 'WHERE ' + sdrFilterLog.slice(4) : '')}) as total_calls,
+                (SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'EMAIL_SENT' ${andFilterInt} ${sdrFilterLog}) as total_emails,
+                (SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'WHATSAPP_SENT' ${andFilterInt} ${sdrFilterLog}) as total_whatsapp,
+                (SELECT COUNT(*)::integer FROM cadence_completions ${dateFilterComp} ${dateFilterComp ? sdrFilterLog : (sdrFilterLog ? 'WHERE ' + sdrFilterLog.slice(4) : '')}) as total_completed
         `;
         
         console.log('[DEBUG] activitySql:', activitySql);
-        const activityRes = await db.query(activitySql);
+        const activityRes = await db.query(activitySql, sdrIds && sdrIds.length > 0 ? sdrIds : []);
 
         // 2. Get lead counts per column from leads table
         const columnSql = `
             SELECT pc.name, COUNT(l.id)::integer as count
             FROM pipeline_columns pc
-            LEFT JOIN leads l ON pc.id = l.current_column_id
+            LEFT JOIN leads l ON pc.id = l.current_column_id ${sdrFilterLeads}
             GROUP BY pc.id, pc.name, pc.position
             ORDER BY pc.position
         `;
-        const columnRes = await db.query(columnSql);
+        const columnRes = await db.query(columnSql, sdrIds && sdrIds.length > 0 ? sdrIds : []);
 
         // 3. Get total active leads
-        const activeLeadsSql = `SELECT COUNT(id)::integer as count FROM leads WHERE status = 'active'`;
-        const activeLeadsRes = await db.query(activeLeadsSql);
+        const activeLeadsSql = `SELECT COUNT(id)::integer as count FROM leads WHERE status = 'active' ${sdrFilterLeads}`;
+        const activeLeadsRes = await db.query(activeLeadsSql, sdrIds && sdrIds.length > 0 ? sdrIds : []);
         const totalActiveLeads = activeLeadsRes.rows[0].count;
 
         // 4. Get individual SDR breakdown
@@ -195,7 +237,7 @@ class StatsService {
             FROM sdrs s
             LEFT JOIN movement_counts mc ON s.id = mc.moved_by_sdr_id
             LEFT JOIN active_counts ac ON s.id = ac.assigned_sdr_id
-            WHERE s.is_active = true ${sdrFilter}
+            WHERE s.is_active = true ${sdrIds && sdrIds.length > 0 ? `AND s.id IN (${sdrIds.map((_, i) => `$${i + 1}`).join(',')})` : ''}
             ORDER BY s.full_name ASC
         `;
         

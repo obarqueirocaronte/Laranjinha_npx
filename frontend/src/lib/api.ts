@@ -172,8 +172,6 @@ export const leadsAPI = {
     scheduleNextContact: (id: string, data: { scheduled_at: string; sdr_id?: string; type?: string; notes?: string; return_to_queue?: boolean }) =>
         api.post(`/leads/${id}/schedule`, data).then(res => res.data),
 
-    createTestLead: () =>
-        api.post('/leads/create-test').then(res => res.data),
 
     getInteractions: (id: string) =>
         api.get(`/leads/${id}/interactions`).then(res => res.data),

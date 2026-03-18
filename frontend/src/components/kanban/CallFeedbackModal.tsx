@@ -219,7 +219,7 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
                                             </button>
                                             <button
                                                 onClick={handleSaveNotes}
-                                                disabled={selectedResult === 'success' ? !noteText.trim() : false}
+                                                disabled={!noteText.trim()}
                                                 className="flex-[2] py-4 px-4 bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white rounded-full font-black text-sm uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                                 style={{ fontFamily: 'Comfortaa, cursive' }}
                                             >

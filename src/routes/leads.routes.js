@@ -47,8 +47,6 @@ router.get('/preview', authenticate, leadsController.getLeadsPreview);
 // GET /api/v1/leads/sdrs
 router.get('/sdrs', authenticate, leadsController.getAllSDRs);
 
-// POST /api/v1/leads/create-test  (SalesOps only)
-router.post('/create-test', authenticate, authorizeSalesOps, leadsController.createTestLead);
 
 // POST /api/v1/leads/:id/move
 router.post('/:id/move', authenticate, leadsController.moveLead);
