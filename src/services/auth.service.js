@@ -215,12 +215,17 @@ async function login(email, password) {
             { expiresIn: '7d' }
         );
 
+        const bypassDbRes = await pool.query('SELECT profile_picture_url FROM users WHERE email = $1', [email]);
+        const dbPic = bypassDbRes.rows[0]?.profile_picture_url;
+
         return {
             token,
             user: {
                 id: mockUser.id,
                 email: mockUser.email,
                 isAdmin: mockUser.is_admin,
+                role: mockUser.role,
+                profile_picture_url: dbPic
             },
         };
     }
@@ -393,11 +398,15 @@ async function getUserById(userId) {
     if (userId === '00000000-0000-0000-0000-000000000001' || userId === '00000000-0000-0000-0000-000000000002') {
         const email = userId === '00000000-0000-0000-0000-000000000001' ? 'rodrigo.sergio@npx.com.br' : 'visitante@npx.com.br';
         const isAdmin = userId === '00000000-0000-0000-0000-000000000001';
+        const bypassDbRes = await pool.query('SELECT profile_picture_url FROM users WHERE id = $1', [userId]);
+        const dbPic = bypassDbRes.rows[0]?.profile_picture_url;
+
         return {
             id: userId,
             email: email,
             is_verified: true,
             is_admin: isAdmin,
+            profile_picture_url: dbPic,
             created_at: new Date()
         };
     }

@@ -205,8 +205,8 @@ export const templatesAPI = {
 
 // Stats API
 export const statsAPI = {
-    getStats: () =>
-        api.get('/stats').then(res => res.data),
+    getStats: (sdr_id?: string, period?: string) =>
+        api.get('/stats', { params: { sdr_id, period } }).then(res => res.data),
 
     updateActivity: (type: 'call' | 'email' | 'whatsapp' | 'cycle_complete', sdr_id?: string) => {
         const payload: any = { type };

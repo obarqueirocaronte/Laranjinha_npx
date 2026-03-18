@@ -15,6 +15,7 @@ import type { Lead, PipelineColumn } from '../../types';
 import { DndContext, useDroppable } from '@dnd-kit/core';
 import { LeadCard } from '../kanban/LeadCard';
 import { ProfileZone } from '../profile/ProfileZone';
+import { UserAvatar } from '../common/UserAvatar';
 
 /* ─────────────────────────────────────────────
    Types
@@ -41,6 +42,7 @@ interface SDR {
     pending_leads?: number;
     pipeline_movements?: number;
     leads?: number;
+    profile_picture_url?: string | null;
 }
 
 interface TabItem {
@@ -224,41 +226,33 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
             <aside
                 className="w-[260px] shrink-0 flex flex-col py-8 px-5 border-r border-white/30 bg-white/20 relative z-10"
             >
-                {/* ── User Profile Header ── */}
-                <div
-                    className="flex flex-col items-center text-center mb-10 px-2 cursor-pointer group"
+                {/* ── User Profile Header (Premium & Large) ── */}
+                <div 
+                    className="flex flex-col items-center justify-center mb-10 px-4 group cursor-pointer relative"
                     onClick={() => setShowProfile(true)}
-                    role="button"
-                    tabIndex={0}
                 >
-                    <div className="relative group mb-5">
-                        {/* Glow effect */}
-                        <div className="absolute inset-[-4px] bg-gradient-to-br from-orange-400 to-rose-400 rounded-full blur-md opacity-30 group-hover:opacity-60 transition-opacity" />
-
-                        <div className="relative w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white shadow-xl bg-gradient-to-br from-orange-100 to-rose-50">
-                            {/* Dicebear Avatar */}
-                            <img
-                                src={`https://api.dicebear.com/7.x/notionists/svg?seed=${user?.email || 'Manager'}&backgroundColor=transparent`}
-                                alt="Manager Profile"
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                            />
-                        </div>
+                    <div className="relative mb-6">
+                        <div className="absolute inset-[-10px] bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500 rounded-[3rem] blur-2xl opacity-20 group-hover:opacity-40 transition-all duration-700 animate-pulse" />
+                        <div className="absolute inset-[-3px] bg-white/40 rounded-[2.3rem] backdrop-blur-md border border-white/60 shadow-xl" />
+                        <UserAvatar 
+                            src={user?.profile_picture_url} 
+                            name={user?.email?.split('@')[0]} 
+                            size="xl" 
+                            rounded={false}
+                            border={true}
+                            role={user?.role}
+                            className="shadow-2xl relative z-10 !rounded-[2.1rem] hover:scale-[1.08] transition-transform duration-500 border-2 border-white/80"
+                        />
                     </div>
-                    <div>
-                        <h2
-                            className="text-sm font-black text-slate-800 tracking-tight capitalize group-hover:text-orange-600 transition-colors"
-                            style={{ fontFamily: 'Comfortaa, cursive' }}
-                        >
-                            {user?.email?.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'Manager'}
-                        </h2>
-                        <div className="flex items-center justify-center gap-1.5 mt-1">
-                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                            <p
-                                className="text-[9px] font-bold text-orange-500 uppercase tracking-widest"
-                                style={{ fontFamily: 'Comfortaa, cursive' }}
-                            >
-                                Manager Profile
-                            </p>
+                    <div className="text-center relative z-10">
+                        <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight drop-shadow-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                            {user?.email?.split('@')[0] || 'Gestor'}
+                        </h3>
+                        <div className="flex items-center justify-center gap-2 mt-3 bg-white/60 backdrop-blur-xl py-1.5 px-4 rounded-full border border-white/80 shadow-lg group-hover:bg-orange-50/50 transition-colors">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-[pulse_2s_infinite] shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600">
+                                {user?.role === 'manager' ? 'Gestor de Vendas' : 'SDR Specialist'}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -349,46 +343,50 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                 ) : (
                     <>
                         {/* Page header */}
-                        <div className="flex items-center gap-6 mb-10 pb-6 border-b border-white/50">
-                            <div className="flex items-center gap-4">
-                                <div
-                                    className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow border border-white/20"
-                                    style={{ background: `linear-gradient(135deg, ${currentTab.color}, ${currentTab.colorTo})` }}
-                                >
-                                    <currentTab.icon size={28} strokeWidth={2.5} />
-                                </div>
-                                <div>
-                                    <h2
-                                        className="text-4xl font-black text-slate-800 tracking-tight flex items-center gap-2"
-                                        style={{ fontFamily: 'Comfortaa, cursive' }}
+                        <div className="flex items-center justify-between mb-10 pb-6 border-b border-white/50">
+                            <div className="flex items-center gap-8">
+                                <div className="flex items-center gap-4">
+                                    <div
+                                        className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow border border-white/20"
+                                        style={{ background: `linear-gradient(135deg, ${currentTab.color}, ${currentTab.colorTo})` }}
                                     >
-                                        <span className="text-slate-700 opacity-90">Manager</span>
-                                        <span>{currentTab.label}</span>
-                                    </h2>
-                                    <p className="text-[11px] text-slate-500 font-extrabold mt-1 tracking-[0.1em] uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                        {currentTab.subtitle}
-                                    </p>
+                                        <currentTab.icon size={28} strokeWidth={2.5} />
+                                    </div>
+                                    <div>
+                                        <h2
+                                            className="text-4xl font-black text-slate-800 tracking-tight flex items-center gap-2"
+                                            style={{ fontFamily: 'Comfortaa, cursive' }}
+                                        >
+                                            <span className="text-slate-700 opacity-90">Manager</span>
+                                            <span>{currentTab.label}</span>
+                                        </h2>
+                                        <p className="text-[11px] text-slate-500 font-extrabold mt-1 tracking-[0.1em] uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                            {currentTab.subtitle}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Period Filter */}
+                                <div className="flex bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50 shadow-inner">
+                                    {(['hoje', 'semana', 'mes', 'tudo'] as PeriodId[]).map((p) => (
+                                        <button
+                                            key={p}
+                                            onClick={() => setPeriod(p)}
+                                            className={cn(
+                                                "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                period === p 
+                                                    ? "bg-white text-orange-600 shadow-sm border border-slate-200/50" 
+                                                    : "text-slate-400 hover:text-slate-600"
+                                            )}
+                                            style={{ fontFamily: 'Comfortaa, cursive' }}
+                                        >
+                                            {p === 'hoje' ? 'Hoje' : p === 'semana' ? 'Semana' : p === 'mes' ? 'Mês' : 'Total'}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
-                            {/* Period Filter */}
-                            <div className="flex bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50 shadow-inner">
-                                {(['hoje', 'semana', 'mes', 'tudo'] as PeriodId[]).map((p) => (
-                                    <button
-                                        key={p}
-                                        onClick={() => setPeriod(p)}
-                                        className={cn(
-                                            "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                            period === p 
-                                                ? "bg-white text-orange-600 shadow-sm border border-slate-200/50" 
-                                                : "text-slate-400 hover:text-slate-600"
-                                        )}
-                                        style={{ fontFamily: 'Comfortaa, cursive' }}
-                                    >
-                                        {p === 'hoje' ? 'Hoje' : p === 'semana' ? 'Semana' : p === 'mes' ? 'Mês' : 'Total'}
-                                    </button>
-                                ))}
-                            </div>
+
                         </div>
 
                         {/* Tab Content */}
@@ -1291,16 +1289,17 @@ const PodiumItem: React.FC<{
             className="flex flex-col items-center group"
         >
             <div className="relative mb-4">
-                <div className={cn(
-                    "w-20 h-20 rounded-full border-4 border-white shadow-2xl relative z-10 overflow-hidden bg-white",
-                    rank === 1 ? "w-24 h-24 ring-4 ring-amber-100" : ""
-                )}>
-                    <img
-                        src={`https://api.dicebear.com/7.x/notionists/svg?seed=${sdr.email}&backgroundColor=transparent`}
-                        alt={sdr.full_name}
-                        className="w-full h-full object-cover"
-                    />
-                </div>
+                <UserAvatar 
+                    src={sdr.profile_picture_url} 
+                    name={sdr.full_name} 
+                    size={rank === 1 ? "xl" : "lg"} 
+                    rounded 
+                    border={false}
+                    className={cn(
+                        "w-full h-full !rounded-full relative z-10",
+                        rank === 1 ? "ring-4 ring-amber-100" : ""
+                    )} 
+                />
                 <div className={cn(
                     "absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center text-2xl z-20 border-2 border-slate-50",
                     rank === 1 ? "w-12 h-12 -bottom-3 -right-3" : ""
@@ -1431,13 +1430,14 @@ const ConquistasTab: React.FC<{
                             >
                                 <div className="flex items-center gap-4">
                                     <span className="text-xs font-black text-slate-300 min-w-[20px]">#{i + 4}</span>
-                                    <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
-                                        <img
-                                            src={`https://api.dicebear.com/7.x/notionists/svg?seed=${sdr.email}&backgroundColor=transparent`}
-                                            alt={sdr.full_name}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
+                                    <UserAvatar 
+                                        src={sdr.profile_picture_url} 
+                                        name={sdr.full_name} 
+                                        size="md" 
+                                        rounded 
+                                        border={false}
+                                        className="!rounded-full border border-slate-100 shadow-sm" 
+                                    />
                                     <div>
                                         <p className="font-black text-slate-800 text-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.email?.split('@')[0]}</p>
                                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{(sdr.calls || 0) + (sdr.emails || 0) + (sdr.whatsapp || 0)} atividades</p>
@@ -1638,7 +1638,7 @@ const PreviewTab: React.FC<{
         const { setNodeRef } = useDroppable({ id: col.id });
 
         return (
-            <div ref={setNodeRef} className={cn("w-[270px] shrink-0 flex flex-col h-full rounded-2xl p-1.5 transition-all duration-300 backdrop-blur-md border border-white/60 shadow-lg relative", tok.columnBg, tok.shadow)}>
+            <div ref={setNodeRef} className={cn("w-[270px] shrink-0 flex flex-col h-full rounded-2xl p-1.5 transition-all duration-300 backdrop-blur-md border border-white/60 shadow-lg relative overflow-hidden", tok.columnBg, tok.shadow)}>
                 {/* ── Header ── */}
                 <div className="relative mb-4 shrink-0 px-1">
                     <div className="rounded-2xl px-4 py-3.5 flex items-center gap-3 bg-white/60 backdrop-blur-md border border-white/80 shadow-sm">
@@ -1661,7 +1661,13 @@ const PreviewTab: React.FC<{
                     </span>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-3 pb-3 px-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-300/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+                <div 
+                    className="flex-1 overflow-y-auto space-y-3 pb-8 pt-2 px-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-300/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
+                    style={{
+                        maskImage: 'linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%)',
+                        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%)'
+                    }}
+                >
                     {colLeads.map((lead: Lead) => (
                         <LeadCard key={lead.id} lead={lead} columnPosition={col.position} />
                     ))}

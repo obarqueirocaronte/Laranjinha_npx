@@ -4,17 +4,34 @@ exports.getStats = async (req, res, next) => {
     try {
         let sdrId = req.query.sdr_id;
 
-        // Prevent 'default-sdr' which is not a valid UUID from causing DB errors
+        // Default to authenticated user if no sdr_id provided
         if (!sdrId || sdrId === 'default-sdr') {
-            const sdrsResult = await require('../config/db').query('SELECT id FROM sdrs LIMIT 1');
-            if (sdrsResult.rows.length > 0) {
-                sdrId = sdrsResult.rows[0].id;
+            if (req.user && req.user.id) {
+                // We need to check if this user ID exists in the sdrs table
+                const sdrCheck = await require('../config/db').query('SELECT id FROM sdrs WHERE user_id = $1', [req.user.id]);
+                if (sdrCheck.rows.length > 0) {
+                    sdrId = sdrCheck.rows[0].id;
+                } else {
+                    // Fallback to first SDR (legacy or manager viewing global)
+                    const sdrsResult = await require('../config/db').query('SELECT id FROM sdrs LIMIT 1');
+                    if (sdrsResult.rows.length > 0) {
+                        sdrId = sdrsResult.rows[0].id;
+                    } else {
+                        return res.json({ success: true, data: { calls: 0, emails: 0, whatsapp: 0, completed_leads: 0 } });
+                    }
+                }
             } else {
-                return res.json({ success: true, data: { calls: 0, emails: 0, whatsapp: 0, completed_leads: 0 } });
+                const sdrsResult = await require('../config/db').query('SELECT id FROM sdrs LIMIT 1');
+                if (sdrsResult.rows.length > 0) {
+                    sdrId = sdrsResult.rows[0].id;
+                } else {
+                    return res.json({ success: true, data: { calls: 0, emails: 0, whatsapp: 0, completed_leads: 0 } });
+                }
             }
         }
 
-        const stats = await statsService.getStats(sdrId);
+        const period = req.query.period || 'all';
+        const stats = await statsService.getStats(sdrId, period.toLowerCase());
         res.json({ success: true, data: stats });
     } catch (err) {
         next(err);
@@ -116,9 +133,17 @@ exports.sendManualReport = async (req, res, next) => {
         }
 
         const notificationScheduler = require('../services/notification_scheduler.service');
-        await notificationScheduler.sendManagementReport(config.webhook_url, sdr_ids);
-        
-        res.json({ success: true, message: 'Report triggered successfully' });
+        try {
+            await notificationScheduler.sendManagementReport(config.webhook_url, sdr_ids);
+            res.json({ success: true, message: 'Report triggered successfully' });
+        } catch (error) {
+            console.error('Error triggering manual report:', error);
+            res.status(500).json({ 
+                success: false, 
+                error: 'Falha ao enviar relatório para o Mattermost. Verifique a configuração do Webhook.',
+                details: error.message 
+            });
+        }
     } catch (err) {
         next(err);
     }

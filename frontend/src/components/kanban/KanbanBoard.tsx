@@ -355,7 +355,7 @@ export const KanbanBoard = ({
                 onDragEnd={handleDragEnd}
             >
                 <div className="grid grid-cols-5 gap-4 h-full">
-                    {columns.map((col) => (
+                    {columns.slice(0, 5).map((col) => (
                         <div key={col.id} className="flex flex-col min-h-0">
                             <KanbanColumn
                                 column={col}

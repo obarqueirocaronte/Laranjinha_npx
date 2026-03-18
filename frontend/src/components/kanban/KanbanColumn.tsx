@@ -51,24 +51,24 @@ const COLUMN_IDENTITY: Record<number, {
         subtitle: 'SCRIPT DE DESCOBERTA',
     },
     3: {
-        gradient: ['#8B5CF6', '#EC4899'],
-        cardBg: 'bg-violet-50/90 border-violet-200/50',
-        columnBg: 'bg-violet-100/20',
-        shadow: 'shadow-violet-300/30',
-        ring: 'ring-violet-300/40',
-        icon: '✉️',
-        label: 'Email',
-        subtitle: 'PROPOSTA E VALOR',
-    },
-    4: {
         gradient: ['#10B981', '#06B6D4'],
         cardBg: 'bg-emerald-50/90 border-emerald-200/50',
         columnBg: 'bg-emerald-100/20',
         shadow: 'shadow-emerald-300/30',
         ring: 'ring-emerald-300/40',
-        icon: 'wpp',   // special — will render WppIcon
+        icon: 'wpp',   // WhatsApp
         label: 'WhatsApp',
         subtitle: 'RELACIONAMENTO',
+    },
+    4: {
+        gradient: ['#8B5CF6', '#EC4899'],
+        cardBg: 'bg-violet-50/90 border-violet-200/50',
+        columnBg: 'bg-violet-100/20',
+        shadow: 'shadow-violet-300/30',
+        ring: 'ring-violet-300/40',
+        icon: '✉️',    // Email
+        label: 'Email',
+        subtitle: 'PROPOSTA E VALOR',
     },
     5: {
         gradient: ['#EF4444', '#F97316'],
@@ -77,8 +77,8 @@ const COLUMN_IDENTITY: Record<number, {
         shadow: 'shadow-red-300/30',
         ring: 'ring-red-300/40',
         icon: '🎯',
-        label: 'Cadência',
-        subtitle: 'FOLLOW-UP FINAL',
+        label: 'Qualified',
+        subtitle: 'OPORTUNIDADE REAL',
     },
 };
 
@@ -105,7 +105,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
         <div
             className={clsx(
                 'flex flex-col h-full rounded-t-[1.5rem] rounded-b-none px-1.5 pt-1.5 transition-all duration-300',
-                'backdrop-blur-md border-t border-x border-white/60 shadow-lg border-b-0 overflow-y-auto overflow-x-visible custom-scrollbar',
+                'backdrop-blur-md border-t border-x border-white/60 shadow-lg border-b-0 overflow-visible',
                 tok.columnBg,
                 tok.shadow,
                 'z-0 group/col relative transition-all duration-300',
@@ -118,13 +118,11 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
         >
             {/* ── Header ── */}
             <div 
-                className="sticky top-0 z-[50] py-4 backdrop-blur-3xl transition-all duration-300 group-hover/col:z-[99]"
+                className="shrink-0 z-[50] py-4 backdrop-blur-3xl transition-all duration-300 group-hover/col:z-[99]"
                 style={{ 
-                    marginTop: '-12px', 
-                    paddingTop: '12px',
-                    background: 'transparent',
-                    maskImage: 'linear-gradient(to bottom, black 90%, transparent 100%)',
-                    WebkitMaskImage: 'linear-gradient(to bottom, black 90%, transparent 100%)'
+                    marginTop: '-24px', 
+                    paddingTop: '24px',
+                    background: 'transparent'
                 }}
             >
                 <div
@@ -151,7 +149,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
                             className="font-black text-xl tracking-tight leading-none text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] truncate"
                             style={{ fontFamily: 'Comfortaa, cursive' }}
                         >
-                            {column.name}
+                            {column.position === 5 && column.name === 'Cadência' ? 'Qualified' : column.name}
                         </h3>
                     </div>
                 </div>
@@ -178,9 +176,16 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
             <div
                 ref={setNodeRef}
                 className={clsx(
-                    'flex-1 px-1.5 pt-6 pb-20 space-y-5 relative z-[10]',
+                    'flex-1 px-1.5 pt-2 pb-20 space-y-5 relative z-[10]',
+                    'overflow-y-auto overflow-x-visible custom-scrollbar',
                     isOver ? 'bg-white/25 ring-2 ring-white/50 ring-inset rounded-2xl' : 'bg-transparent'
                 )}
+                style={{
+                    maskImage: 'linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%)',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none'
+                } as any}
             >
                 <AnimatePresence mode="sync">
                     {leads.map((lead) => (

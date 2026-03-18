@@ -5,14 +5,38 @@ class StatsService {
      * Get stats for the current SDR.
      * For now, we'll return aggregate stats or per-SDR stats.
      */
-    async getStats(sdrId) {
+    async getStats(sdrId, period = 'all') {
+        let callWhere = ["sdr_id = $1"];
+        let intWhere = ["sdr_id = $1"];
+        let compWhere = ["sdr_id = $1"];
+
+        if (period === 'hoje') {
+            callWhere.push("created_at >= CURRENT_DATE");
+            intWhere.push("created_at >= CURRENT_DATE");
+            compWhere.push("completed_at >= CURRENT_DATE");
+        } else if (period === 'semana') {
+            const startOfWeek = "DATE_TRUNC('week', CURRENT_DATE)";
+            callWhere.push(`created_at >= ${startOfWeek}`);
+            intWhere.push(`created_at >= ${startOfWeek}`);
+            compWhere.push(`completed_at >= ${startOfWeek}`);
+        } else if (period === 'mes') {
+            const startOfMonth = "DATE_TRUNC('month', CURRENT_DATE)";
+            callWhere.push(`created_at >= ${startOfMonth}`);
+            intWhere.push(`created_at >= ${startOfMonth}`);
+            compWhere.push(`completed_at >= ${startOfMonth}`);
+        }
+
+        const dateFilterCall = callWhere.length > 0 ? `WHERE ${callWhere.join(' AND ')}` : '';
+        const dateFilterInt = intWhere.length > 0 ? `WHERE ${intWhere.join(' AND ')}` : '';
+        const dateFilterComp = compWhere.length > 0 ? `WHERE ${compWhere.join(' AND ')}` : '';
+
         // Query logs for accurate activity counts for this specific SDR
         const sql = `
             SELECT 
-                (SELECT COUNT(*)::integer FROM call_logs WHERE sdr_id = $1) as calls,
-                (SELECT COUNT(*)::integer FROM interactions_log WHERE sdr_id = $1 AND action_type = 'EMAIL_SENT') as emails,
-                (SELECT COUNT(*)::integer FROM interactions_log WHERE sdr_id = $1 AND action_type = 'WHATSAPP_SENT') as whatsapp,
-                (SELECT COUNT(*)::integer FROM cadence_completions WHERE sdr_id = $1) as completed_leads
+                (SELECT COUNT(*)::integer FROM call_logs ${dateFilterCall}) as calls,
+                (SELECT COUNT(*)::integer FROM interactions_log ${dateFilterInt} AND action_type = 'EMAIL_SENT') as emails,
+                (SELECT COUNT(*)::integer FROM interactions_log ${dateFilterInt} AND action_type = 'WHATSAPP_SENT') as whatsapp,
+                (SELECT COUNT(*)::integer FROM cadence_completions ${dateFilterComp}) as completed_leads
         `;
         const res = await db.query(sql, [sdrId]);
         return res.rows[0];

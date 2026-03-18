@@ -42,6 +42,10 @@ interface ControlHubProps {
     };
     onReset?: () => void;
     user?: { email: string; role?: 'manager' | 'sdr' | 'salesops'; profile_picture_url?: string | null } | null;
+    isOpen?: boolean;
+    onToggle?: (open: boolean) => void;
+    activeTab?: TabType;
+    onTabChange?: (tab: TabType) => void;
 }
 
 export const ControlHub: React.FC<ControlHubProps> = ({
@@ -49,11 +53,29 @@ export const ControlHub: React.FC<ControlHubProps> = ({
     completedCount = 0,
     activityStats = { calls: 0, emails: 0, whatsapp: 0 },
     onReset,
-    user
+    user,
+    isOpen: externalIsOpen,
+    onToggle,
+    activeTab: externalActiveTab,
+    onTabChange
 }) => {
     const tabs: TabType[] = ['Hoje', 'Semana', 'Mês'];
-    const [activeTab, setActiveTab] = useState<TabType>('Hoje');
-    const [isOpen, setIsOpen] = useState(true);
+    const [internalActiveTab, setInternalActiveTab] = useState<TabType>('Hoje');
+
+    const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
+    const setActiveTab = (tab: TabType) => {
+        if (onTabChange) onTabChange(tab);
+        else setInternalActiveTab(tab);
+    };
+
+    const [internalIsOpen, setInternalIsOpen] = useState(false);
+
+    const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+    const setIsOpen = (open: boolean) => {
+        if (onToggle) onToggle(open);
+        else setInternalIsOpen(open);
+    };
+
     const hubRef = useRef<HTMLDivElement>(null);
     const carouselRef = useRef<HTMLDivElement>(null);
     const [activeSection, setActiveSection] = useState(0);
@@ -90,7 +112,6 @@ export const ControlHub: React.FC<ControlHubProps> = ({
             }
         };
         if (isOpen) {
-            // Use click (not pointerdown) so dnd-kit's pointerdown events are unaffected
             document.addEventListener('click', handleClickOutside, { capture: false });
         }
         return () => document.removeEventListener('click', handleClickOutside, { capture: false } as EventListenerOptions);
@@ -142,6 +163,25 @@ export const ControlHub: React.FC<ControlHubProps> = ({
                         <div className="w-full bg-black/20 h-1.5 rounded-full mt-3 overflow-hidden">
                             <div className="bg-white w-[90%] h-full rounded-full shadow-sm" />
                         </div>
+                    </div>
+                </motion.div>
+
+                <motion.div
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    className="col-span-2 bg-amber-500 rounded-2xl p-4 shadow-lg shadow-amber-500/20 text-white relative overflow-hidden group flex items-center justify-between"
+                    style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' }}
+                >
+                    <div className="absolute -right-4 -bottom-4 opacity-10 rotate-12 group-hover:rotate-0 transition-transform"><Trophy size={88} /></div>
+
+                    <div className="relative z-10">
+                        <div className="text-3xl font-black mb-1 drop-shadow-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>{completedCount}</div>
+                        <div className="text-[11px] font-bold text-amber-100 tracking-wide">Resultados (Gols)</div>
+                    </div>
+
+                    <div className="text-right relative z-10 bg-white/10 px-3 py-2 rounded-xl backdrop-blur-sm border border-white/20">
+                        <div className="text-xl font-black drop-shadow-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>+12%</div>
+                        <div className="text-[9px] font-bold text-amber-100">Meta</div>
                     </div>
                 </motion.div>
 
@@ -263,44 +303,6 @@ export const ControlHub: React.FC<ControlHubProps> = ({
             className="fixed top-6 left-6 z-50 pointer-events-none"
         >
             <AnimatePresence mode="wait">
-                {/* Golden Trophy Trigger Button */}
-                {!isOpen && (
-                    <motion.button
-                        key="trigger"
-                        onClick={() => setIsOpen(true)}
-                        initial={{ opacity: 0, scale: 0.7, y: -10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.7, y: -10 }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-                        whileHover={{ scale: 1.08, rotate: -3 }}
-                        whileTap={{ scale: 0.93 }}
-                        className="pointer-events-auto relative flex items-center justify-center w-[52px] h-[52px] rounded-full cursor-pointer z-50 border border-yellow-200/80"
-                        style={{
-                            background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 60%, #FF8C00 100%)',
-                            boxShadow: '0 6px 20px rgba(255, 180, 0, 0.35), 0 2px 8px rgba(255,140,0,0.25)',
-                        }}
-                    >
-                        {/* Sheen */}
-                        <div className="absolute inset-0 rounded-full bg-white/20 pointer-events-none" />
-
-                        {/* Golden Trophy icon */}
-                        <motion.span
-                            animate={{ rotate: [0, 8, -5, 0] }}
-                            transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
-                            className="relative z-10 text-white drop-shadow-sm flex items-center justify-center"
-                        >
-                            <Trophy size={20} fill="currentColor" className="drop-shadow-sm opacity-90" strokeWidth={1.5} />
-                        </motion.span>
-
-                        {/* Completed count badge */}
-                        {completedCount > 0 && (
-                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 border-2 border-white text-[9px] font-bold text-white shadow-md">
-                                {completedCount}
-                            </span>
-                        )}
-                    </motion.button>
-                )}
-
                 {/* Expanded Panel */}
                 {isOpen && (
                     <motion.div
@@ -346,14 +348,11 @@ export const ControlHub: React.FC<ControlHubProps> = ({
                                     </span>
                                     <span
                                         className={cn(
-                                            "text-[10px] font-bold uppercase tracking-widest mt-0.5 px-2 py-0.5 rounded-md bg-white/10 w-fit",
-                                            user?.role === 'manager' ? "text-amber-300 border border-amber-400/30" : 
-                                            user?.role === 'salesops' ? "text-indigo-300 border border-indigo-400/30" : 
-                                            "text-white/80"
+                                            "text-[10px] font-bold uppercase tracking-widest mt-0.5 px-2 py-0.5 rounded-md bg-white/20 w-fit text-white border border-white/30"
                                         )}
                                         style={{ fontFamily: 'Comfortaa, cursive' }}
                                     >
-                                        {user?.role === 'manager' ? '⭐ Manager' : user?.role === 'salesops' ? '🛠️ SalesOps' : '🍊 SDR'}
+                                        🎯 {activeTab === 'Hoje' ? 'Hoje' : activeTab === 'Semana' ? 'Nesta Semana' : 'Neste Mês'} • Meus Resultados
                                     </span>
                                 </div>
                             </motion.div>

@@ -42,13 +42,14 @@ const ROLE_CONFIG: Record<string, { ring: string; bg: string; text: string; labe
     },
 };
 
-export const UserAvatar: React.FC<UserAvatarProps> = ({ 
+export const UserAvatar: React.FC<UserAvatarProps & { rounded?: boolean }> = ({ 
     src, 
     name, 
     size = 'md', 
     className,
     border = true,
-    role
+    role,
+    rounded = false
 }) => {
     const fallbackSeed = name || 'User';
     const dicebearUrl = `https://api.dicebear.com/7.x/notionists/svg?seed=${fallbackSeed}&backgroundColor=transparent`;
@@ -60,7 +61,8 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
     return (
         <div className="relative shrink-0 p-0.5">
             <div className={clsx(
-                "relative rounded-2xl overflow-hidden flex items-center justify-center bg-slate-100 transition-all duration-300",
+                "relative overflow-hidden flex items-center justify-center bg-slate-100 transition-all duration-300",
+                rounded ? "rounded-full" : "rounded-2xl",
                 SIZES[size],
                 border && "ring-2 ring-offset-2",
                 border && config?.ring,

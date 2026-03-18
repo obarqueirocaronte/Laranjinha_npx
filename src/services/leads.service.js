@@ -525,10 +525,12 @@ class LeadsService {
         const sql = `
             SELECT s.id, s.full_name, s.email,
                    COUNT(l.id) as total_leads,
-                   s.total_leads_assigned
+                   s.total_leads_assigned,
+                   u.profile_picture_url
             FROM sdrs s
+            LEFT JOIN users u ON s.user_id = u.id
             LEFT JOIN leads l ON l.assigned_sdr_id = s.id AND l.qualification_status = 'qualified'
-            GROUP BY s.id, s.full_name, s.email, s.total_leads_assigned
+            GROUP BY s.id, s.full_name, s.email, s.total_leads_assigned, u.profile_picture_url
             ORDER BY s.full_name
         `;
         const res = await db.query(sql);

@@ -182,7 +182,7 @@ export const ProfileZone: React.FC<ProfileZoneProps> = ({ onClose }) => {
     };
 
     return (
-        <div className="h-full flex flex-col font-sans max-w-4xl mx-auto p-8 w-full">
+        <div className="h-full flex flex-col font-sans max-w-6xl mx-auto p-8 w-full">
             {/* Header Area */}
             <div className="flex items-center gap-6 mb-10 pb-6 border-b border-orange-200/30">
                 <div className="flex items-center gap-4">

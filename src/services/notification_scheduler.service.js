@@ -67,6 +67,7 @@ class NotificationSchedulerService {
             console.log('✅ Management report sent successfully to Mattermost.');
         } catch (error) {
             console.error('❌ Failed to send Mattermost report:', error.message);
+            throw error; // Re-throw to allow controller to handle
         }
     }
 
