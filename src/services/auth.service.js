@@ -197,63 +197,6 @@ async function verifyEmail(token) {
  */
 async function login(email, password) {
     console.log(`[Auth] Attempting login for email: ${email}`);
-    // --- TEMPORARY DEV BYPASSES ---
-    // rodrigo.sergio@npx.com.br
-    if (email === 'rodrigo.sergio@npx.com.br' && password === '505050') {
-        console.log(`[Auth] Bypass hit for ${email}`);
-        const mockUser = {
-            id: '00000000-0000-0000-0000-000000000001',
-            email: 'rodrigo.sergio@npx.com.br',
-            is_admin: true,
-            role: 'salesops',
-            is_verified: true
-        };
-
-        const token = jwt.sign(
-            { userId: mockUser.id, email: mockUser.email, isAdmin: mockUser.is_admin },
-            process.env.JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        const bypassDbRes = await pool.query('SELECT profile_picture_url FROM users WHERE email = $1', [email]);
-        const dbPic = bypassDbRes.rows[0]?.profile_picture_url;
-
-        return {
-            token,
-            user: {
-                id: mockUser.id,
-                email: mockUser.email,
-                isAdmin: mockUser.is_admin,
-                role: mockUser.role,
-                profile_picture_url: dbPic
-            },
-        };
-    }
-
-    // visitante@npx.com.br (for external demos)
-    if (email === 'visitante@npx.com.br' && password === 'npx-visitante') {
-        const mockUser = {
-            id: '00000000-0000-0000-0000-000000000002',
-            email: 'visitante@npx.com.br',
-            is_admin: false,
-            is_verified: true
-        };
-
-        const token = jwt.sign(
-            { userId: mockUser.id, email: mockUser.email, isAdmin: mockUser.is_admin },
-            process.env.JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        return {
-            token,
-            user: {
-                id: mockUser.id,
-                email: mockUser.email,
-                isAdmin: mockUser.is_admin,
-            },
-        };
-    }
     // --- END BYPASSES ---
 
     // Find user
