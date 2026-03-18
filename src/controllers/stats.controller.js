@@ -105,3 +105,21 @@ exports.getStatsHistory = async (req, res, next) => {
         next(err);
     }
 };
+
+exports.sendManualReport = async (req, res, next) => {
+    try {
+        const { sdr_ids } = req.body;
+        const config = await statsService.getReportConfig();
+        
+        if (!config || !config.webhook_url) {
+            return res.status(400).json({ success: false, error: 'Mattermost Webhook not configured' });
+        }
+
+        const notificationScheduler = require('../services/notification_scheduler.service');
+        await notificationScheduler.sendManagementReport(config.webhook_url, sdr_ids);
+        
+        res.json({ success: true, message: 'Report triggered successfully' });
+    } catch (err) {
+        next(err);
+    }
+};

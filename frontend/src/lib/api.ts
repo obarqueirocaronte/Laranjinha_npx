@@ -150,8 +150,15 @@ export const leadsAPI = {
     getAllSDRs: () =>
         api.get('/leads/sdrs').then(res => res.data),
 
-    bulkAssignWithCadence: (cadence_name: string, filter_type: string, filter_value: string | undefined, sdr_assignments: Array<{ sdr_id: string; percentage: number }>, scheduling_rule: string) =>
-        api.post('/leads/cadence/bulk-assign', { cadence_name, filter_type, filter_value, sdr_assignments, scheduling_rule }).then(res => res.data),
+    bulkAssignWithCadence: (cadenceName: string, filterType: string, filterValue: string | undefined, sdrAssignments: any[], schedulingRule: string, totalSteps?: number) =>
+        api.post('/leads/cadence/bulk-assign', {
+            cadenceName,
+            filterType,
+            filterValue,
+            sdrAssignments,
+            schedulingRule,
+            total_steps: totalSteps
+        }).then(res => res.data),
 
     updateLead: (id: string, data: Partial<any>) =>
         api.patch(`/leads/${id}`, data).then(res => res.data),
@@ -229,6 +236,9 @@ export const statsAPI = {
 
     getStatsHistory: () =>
         api.get('/stats/history').then(res => res.data),
+
+    sendManualReport: (sdr_ids?: string[]) =>
+        api.post('/stats/report/manual', { sdr_ids }).then(res => res.data),
 };
 
 // Aurora Chat API

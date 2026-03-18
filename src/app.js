@@ -94,12 +94,21 @@ app.use((req, res, next) => {
 
 // Error handling
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error('❌ [SERVER ERROR]', {
+        message: err.message,
+        stack: err.stack,
+        path: req.path,
+        method: req.method,
+        query: req.query,
+        body: req.method !== 'GET' ? req.body : undefined,
+        user: req.user?.id
+    });
+
     res.status(500).json({
         success: false,
         error: {
             code: 'INTERNAL_ERROR',
-            message: 'Something went wrong!',
+            message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong!',
         },
     });
 });

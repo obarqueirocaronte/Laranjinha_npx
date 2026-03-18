@@ -218,30 +218,37 @@ class LeadsService {
     }
 
     async getLeadById(id) {
-        // Basic fetch + join for readability
-        const sql = `
-      SELECT 
-             l.*, 
-             s.full_name as sdr_name, 
-             s.email as sdr_email,
-             pc.name as column_name,
-             pc.color as column_color,
-             u.profile_picture_url as sdr_profile_picture_url,
-             u.role as sdr_role,
-             (l.metadata->'tags') as tags,
-             LEAST(COALESCE((
-                 SELECT COUNT(*) * 25
-                 FROM interactions_log il 
-                 WHERE il.lead_id = l.id
-             ), 0), 100) as cadence_progress
-      FROM leads l
-      LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
-      LEFT JOIN users u ON s.user_id = u.id
-      LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
-      WHERE l.id = $1
-    `;
-        const res = await db.query(sql, [id]);
-        return res.rows[0];
+        try {
+            const sql = `
+          SELECT 
+                 l.*, 
+                 s.full_name as sdr_name, 
+                 s.email as sdr_email,
+                 pc.name as column_name,
+                 pc.color as column_color,
+                 u.profile_picture_url as sdr_profile_picture_url,
+                 u.role as sdr_role,
+                 (l.metadata->'tags') as tags,
+                 LEAST(COALESCE((
+                     SELECT (COUNT(*)::numeric * 100) / NULLIF(COALESCE((l.metadata->>'total_steps')::numeric, 4), 0)
+                     FROM (
+                         SELECT lead_id FROM call_logs WHERE lead_id = l.id
+                         UNION ALL
+                         SELECT lead_id FROM interactions_log WHERE lead_id = l.id
+                     ) interactions
+                 ), 0), 100) as cadence_progress
+          FROM leads l
+          LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
+          LEFT JOIN users u ON s.user_id = u.id
+          LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
+          WHERE l.id = $1
+        `;
+            const res = await db.query(sql, [id]);
+            return res.rows[0];
+        } catch (err) {
+            console.error('[LeadsService] getLeadById ERROR:', { id, error: err.message });
+            throw err;
+        }
     }
 
     async createLeadsBatch(leadsData) {
@@ -290,9 +297,12 @@ class LeadsService {
                 u.role as sdr_role,
                 (l.metadata->'tags') as tags,
                 LEAST(COALESCE((
-                    SELECT COUNT(*) * 25
-                    FROM interactions_log il 
-                    WHERE il.lead_id = l.id
+                    SELECT (COUNT(*)::numeric * 100) / NULLIF(COALESCE((l.metadata->>'total_steps')::numeric, 4), 0)
+                    FROM (
+                        SELECT lead_id FROM call_logs WHERE lead_id = l.id
+                        UNION ALL
+                        SELECT lead_id FROM interactions_log WHERE lead_id = l.id
+                    ) interactions
                 ), 0), 100) as cadence_progress
             FROM leads l
             LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
@@ -334,8 +344,13 @@ class LeadsService {
 
         queryStr += ` ORDER BY l.created_at DESC LIMIT 100`;
 
-        const res = await db.query(queryStr, params);
-        return res.rows;
+        try {
+            const res = await db.query(queryStr, params);
+            return res.rows;
+        } catch (err) {
+            console.error('[LeadsService] getLeadsBySegment ERROR:', { type, value, error: err.message, query: queryStr });
+            throw err;
+        }
     }
     /**
      * Assign a lead to an SDR and a Cadence
@@ -523,7 +538,7 @@ class LeadsService {
     /**
      * Bulk assign leads (by filter) to SDRs with a cadence — final wizard step
      */
-    async bulkAssignWithCadence(cadenceName, filterType, filterValue, sdrAssignments, schedulingRule) {
+    async bulkAssignWithCadence(cadenceName, filterType, filterValue, sdrAssignments, schedulingRule, data = {}) {
         // sdrAssignments: [{ sdr_id, percentage }] to distribute among SDRs
         const client = await db.getClient();
         try {
@@ -581,10 +596,13 @@ class LeadsService {
                     SET assigned_sdr_id = $1,
                         cadence_name = $2,
                         qualification_status = 'qualified',
-                        metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('scheduling_rule', $4::text),
+                        metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object(
+                            'scheduling_rule', $4::text,
+                            'total_steps', $5::int
+                        ),
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = ANY($3::uuid[])
-                `, [sdr_id, cadenceName, batch, schedulingRule]);
+                `, [sdr_id, cadenceName, batch, schedulingRule, data.total_steps || 4]);
 
                 await client.query(`
                     UPDATE sdrs
@@ -683,16 +701,23 @@ class LeadsService {
                 u.role as sdr_role,
                 (l.metadata->'tags') as tags,
                 LEAST(COALESCE((
-                    SELECT COUNT(*) * 25
-                    FROM interactions_log il 
-                    WHERE il.lead_id = l.id
+                    SELECT (COUNT(*)::numeric * 100) / NULLIF(COALESCE((l.metadata->>'total_steps')::numeric, 4), 0)
+                    FROM (
+                        SELECT lead_id FROM call_logs WHERE lead_id = l.id
+                        UNION ALL
+                        SELECT lead_id FROM interactions_log WHERE lead_id = l.id
+                    ) interactions
                 ), 0), 100) as cadence_progress
             FROM leads l
             LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
             LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
             LEFT JOIN users u ON s.user_id = u.id
-            WHERE l.status NOT IN ('qualified', 'archived')
+            WHERE l.status NOT IN ('qualified', 'archived', 'lost')
               AND l.assigned_sdr_id IS NOT NULL
+              AND (
+                (l.metadata->>'next_contact_at') IS NULL 
+                OR (l.metadata->>'next_contact_at')::timestamp <= CURRENT_TIMESTAMP
+              )
         `;
         const params = [];
 
@@ -714,8 +739,13 @@ class LeadsService {
 
         queryStr += ` ORDER BY l.updated_at DESC LIMIT 500`;
 
-        const res = await db.query(queryStr, params);
-        return res.rows;
+        try {
+            const res = await db.query(queryStr, params);
+            return res.rows;
+        } catch (err) {
+            console.error('[LeadsService] getActiveLeads ERROR:', { error: err.message, query: queryStr });
+            throw err;
+        }
     }
 
     async bulkUpdateLeads(action, leadIds) {
@@ -831,24 +861,34 @@ class LeadsService {
     }
     async logCallInteraction(leadId, data) {
         const { sdr_id, outcome, notes = '' } = data;
+        
+        // Resolve userId from sdr_id because call_logs FK points to users.id
+        const sdrRes = await db.query('SELECT user_id FROM sdrs WHERE id = $1', [sdr_id]);
+        const targetId = sdrRes.rows[0]?.user_id || sdr_id;
+
         const sql = `
             INSERT INTO call_logs (lead_id, sdr_id, outcome, notes)
             VALUES ($1, $2, $3, $4)
             RETURNING *
         `;
-        return db.query(sql, [leadId, sdr_id, outcome, notes]);
+        return db.query(sql, [leadId, targetId, outcome, notes]);
     }
 
     async getLeadInteractions(id) {
         const sql = `
             SELECT 'call' as type, outcome as result, notes, cl.created_at, s.full_name as author_name
             FROM call_logs cl
-            LEFT JOIN sdrs s ON cl.sdr_id = s.id
+            LEFT JOIN sdrs s ON cl.sdr_id = s.user_id
             WHERE cl.lead_id = $1
+            UNION ALL
+            SELECT 'interaction' as type, action_type as result, content_snapshot as notes, il.created_at, s.full_name as author_name
+            FROM interactions_log il
+            LEFT JOIN sdrs s ON il.sdr_id = s.id
+            WHERE il.lead_id = $1
             UNION ALL
             SELECT 'cadence_completion' as type, final_outcome as result, notes, completed_at as created_at, s.full_name as author_name
             FROM cadence_completions cc
-            LEFT JOIN sdrs s ON cc.sdr_id = s.id
+            LEFT JOIN sdrs s ON cc.sdr_id = s.user_id
             WHERE cc.lead_id = $1
             UNION ALL
             SELECT 'schedule' as type, status as result, notes, sch.created_at, s.full_name as author_name
@@ -867,13 +907,17 @@ class LeadsService {
         try {
             await client.query('BEGIN');
 
+            // Resolve userId from sdr_id because cadence_completions FK points to users.id
+            const sdrRes = await client.query('SELECT user_id FROM sdrs WHERE id = $1', [sdr_id]);
+            const targetId = sdrRes.rows[0]?.user_id || sdr_id;
+
             // 1. Log completion
             const completionSql = `
                 INSERT INTO cadence_completions (lead_id, sdr_id, notes, final_outcome)
                 VALUES ($1, $2, $3, $4)
                 RETURNING *
             `;
-            const completionRes = await client.query(completionSql, [leadId, sdr_id, notes, final_outcome]);
+            const completionRes = await client.query(completionSql, [leadId, targetId, notes, final_outcome]);
 
             // 2. Update lead status if it's an opportunity or rejected
             let status = 'active';

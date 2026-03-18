@@ -259,13 +259,20 @@ export const CadenceZone: React.FC<CadenceZoneProps> = ({ onClose }) => {
     const handleApply = async () => {
         if (!activeFilter || assignments.length === 0) return;
         setIsApplying(true);
+
+        // Calculate total steps (sum of rolls for active channels)
+        const totalSteps = (config.phone.active ? config.phone.rolls : 0) +
+            (config.whatsapp.active ? config.whatsapp.rolls : 0) +
+            (config.email.active ? config.email.rolls : 0);
+
         try {
             const r = await leadsAPI.bulkAssignWithCadence(
                 config.name,
                 activeFilter.type,
                 activeFilter.type !== 'all_pending' ? activeFilter.label : undefined,
                 assignments,
-                config.schedulingRule || 'Sugerido Pela Plataforma'
+                config.schedulingRule || 'Sugerido Pela Plataforma',
+                totalSteps
             );
             if (r.success) setResult(r.data);
         } catch (err: any) {

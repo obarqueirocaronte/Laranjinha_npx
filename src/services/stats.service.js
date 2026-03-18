@@ -74,7 +74,7 @@ class StatsService {
      * Now includes individual breakdown with goals, active leads, and pipeline moves.
      * Supports filtering by period: 'hoje', 'semana', 'mes', 'tudo'.
      */
-    async getGlobalStats(period = 'tudo') {
+    async getGlobalStats(period = 'all', sdrIds = []) {
         let callWhere = [];
         let intWhere = [];
         let compWhere = [];
@@ -105,6 +105,12 @@ class StatsService {
         const dateFilterComp = compWhere.length > 0 ? `WHERE ${compWhere.join(' AND ')}` : '';
         const andFilterComp = compWhere.length > 0 ? `AND ${compWhere.join(' AND ')}` : '';
         const dateFilterMove = moveWhere.length > 0 ? `WHERE ${moveWhere.join(' AND ')}` : '';
+
+        // Add SDR filtering if provided
+        let sdrFilter = '';
+        if (sdrIds && sdrIds.length > 0) {
+            sdrFilter = `AND s.id IN (${sdrIds.map((_, i) => `$${i + 1}`).join(',')})`;
+        }
 
         // 1. Get activity stats from logs
         const activitySql = `
@@ -165,12 +171,12 @@ class StatsService {
             FROM sdrs s
             LEFT JOIN movement_counts mc ON s.id = mc.moved_by_sdr_id
             LEFT JOIN active_counts ac ON s.id = ac.assigned_sdr_id
-            WHERE s.is_active = true
+            WHERE s.is_active = true ${sdrFilter}
             ORDER BY s.full_name ASC
         `;
         
         console.log('[DEBUG] sdrSql:', sdrSql);
-        const sdrRes = await db.query(sdrSql);
+        const sdrRes = await db.query(sdrSql, sdrIds && sdrIds.length > 0 ? sdrIds : []);
 
         return {
             summary: {

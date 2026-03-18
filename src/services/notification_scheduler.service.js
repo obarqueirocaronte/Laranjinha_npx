@@ -48,9 +48,9 @@ class NotificationSchedulerService {
     /**
      * Formats and sends the "Liquid Glass" style report via Message Attachments
      */
-    async sendManagementReport(webhookUrl) {
+    async sendManagementReport(webhookUrl, sdrIds = []) {
         try {
-            const stats = await statsService.getGlobalStats();
+            const stats = await statsService.getGlobalStats('all', sdrIds);
             const { summary, columns, sdrs } = stats;
 
             const message = this.buildLiquidGlassMessage(summary, columns, sdrs);

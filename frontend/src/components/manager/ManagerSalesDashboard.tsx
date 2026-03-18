@@ -87,6 +87,8 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
     const [stats, setStats] = useState({ calls: 0, emails: 0, whatsapp: 0, completed_leads: 0 });
     const [period, setPeriod] = useState<PeriodId>('tudo');
     const [history, setHistory] = useState<StatsHistory | null>(null);
+    const [selectedAuditSdrIds, setSelectedAuditSdrIds] = useState<string[]>([]);
+    const [isSendingAudit, setIsSendingAudit] = useState(false);
 
     const filterByPeriod = useCallback((dateStr: string) => {
         if (period === 'tudo') return true;
@@ -406,6 +408,27 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                         sdrs={enrichedSdrs} 
                                         user={user} 
                                         onOpenStats={() => setShowStats(true)}
+                                        selectedAuditSdrIds={selectedAuditSdrIds}
+                                        onToggleAuditSdr={(id) => {
+                                            setSelectedAuditSdrIds(prev => 
+                                                prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+                                            );
+                                        }}
+                                        onSendAudit={async () => {
+                                            if (selectedAuditSdrIds.length === 0) return;
+                                            setIsSendingAudit(true);
+                                            try {
+                                                await statsAPI.sendManualReport(selectedAuditSdrIds);
+                                                alert('✅ Auditoria enviada para o Mattermost com sucesso!');
+                                                setSelectedAuditSdrIds([]);
+                                            } catch (e: any) {
+                                                console.error('Failed to send audit:', e);
+                                                alert('❌ Falha ao enviar auditoria: ' + (e.response?.data?.error || e.message));
+                                            } finally {
+                                                setIsSendingAudit(false);
+                                            }
+                                        }}
+                                        isSendingAudit={isSendingAudit}
                                     />
                                 )}
                                 {activeTab === 'acompanhamento' && (
@@ -822,7 +845,11 @@ const ResumoTab: React.FC<{
     sdrs: SDR[];
     user: any;
     onOpenStats?: () => void;
-}> = ({ stats, activeLeads, allLeads, sdrs, user, onOpenStats }) => {
+    selectedAuditSdrIds: string[];
+    onToggleAuditSdr: (id: string) => void;
+    onSendAudit: () => void;
+    isSendingAudit: boolean;
+}> = ({ stats, activeLeads, allLeads, sdrs, user, onOpenStats, selectedAuditSdrIds, onToggleAuditSdr, onSendAudit, isSendingAudit }) => {
     const totalLeads = allLeads.length + activeLeads.length;
     const inCadence = activeLeads.length;
     const conversionRate = totalLeads > 0 ? Math.round((stats.completed_leads / totalLeads) * 100) : 0;
@@ -872,15 +899,39 @@ const ResumoTab: React.FC<{
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {sdrs.length > 0 ? (
                     <GlassCard className="md:col-span-2">
-                        <h3 className="text-sm font-black text-slate-700 mb-4" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                            SDRs Ativos no Período
-                        </h3>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-black text-slate-700" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                SDRs Ativos no Período
+                            </h3>
+                            {selectedAuditSdrIds.length > 0 && (
+                                <motion.button
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    onClick={onSendAudit}
+                                    disabled={isSendingAudit}
+                                    className={cn(
+                                        "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg",
+                                        isSendingAudit ? "bg-slate-400 cursor-wait" : "bg-gradient-to-r from-orange-500 to-rose-500 text-white hover:shadow-orange-500/30"
+                                    )}
+                                    style={{ fontFamily: 'Comfortaa, cursive' }}
+                                >
+                                    <Send size={12} />
+                                    {isSendingAudit ? 'Enviando...' : `Gerar Auditoria (${selectedAuditSdrIds.length}) no Mattermost`}
+                                </motion.button>
+                            )}
+                        </div>
                         <div className="space-y-3">
                             {sdrs.map((sdr: SDR) => {
                                 const sdrLeadsCount = sdr.leads ?? 0;
                                 return (
                                     <div key={sdr.id} className="flex items-center justify-between py-3 px-4 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all hover:border-orange-200 hover:shadow-md">
                                         <div className="flex items-center gap-4">
+                                            <input 
+                                                type="checkbox"
+                                                checked={selectedAuditSdrIds.includes(sdr.id)}
+                                                onChange={() => onToggleAuditSdr(sdr.id)}
+                                                className="w-4 h-4 rounded-lg border-slate-200 text-orange-500 focus:ring-orange-500 transition-colors cursor-pointer"
+                                            />
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-xs font-black shadow-md border-2 border-white">
                                                 {sdr.email?.charAt(0).toUpperCase() || 'S'}
                                             </div>
