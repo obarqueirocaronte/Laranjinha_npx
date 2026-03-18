@@ -150,14 +150,14 @@ export const leadsAPI = {
     getAllSDRs: () =>
         api.get('/leads/sdrs').then(res => res.data),
 
-    bulkAssignWithCadence: (cadenceName: string, filterType: string, filterValue: string | undefined, sdrAssignments: any[], schedulingRule: string, totalSteps?: number) =>
+    bulkAssignWithCadence: (cadence_name: string, filter_type: string, filter_value: string | undefined, sdr_assignments: any[], scheduling_rule: string, total_steps?: number) =>
         api.post('/leads/cadence/bulk-assign', {
-            cadenceName,
-            filterType,
-            filterValue,
-            sdrAssignments,
-            schedulingRule,
-            total_steps: totalSteps
+            cadence_name,
+            filter_type,
+            filter_value,
+            sdr_assignments,
+            scheduling_rule,
+            total_steps
         }).then(res => res.data),
 
     updateLead: (id: string, data: Partial<any>) =>
