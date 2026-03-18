@@ -75,36 +75,32 @@ class StatsService {
      * Supports filtering by period: 'hoje', 'semana', 'mes', 'tudo'.
      */
     async getGlobalStats(period = 'tudo') {
-        let whereClauses = [];
         let callWhere = [];
         let intWhere = [];
         let compWhere = [];
         let moveWhere = [];
 
         if (period === 'hoje') {
-            whereClauses.push("created_at >= CURRENT_DATE");
             callWhere.push("created_at >= CURRENT_DATE");
             intWhere.push("created_at >= CURRENT_DATE");
             compWhere.push("completed_at >= CURRENT_DATE");
             moveWhere.push("moved_at >= CURRENT_DATE");
         } else if (period === 'semana') {
-            whereClauses.push("created_at >= DATE_TRUNC('week', CURRENT_DATE)");
-            callWhere.push("created_at >= DATE_TRUNC('week', CURRENT_DATE)");
-            intWhere.push("created_at >= DATE_TRUNC('week', CURRENT_DATE)");
-            compWhere.push("completed_at >= DATE_TRUNC('week', CURRENT_DATE)");
-            moveWhere.push("moved_at >= DATE_TRUNC('week', CURRENT_DATE)");
+            const startOfWeek = "DATE_TRUNC('week', CURRENT_DATE)";
+            callWhere.push(`created_at >= ${startOfWeek}`);
+            intWhere.push(`created_at >= ${startOfWeek}`);
+            compWhere.push(`completed_at >= ${startOfWeek}`);
+            moveWhere.push(`moved_at >= ${startOfWeek}`);
         } else if (period === 'mes') {
-            whereClauses.push("created_at >= DATE_TRUNC('month', CURRENT_DATE)");
-            callWhere.push("created_at >= DATE_TRUNC('month', CURRENT_DATE)");
-            intWhere.push("created_at >= DATE_TRUNC('month', CURRENT_DATE)");
-            compWhere.push("completed_at >= DATE_TRUNC('month', CURRENT_DATE)");
-            moveWhere.push("moved_at >= DATE_TRUNC('month', CURRENT_DATE)");
+            const startOfMonth = "DATE_TRUNC('month', CURRENT_DATE)";
+            callWhere.push(`created_at >= ${startOfMonth}`);
+            intWhere.push(`created_at >= ${startOfMonth}`);
+            compWhere.push(`completed_at >= ${startOfMonth}`);
+            moveWhere.push(`moved_at >= ${startOfMonth}`);
         }
 
-        const dateFilterMain = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
         const dateFilterCall = callWhere.length > 0 ? `WHERE ${callWhere.join(' AND ')}` : '';
         const andFilterCall = callWhere.length > 0 ? `AND ${callWhere.join(' AND ')}` : '';
-        const dateFilterInt = intWhere.length > 0 ? `WHERE ${intWhere.join(' AND ')}` : '';
         const andFilterInt = intWhere.length > 0 ? `AND ${intWhere.join(' AND ')}` : '';
         const dateFilterComp = compWhere.length > 0 ? `WHERE ${compWhere.join(' AND ')}` : '';
         const andFilterComp = compWhere.length > 0 ? `AND ${compWhere.join(' AND ')}` : '';
@@ -118,6 +114,8 @@ class StatsService {
                 (SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'WHATSAPP_SENT' ${andFilterInt}) as total_whatsapp,
                 (SELECT COUNT(*)::integer FROM cadence_completions ${dateFilterComp}) as total_completed
         `;
+        
+        console.log('[DEBUG] activitySql:', activitySql);
         const activityRes = await db.query(activitySql);
 
         // 2. Get lead counts per column from leads table
@@ -170,6 +168,8 @@ class StatsService {
             WHERE s.is_active = true
             ORDER BY s.full_name ASC
         `;
+        
+        console.log('[DEBUG] sdrSql:', sdrSql);
         const sdrRes = await db.query(sdrSql);
 
         return {
