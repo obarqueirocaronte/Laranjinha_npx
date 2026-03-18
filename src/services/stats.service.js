@@ -75,32 +75,48 @@ class StatsService {
      * Supports filtering by period: 'hoje', 'semana', 'mes', 'tudo'.
      */
     async getGlobalStats(period = 'tudo') {
-        let dateFilter = '';
-        let andDateFilter = '';
-        
+        let whereClauses = [];
+        let callWhere = [];
+        let intWhere = [];
+        let compWhere = [];
+        let moveWhere = [];
+
         if (period === 'hoje') {
-            dateFilter = "WHERE created_at >= CURRENT_DATE";
-            andDateFilter = "AND created_at >= CURRENT_DATE";
+            whereClauses.push("created_at >= CURRENT_DATE");
+            callWhere.push("created_at >= CURRENT_DATE");
+            intWhere.push("created_at >= CURRENT_DATE");
+            compWhere.push("completed_at >= CURRENT_DATE");
+            moveWhere.push("moved_at >= CURRENT_DATE");
         } else if (period === 'semana') {
-            dateFilter = "WHERE created_at >= DATE_TRUNC('week', CURRENT_DATE)";
-            andDateFilter = "AND created_at >= DATE_TRUNC('week', CURRENT_DATE)";
+            whereClauses.push("created_at >= DATE_TRUNC('week', CURRENT_DATE)");
+            callWhere.push("created_at >= DATE_TRUNC('week', CURRENT_DATE)");
+            intWhere.push("created_at >= DATE_TRUNC('week', CURRENT_DATE)");
+            compWhere.push("completed_at >= DATE_TRUNC('week', CURRENT_DATE)");
+            moveWhere.push("moved_at >= DATE_TRUNC('week', CURRENT_DATE)");
         } else if (period === 'mes') {
-            dateFilter = "WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)";
-            andDateFilter = "AND created_at >= DATE_TRUNC('month', CURRENT_DATE)";
+            whereClauses.push("created_at >= DATE_TRUNC('month', CURRENT_DATE)");
+            callWhere.push("created_at >= DATE_TRUNC('month', CURRENT_DATE)");
+            intWhere.push("created_at >= DATE_TRUNC('month', CURRENT_DATE)");
+            compWhere.push("completed_at >= DATE_TRUNC('month', CURRENT_DATE)");
+            moveWhere.push("moved_at >= DATE_TRUNC('month', CURRENT_DATE)");
         }
 
-        // Adjust for different table column names if necessary
-        const altDateFilter = dateFilter.replace('created_at', 'moved_at');
-        const altAndDateFilter = andDateFilter.replace('created_at', 'moved_at');
-        const completionAndDateFilter = andDateFilter.replace('created_at', 'completed_at');
+        const dateFilterMain = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+        const dateFilterCall = callWhere.length > 0 ? `WHERE ${callWhere.join(' AND ')}` : '';
+        const andFilterCall = callWhere.length > 0 ? `AND ${callWhere.join(' AND ')}` : '';
+        const dateFilterInt = intWhere.length > 0 ? `WHERE ${intWhere.join(' AND ')}` : '';
+        const andFilterInt = intWhere.length > 0 ? `AND ${intWhere.join(' AND ')}` : '';
+        const dateFilterComp = compWhere.length > 0 ? `WHERE ${compWhere.join(' AND ')}` : '';
+        const andFilterComp = compWhere.length > 0 ? `AND ${compWhere.join(' AND ')}` : '';
+        const dateFilterMove = moveWhere.length > 0 ? `WHERE ${moveWhere.join(' AND ')}` : '';
 
-        // 1. Get activity stats from logs (more accurate than incremental counters)
+        // 1. Get activity stats from logs
         const activitySql = `
             SELECT 
-                (SELECT COUNT(*)::integer FROM call_logs ${dateFilter}) as total_calls,
-                (SELECT COUNT(*)::integer FROM interactions_log ${dateFilter} ${dateFilter ? 'AND' : 'WHERE'} action_type = 'EMAIL_SENT') as total_emails,
-                (SELECT COUNT(*)::integer FROM interactions_log ${dateFilter} ${dateFilter ? 'AND' : 'WHERE'} action_type = 'WHATSAPP_SENT') as total_whatsapp,
-                (SELECT COUNT(*)::integer FROM cadence_completions ${dateFilter ? completionAndDateFilter.replace('AND', 'WHERE') : ''}) as total_completed
+                (SELECT COUNT(*)::integer FROM call_logs ${dateFilterCall}) as total_calls,
+                (SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'EMAIL_SENT' ${andFilterInt}) as total_emails,
+                (SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'WHATSAPP_SENT' ${andFilterInt}) as total_whatsapp,
+                (SELECT COUNT(*)::integer FROM cadence_completions ${dateFilterComp}) as total_completed
         `;
         const activityRes = await db.query(activitySql);
 
@@ -114,17 +130,17 @@ class StatsService {
         `;
         const columnRes = await db.query(columnSql);
 
-        // 3. Get total active leads across the entire board
+        // 3. Get total active leads
         const activeLeadsSql = `SELECT COUNT(id)::integer as count FROM leads WHERE status = 'active'`;
         const activeLeadsRes = await db.query(activeLeadsSql);
         const totalActiveLeads = activeLeadsRes.rows[0].count;
 
-        // 4. Get individual SDR breakdown (stats from logs + goals + leads + movement)
+        // 4. Get individual SDR breakdown
         const sdrSql = `
             WITH movement_counts AS (
                 SELECT moved_by_sdr_id, COUNT(id) as movements
                 FROM lead_pipeline_history
-                ${altDateFilter}
+                ${dateFilterMove}
                 GROUP BY moved_by_sdr_id
             ),
             active_counts AS (
@@ -140,10 +156,10 @@ class StatsService {
                 s.total_leads_assigned,
                 COALESCE(ac.pending_leads, 0)::integer as pending_leads,
                 COALESCE(mc.movements, 0)::integer as pipeline_movements,
-                (SELECT COUNT(*)::integer FROM call_logs cl WHERE cl.sdr_id = s.id ${andDateFilter}) as calls,
-                (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'EMAIL_SENT' ${andDateFilter}) as emails,
-                (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'WHATSAPP_SENT' ${andDateFilter}) as whatsapp,
-                (SELECT COUNT(*)::integer FROM cadence_completions cc WHERE cc.sdr_id = s.id ${completionAndDateFilter}) as completed,
+                (SELECT COUNT(*)::integer FROM call_logs cl WHERE cl.sdr_id = s.id ${andFilterCall}) as calls,
+                (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'EMAIL_SENT' ${andFilterInt}) as emails,
+                (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'WHATSAPP_SENT' ${andFilterInt}) as whatsapp,
+                (SELECT COUNT(*)::integer FROM cadence_completions cc WHERE cc.sdr_id = s.id ${andFilterComp}) as completed,
                 s.goal_calls,
                 s.goal_emails,
                 s.goal_whatsapp,
