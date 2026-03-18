@@ -69,14 +69,32 @@ class StatsService {
      * Get aggregate stats for all SDRs and lead counts per column.
      * Now includes individual breakdown with goals, active leads, and pipeline moves.
      */
-    async getGlobalStats() {
+    /**
+     * Get aggregate stats for all SDRs and lead counts per column.
+     * Now includes individual breakdown with goals, active leads, and pipeline moves.
+     * Supports filtering by period: 'hoje', 'semana', 'mes', 'tudo'.
+     */
+    async getGlobalStats(period = 'tudo') {
+        let dateFilter = '';
+        if (period === 'hoje') {
+            dateFilter = "WHERE created_at >= CURRENT_DATE";
+        } else if (period === 'semana') {
+            dateFilter = "WHERE created_at >= DATE_TRUNC('week', CURRENT_DATE)";
+        } else if (period === 'mes') {
+            dateFilter = "WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)";
+        }
+
+        // Adjust for different table column names if necessary
+        const altDateFilter = dateFilter.replace('created_at', 'moved_at');
+        const completionDateFilter = dateFilter.replace('created_at', 'completed_at');
+
         // 1. Get activity stats from logs (more accurate than incremental counters)
         const activitySql = `
             SELECT 
-                (SELECT COUNT(*)::integer FROM call_logs) as total_calls,
-                (SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'EMAIL_SENT') as total_emails,
-                (SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'WHATSAPP_SENT') as total_whatsapp,
-                (SELECT COUNT(*)::integer FROM cadence_completions) as total_completed
+                (SELECT COUNT(*)::integer FROM call_logs ${dateFilter}) as total_calls,
+                (SELECT COUNT(*)::integer FROM interactions_log ${dateFilter} AND action_type = 'EMAIL_SENT') as total_emails,
+                (SELECT COUNT(*)::integer FROM interactions_log ${dateFilter} AND action_type = 'WHATSAPP_SENT') as total_whatsapp,
+                (SELECT COUNT(*)::integer FROM cadence_completions ${completionDateFilter}) as total_completed
         `;
         const activityRes = await db.query(activitySql);
 
@@ -100,6 +118,7 @@ class StatsService {
             WITH movement_counts AS (
                 SELECT moved_by_sdr_id, COUNT(id) as movements
                 FROM lead_pipeline_history
+                ${altDateFilter}
                 GROUP BY moved_by_sdr_id
             ),
             active_counts AS (
@@ -109,14 +128,16 @@ class StatsService {
                 GROUP BY assigned_sdr_id
             )
             SELECT 
+                s.id,
                 s.full_name,
+                s.email,
                 s.total_leads_assigned,
                 COALESCE(ac.pending_leads, 0)::integer as pending_leads,
                 COALESCE(mc.movements, 0)::integer as pipeline_movements,
-                (SELECT COUNT(*)::integer FROM call_logs cl WHERE cl.sdr_id = s.id) as calls,
-                (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'EMAIL_SENT') as emails,
-                (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'WHATSAPP_SENT') as whatsapp,
-                (SELECT COUNT(*)::integer FROM cadence_completions cc WHERE cc.sdr_id = s.id) as completed,
+                (SELECT COUNT(*)::integer FROM call_logs cl WHERE cl.sdr_id = s.id ${dateFilter}) as calls,
+                (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'EMAIL_SENT' ${dateFilter}) as emails,
+                (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'WHATSAPP_SENT' ${dateFilter}) as whatsapp,
+                (SELECT COUNT(*)::integer FROM cadence_completions cc WHERE cc.sdr_id = s.id ${completionDateFilter}) as completed,
                 s.goal_calls,
                 s.goal_emails,
                 s.goal_whatsapp,
@@ -141,10 +162,16 @@ class StatsService {
 
     /**
      * Get raw history logs for dashboard analysis (day/week/month).
+     * Includes unified interactions from interactions_log and call_logs.
      */
     async getStatsHistory() {
         // Fetch interactions (calls, emails, whatsapp) - last 30 days
+        // Unifying interactions_log and call_logs
         const interactionsSql = `
+            SELECT 'CALL_MADE' as action_type, created_at, sdr_id
+            FROM call_logs
+            WHERE created_at >= NOW() - INTERVAL '30 days'
+            UNION ALL
             SELECT action_type, created_at, sdr_id
             FROM interactions_log
             WHERE created_at >= NOW() - INTERVAL '30 days'

@@ -218,8 +218,8 @@ export const statsAPI = {
     resetStats: () =>
         api.post('/stats/reset').then(res => res.data),
 
-    getGlobalStats: () =>
-        api.get('/stats/global').then(res => res.data),
+    getGlobalStats: (period?: string) =>
+        api.get('/stats/global', { params: { period } }).then(res => res.data),
 
     getReportConfig: () =>
         api.get('/stats/config').then(res => res.data),

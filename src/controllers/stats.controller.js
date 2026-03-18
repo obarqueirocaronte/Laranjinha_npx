@@ -89,7 +89,8 @@ exports.updateReportConfig = async (req, res, next) => {
 
 exports.getGlobalStats = async (req, res, next) => {
     try {
-        const stats = await statsService.getGlobalStats();
+        const { period } = req.query;
+        const stats = await statsService.getGlobalStats(period);
         res.json({ success: true, data: stats });
     } catch (err) {
         next(err);

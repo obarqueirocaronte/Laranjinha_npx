@@ -161,7 +161,7 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                 leadsAPI.getActiveLeads(),
                 leadsAPI.getSegments('status', 'Novo'),
                 leadsAPI.getColumns(),
-                statsAPI.getGlobalStats(),
+                statsAPI.getGlobalStats(period),
                 statsAPI.getStatsHistory(),
             ]);
 
