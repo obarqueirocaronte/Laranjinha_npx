@@ -55,7 +55,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
     const hasLinkedin = !!(lead.metadata?.linkedin_url || lead.metadata?.linkedin);
     const hasTags = lead.tags && lead.tags.length > 0;
 
-    const cadenceProgress = Math.round(lead.cadence_progress || 0);
+    const cadenceProgress = isCadenceColumn ? 100 : Math.round(lead.cadence_progress || 0);
     const cnpj = lead.metadata?.cnpj;
     const jobTitle = lead.metadata?.job_title;
     const isFirstColumn = columnPosition === 1;

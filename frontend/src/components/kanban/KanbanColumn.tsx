@@ -56,8 +56,8 @@ const COLUMN_IDENTITY: Record<number, {
         columnBg: 'bg-emerald-100/20',
         shadow: 'shadow-emerald-300/30',
         ring: 'ring-emerald-300/40',
-        icon: 'wpp',   // WhatsApp
-        label: 'WhatsApp',
+        icon: '✉️',    // Email
+        label: 'Email',
         subtitle: 'RELACIONAMENTO',
     },
     4: {
@@ -66,8 +66,8 @@ const COLUMN_IDENTITY: Record<number, {
         columnBg: 'bg-violet-100/20',
         shadow: 'shadow-violet-300/30',
         ring: 'ring-violet-300/40',
-        icon: '✉️',    // Email
-        label: 'Email',
+        icon: 'wpp',   // WhatsApp
+        label: 'WhatsApp',
         subtitle: 'PROPOSTA E VALOR',
     },
     5: {
@@ -77,7 +77,7 @@ const COLUMN_IDENTITY: Record<number, {
         shadow: 'shadow-red-300/30',
         ring: 'ring-red-300/40',
         icon: '🎯',
-        label: 'Qualified',
+        label: 'Conclusão',
         subtitle: 'OPORTUNIDADE REAL',
     },
 };
@@ -149,7 +149,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
                             className="font-black text-xl tracking-tight leading-none text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] truncate"
                             style={{ fontFamily: 'Comfortaa, cursive' }}
                         >
-                            {column.position === 5 && column.name === 'Cadência' ? 'Qualified' : column.name}
+                            {column.position === 5 ? 'Conclusão' : column.name}
                         </h3>
                     </div>
                 </div>
