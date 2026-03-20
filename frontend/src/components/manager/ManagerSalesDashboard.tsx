@@ -3,24 +3,25 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Activity, Users, Target, Trophy, Eye,
-    Settings, Phone, Mail, TrendingUp,
-    Building2, Clock, Zap, ChevronRight, LogOut,
-    Brain, Sparkles, Send, Calendar,
+    Settings, TrendingUp, Building2, Clock, Zap, ChevronRight, LogOut,
+    Brain, Sparkles, Send, Calendar, CheckCircle2
 } from 'lucide-react';
-import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 import { cn } from '../../lib/utils';
-import { leadsAPI, statsAPI, aiAPI } from '../../lib/api';
+import { leadsAPI, statsAPI, aiAPI, cadencesAPI } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Lead, PipelineColumn } from '../../types';
 import { DndContext, useDroppable } from '@dnd-kit/core';
 import { LeadCard } from '../kanban/LeadCard';
 import { ProfileZone } from '../profile/ProfileZone';
 import { UserAvatar } from '../common/UserAvatar';
+import { CadencesDashboard } from './CadencesDashboard';
 
 /* ─────────────────────────────────────────────
    Types
    ───────────────────────────────────────────── */
-type TabId = 'resumo' | 'acompanhamento' | 'leads' | 'cadencias' | 'conquistas' | 'preview' | 'assistente';
+type TabId = 'resumo' | 'monitoramento' | 'acompanhamento' | 'preview' | 'assistente';
+type MonitorSubTab = 'operacao' | 'performance' | 'leads';
+
 type PeriodId = 'hoje' | 'semana' | 'mes' | 'tudo';
 
 interface StatsHistory {
@@ -56,10 +57,8 @@ interface TabItem {
 
 const TABS: TabItem[] = [
     { id: 'resumo', label: 'Resumo', icon: LayoutDashboard, color: '#FF8C00', colorTo: '#FF6347', subtitle: 'VISÃO GERAL DO DESEMPENHO' },
-    { id: 'acompanhamento', label: 'Acompanhamento', icon: Activity, color: '#3B82F6', colorTo: '#6366F1', subtitle: 'CONTROLE DE ATIVIDADES' },
-    { id: 'leads', label: 'Leads', icon: Users, color: '#10B981', colorTo: '#059669', subtitle: 'GESTÃO DE BASE E FILTROS' },
-    { id: 'cadencias', label: 'Cadências', icon: Target, color: '#8B5CF6', colorTo: '#EC4899', subtitle: 'ESTRATÉGIAS DE CONTATO' },
-    { id: 'conquistas', label: 'Conquistas', icon: Trophy, color: '#F59E0B', colorTo: '#EF4444', subtitle: 'RANKING E RESULTADOS' },
+    { id: 'monitoramento', label: 'Monitoramento', icon: Activity, color: '#3B82F6', colorTo: '#6366F1', subtitle: 'ACOMPANHAMENTO OPERACIONAL' },
+    { id: 'acompanhamento', label: 'Ranking', icon: Trophy, color: '#F59E0B', colorTo: '#EF4444', subtitle: 'RANKING E RESULTADOS' },
     { id: 'preview', label: 'Preview SDR', icon: Eye, color: '#06B6D4', colorTo: '#3B82F6', subtitle: 'VISUALIZAÇÃO DE OPERAÇÃO' },
     { id: 'assistente', label: 'Assistente', icon: Brain, color: '#F472B6', colorTo: '#DB2777', subtitle: 'INTELIGÊNCIA DE VENDAS' },
 ];
@@ -78,7 +77,9 @@ interface ManagerSalesDashboardProps {
 export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ onAdminClick, onLogout, onNavigateBack }) => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<TabId>('resumo');
+    const [monitorSubTab, setMonitorSubTab] = useState<MonitorSubTab>('operacao');
     const [showProfile, setShowProfile] = useState(false);
+
     const [showStats, setShowStats] = useState(false);
 
     // ── Shared data ──
@@ -88,9 +89,13 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
     const [columns, setColumns] = useState<PipelineColumn[]>([]);
     const [stats, setStats] = useState({ calls: 0, emails: 0, whatsapp: 0, completed_leads: 0 });
     const [period, setPeriod] = useState<PeriodId>('tudo');
+    const [showExpanded, setShowExpanded] = useState(false);
+    const [sdrFilter, setSdrFilter] = useState<string>('all');
+
     const [history, setHistory] = useState<StatsHistory | null>(null);
     const [selectedAuditSdrIds, setSelectedAuditSdrIds] = useState<string[]>([]);
     const [isSendingAudit, setIsSendingAudit] = useState(false);
+    const [cadenceDashboard, setCadenceDashboard] = useState<any>(null);
 
     // Persist selectedAuditSdrIds
     useEffect(() => {
@@ -176,18 +181,21 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
 
     const fetchData = useCallback(async () => {
         try {
-            const [sdrsRes, activeRes, pendingRes, colsRes, statsRes, historyRes] = await Promise.allSettled([
+            const results = await Promise.allSettled([
                 leadsAPI.getAllSDRs(),
                 leadsAPI.getActiveLeads(),
                 leadsAPI.getSegments('status', 'Novo'),
                 leadsAPI.getColumns(),
                 statsAPI.getGlobalStats(period),
                 statsAPI.getStatsHistory(),
+                cadencesAPI.getDashboard(period as any),
             ]);
+            
+            const [sdrsRes, activeRes, pendingRes, colsRes, statsRes, historyRes, cadenceDashboardRes] = results;
 
             if (statsRes.status === 'fulfilled' && statsRes.value?.success) {
                 const globalData = statsRes.value.data;
-                setStats(globalData.summary || stats);
+                setStats(prev => globalData.summary || prev);
 
                 // If we also got SDR breakdown from global stats, we'll merge it later
                 const sdrStatsMap = new Map();
@@ -223,6 +231,7 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
             }
 
             if (historyRes.status === 'fulfilled' && historyRes.value?.success) setHistory(historyRes.value.data);
+            if (cadenceDashboardRes.status === 'fulfilled' && (cadenceDashboardRes.value as any)?.success) setCadenceDashboard((cadenceDashboardRes.value as any).data);
 
             if (activeRes.status === 'fulfilled' && activeRes.value?.success) setActiveLeads(activeRes.value.data || []);
             if (pendingRes.status === 'fulfilled' && pendingRes.value?.success) setAllLeads(pendingRes.value.data || []);
@@ -230,7 +239,7 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
         } catch (e) {
             console.error('ManagerDashboard fetch error:', e);
         }
-    }, [user, stats]);
+    }, [user, period]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -301,7 +310,7 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                     "relative z-10 p-1.5 rounded-xl transition-colors",
                                     isActive ? "bg-white/20 text-white shadow-sm" : "bg-white/50 text-slate-600 group-hover:text-amber-500"
                                 )}>
-                                    <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                                    <Icon size={18} strokeWidth={2.5} />
                                 </span>
                                 <span className={cn('relative z-10 text-[13px] font-black tracking-wide', isActive ? 'text-white drop-shadow-sm' : '')}>
                                     {tab.label}
@@ -373,36 +382,24 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                             className="text-4xl font-black text-slate-800 tracking-tight flex items-center gap-2"
                                             style={{ fontFamily: 'Comfortaa, cursive' }}
                                         >
-                                            <span className="text-slate-700 opacity-90">Manager</span>
-                                            <span>{currentTab.label}</span>
+                                            {activeTab === 'resumo' ? (
+                                                <>
+                                                    <span className="text-slate-700 opacity-90">Manager</span>
+                                                    <span>Resumo</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="text-slate-700 opacity-90">Manager</span>
+                                                    <span>{currentTab.label}</span>
+                                                </>
+                                            )}
                                         </h2>
                                         <p className="text-[11px] text-slate-500 font-extrabold mt-1 tracking-[0.1em] uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>
                                             {currentTab.subtitle}
                                         </p>
                                     </div>
                                 </div>
-
-                                {/* Period Filter */}
-                                <div className="flex bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50 shadow-inner">
-                                    {(['hoje', 'semana', 'mes', 'tudo'] as PeriodId[]).map((p) => (
-                                        <button
-                                            key={p}
-                                            onClick={() => setPeriod(p)}
-                                            className={cn(
-                                                "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                                period === p 
-                                                    ? "bg-white text-orange-600 shadow-sm border border-slate-200/50" 
-                                                    : "text-slate-400 hover:text-slate-600"
-                                            )}
-                                            style={{ fontFamily: 'Comfortaa, cursive' }}
-                                        >
-                                            {p === 'hoje' ? 'Hoje' : p === 'semana' ? 'Semana' : p === 'mes' ? 'Mês' : 'Total'}
-                                        </button>
-                                    ))}
-                                </div>
                             </div>
-
-
                         </div>
 
                         {/* Tab Content */}
@@ -421,6 +418,34 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                         allLeads={filteredAllLeads} 
                                         sdrs={enrichedSdrs} 
                                         onOpenStats={() => setShowStats(true)}
+                                        onNavigateToTab={(tab, sub) => {
+                                            setActiveTab(tab);
+                                            if (sub) setMonitorSubTab(sub);
+                                        }}
+                                        cadenceDashboard={cadenceDashboard}
+                                    />
+                                )}
+                                {activeTab === 'monitoramento' && (
+                                    <MonitoramentoTab 
+                                        activeSubTab={monitorSubTab}
+                                        onSubTabChange={setMonitorSubTab}
+                                        sdrs={enrichedSdrs}
+                                        activeLeads={filteredActiveLeads}
+                                        allLeads={filteredAllLeads}
+                                        sdrFilter={sdrFilter}
+                                        setSdrFilter={setSdrFilter}
+                                        period={period}
+                                        setPeriod={setPeriod}
+                                    />
+                                )}
+                                {activeTab === 'acompanhamento' && (
+                                    <ConquistasTab stats={filteredStats} sdrs={enrichedSdrs} />
+                                )}
+                                {activeTab === 'preview' && (
+                                    <PreviewTab 
+                                        sdrs={sdrs} 
+                                        activeLeads={activeLeads} 
+                                        columns={columns}
                                         selectedAuditSdrIds={selectedAuditSdrIds}
                                         onToggleAuditSdr={(id) => {
                                             setSelectedAuditSdrIds(prev => 
@@ -433,7 +458,6 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                             try {
                                                 await statsAPI.sendManualReport(selectedAuditSdrIds);
                                                 alert('✅ Auditoria enviada para o Mattermost com sucesso!');
-                                                // Don't clear selection as per user request "deixe os sdrs selecionados como salvos"
                                             } catch (e: any) {
                                                 console.error('Failed to send audit:', e);
                                                 alert('❌ Falha ao enviar auditoria: ' + (e.response?.data?.error || e.message));
@@ -443,21 +467,6 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                         }}
                                         isSendingAudit={isSendingAudit}
                                     />
-                                )}
-                                {activeTab === 'acompanhamento' && (
-                                    <AcompanhamentoTab sdrs={enrichedSdrs} activeLeads={filteredActiveLeads} />
-                                )}
-                                {activeTab === 'leads' && (
-                                    <LeadsTab allLeads={filteredAllLeads} activeLeads={filteredActiveLeads} />
-                                )}
-                                {activeTab === 'cadencias' && (
-                                    <CadenciasTab activeLeads={filteredActiveLeads} />
-                                )}
-                                {activeTab === 'conquistas' && (
-                                    <ConquistasTab stats={filteredStats} sdrs={enrichedSdrs} />
-                                )}
-                                {activeTab === 'preview' && (
-                                    <PreviewTab sdrs={sdrs} activeLeads={activeLeads} columns={columns} />
                                 )}
                                 {activeTab === 'assistente' && (
                                     <AssistenteTab allLeads={allLeads} activeLeads={activeLeads} sdrs={sdrs} />
@@ -475,9 +484,150 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                         onClose={() => setShowStats(false)} 
                         sdrs={enrichedSdrs} 
                         allLeads={allLeads}
+                        cadenceDashboard={cadenceDashboard}
                     />
                 )}
             </AnimatePresence>
+
+            {/* ═══════ Expanded View Modal (Portal) ═══════ */}
+            {createPortal(
+                <AnimatePresence>
+                    {showExpanded && (
+                        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 md:p-8">
+                            {/* Backdrop with higher opacity and blur for ZERO overlap feel */}
+                            <motion.div 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => setShowExpanded(false)}
+                                className="absolute inset-0 bg-slate-900/80 backdrop-blur-3xl"
+                            />
+                            <motion.div 
+                                initial={{ scale: 0.9, opacity: 0, y: 40 }}
+                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                exit={{ scale: 0.9, opacity: 0, y: 40 }}
+                                className="relative bg-white border border-white/20 shadow-[0_32px_128px_-16px_rgba(0,0,0,0.5)] rounded-[3.5rem] w-full max-w-[85rem] h-[90vh] flex flex-col overflow-hidden"
+                            >
+                                {/* Header with gradient line */}
+                                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-400 via-rose-500 to-purple-600" />
+                                
+                                <div className="p-10 border-b border-slate-100 flex items-center justify-between bg-white relative z-10">
+                                    <div>
+                                        <div className="flex items-center gap-4 mb-2">
+                                            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white">
+                                                <Sparkles size={20} />
+                                            </div>
+                                            <h2 className="text-4xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Operational Pulse</h2>
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 font-extrabold tracking-[0.2em] uppercase">Monitoramento em Tempo Real • {period.toUpperCase()}</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => setShowExpanded(false)}
+                                        className="group p-4 bg-slate-100 rounded-3xl border border-slate-200 text-slate-400 hover:text-white hover:bg-slate-900 hover:border-slate-900 transition-all duration-300 transform active:scale-95 shadow-inner"
+                                    >
+                                        <Zap size={24} className="group-hover:rotate-12 transition-transform" />
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 p-10 overflow-y-auto bg-slate-50/30 custom-scrollbar">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                                        <div className="p-10 bg-gradient-to-br from-emerald-600 to-teal-800 rounded-[3rem] text-white shadow-2xl shadow-emerald-900/20 relative overflow-hidden group">
+                                            <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-white/10 transition-colors" />
+                                            <p className="text-sm font-black uppercase tracking-[0.2em] opacity-80 mb-2">Efficiency Rate</p>
+                                            <p className="text-7xl font-black tracking-tighter">94.2<span className="text-4xl opacity-60 ml-1">%</span></p>
+                                            <div className="mt-8 flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl w-fit border border-white/10">
+                                                <TrendingUp size={18} className="text-emerald-300" />
+                                                <span className="text-xs font-black tracking-wider uppercase">+5.4% de hoje</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-10 bg-gradient-to-br from-slate-900 to-slate-800 rounded-[3rem] text-white shadow-2xl shadow-slate-900/30 relative overflow-hidden group">
+                                            <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl -ml-20 -mb-20" />
+                                            <p className="text-sm font-black uppercase tracking-[0.2em] opacity-80 mb-2">Live Conversions</p>
+                                            <p className="text-7xl font-black tracking-tighter">{filteredStats.completed_leads}</p>
+                                            <div className="mt-8 flex items-center gap-3 bg-white/10 px-4 py-2 rounded-2xl w-fit border border-white/10">
+                                                <Users size={18} className="text-blue-300" />
+                                                <span className="text-xs font-black tracking-wider uppercase">Futebol em campo</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-10 bg-gradient-to-br from-orange-500 to-rose-600 rounded-[3rem] text-white shadow-2xl shadow-orange-900/20 relative overflow-hidden group">
+                                            <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20" />
+                                            <p className="text-sm font-black uppercase tracking-[0.2em] opacity-80 mb-2">Queue Load</p>
+                                            <p className="text-7xl font-black tracking-tighter">{filteredActiveLeads.length}</p>
+                                            <div className="mt-8 flex items-center gap-3 bg-white/10 px-4 py-2 rounded-2xl w-fit border border-white/10">
+                                                <Clock size={18} className="text-orange-200" />
+                                                <span className="text-xs font-black tracking-wider uppercase">Backlog pendente</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 p-10 relative overflow-hidden">
+                                        <div className="flex items-center justify-between mb-8">
+                                            <div>
+                                                <h3 className="text-2xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>SDR Performance Pulse</h3>
+                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Ranking de produtividade individual</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            {enrichedSdrs.map(sdr => {
+                                                const conversion = Math.round((sdr.completed || 0) / (sdr.leads || 1) * 100);
+                                                return (
+                                                    <div key={sdr.id} className="group flex items-center justify-between p-6 bg-slate-50/50 hover:bg-white rounded-[2rem] border border-transparent hover:border-slate-100 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-300">
+                                                        <div className="flex items-center gap-5">
+                                                            <div className="relative">
+                                                                 <UserAvatar 
+                                                                    src={sdr.profile_picture_url} 
+                                                                    name={sdr.full_name || sdr.email?.split('@')[0]} 
+                                                                    size="lg" 
+                                                                    className="shadow-lg group-hover:scale-110 transition-transform" 
+                                                                />
+                                                                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-4 border-white rounded-full" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-base font-black text-slate-800 group-hover:text-orange-500 transition-colors">{sdr.full_name || sdr.email?.split('@')[0]}</p>
+                                                                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest mt-0.5">Especialista de Vendas</p>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="flex items-center gap-12">
+                                                            <div className="flex gap-10">
+                                                                <div className="text-center">
+                                                                    <p className="text-2xl font-black text-slate-800 tracking-tight">{sdr.calls || 0}</p>
+                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Calls</p>
+                                                                </div>
+                                                                <div className="text-center">
+                                                                    <p className="text-2xl font-black text-emerald-600 tracking-tight">{conversion}%</p>
+                                                                    <p className="text-[9px] font-black text-emerald-600/60 uppercase tracking-widest mt-1">Prod.</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="w-48">
+                                                                <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                                                                    <span>Activity Rate</span>
+                                                                    <span>{Math.min((sdr.calls || 0) * 2, 100)}%</span>
+                                                                </div>
+                                                                <div className="h-2.5 bg-slate-200/60 rounded-full overflow-hidden p-0.5 border border-slate-100 shadow-inner">
+                                                                    <motion.div 
+                                                                        initial={{ width: 0 }}
+                                                                        animate={{ width: `${Math.min((sdr.calls || 0) * 2, 100)}%` }}
+                                                                        className="h-full bg-gradient-to-r from-orange-400 to-rose-500 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.4)]"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
         </div>
     );
 };
@@ -489,14 +639,16 @@ interface StatsModalProps {
     onClose: () => void;
     sdrs: SDR[];
     allLeads: Lead[];
+    cadenceDashboard?: any;
 }
 
-const StatsModal: React.FC<StatsModalProps> = ({ onClose, sdrs, allLeads }) => {
-    const [activeModalTab, setActiveModalTab] = useState<'produtividade' | 'campanhas' | 'imports' | 'visibilidade'>('produtividade');
+const StatsModal: React.FC<StatsModalProps> = ({ onClose, sdrs, allLeads, cadenceDashboard }) => {
+    const [activeModalTab, setActiveModalTab] = useState<'produtividade' | 'campanhas' | 'retornos' | 'imports' | 'visibilidade'>('produtividade');
 
     const modalTabs = [
         { id: 'produtividade', label: 'Produtividade', icon: Activity },
         { id: 'campanhas', label: 'Campanhas', icon: Target },
+        { id: 'retornos', label: 'Calendário', icon: Calendar },
         { id: 'imports', label: 'Importações & Tags', icon: Zap },
         { id: 'visibilidade', label: 'Visibilidade Full', icon: Eye },
     ];
@@ -582,6 +734,12 @@ const StatsModal: React.FC<StatsModalProps> = ({ onClose, sdrs, allLeads }) => {
                             {activeModalTab === 'campanhas' && (
                                 <StatsCampaignView leads={allLeads} />
                             )}
+                            {activeModalTab === 'retornos' && (
+                                <RetornosCalendarView 
+                                    scheduledReturns={cadenceDashboard?.scheduled_returns || []}
+                                    sdrs={sdrs}
+                                />
+                            )}
                             {activeModalTab === 'imports' && (
                                 <StatsImportsView leads={allLeads} />
                             )}
@@ -596,6 +754,185 @@ const StatsModal: React.FC<StatsModalProps> = ({ onClose, sdrs, allLeads }) => {
         document.body
     );
 };
+/* ─────────────────────────────────────────────
+   Retornos Calendar View
+   ───────────────────────────────────────────── */
+const RetornosCalendarView: React.FC<{
+    scheduledReturns: any[];
+    sdrs: SDR[];
+}> = ({ scheduledReturns, sdrs }) => {
+    const [selectedSdrId, setSelectedSdrId] = useState<string>('all');
+
+    // Get the current month grid
+    const today = new Date();
+    const [viewYear, setViewYear] = useState(today.getFullYear());
+    const [viewMonth, setViewMonth] = useState(today.getMonth());
+
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+    const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+    const filtered = scheduledReturns.filter(r => selectedSdrId === 'all' || r.sdr_id === selectedSdrId);
+
+    // Map by day
+    const byDay: Record<string, any[]> = {};
+    for (const r of filtered) {
+        const d = new Date(r.scheduled_at);
+        if (d.getFullYear() === viewYear && d.getMonth() === viewMonth) {
+            const key = d.getDate().toString();
+            if (!byDay[key]) byDay[key] = [];
+            byDay[key].push(r);
+        }
+    }
+
+    const prevMonth = () => {
+        if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+        else setViewMonth(m => m - 1);
+    };
+    const nextMonth = () => {
+        if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+        else setViewMonth(m => m + 1);
+    };
+
+    const [selectedDay, setSelectedDay] = useState<string | null>(null);
+    const dayEvents = selectedDay ? (byDay[selectedDay] || []) : [];
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+            {/* Calendar Left */}
+            <div className="lg:col-span-2 flex flex-col gap-4">
+                {/* Header Controls */}
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                        <button onClick={prevMonth} className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center text-slate-500">‹</button>
+                        <h3 className="text-lg font-black text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                            {monthNames[viewMonth]} {viewYear}
+                        </h3>
+                        <button onClick={nextMonth} className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center text-slate-500">›</button>
+                    </div>
+                    {/* SDR Switcher */}
+                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
+                        <Users size={14} className="text-slate-400" />
+                        <select
+                            value={selectedSdrId}
+                            onChange={e => setSelectedSdrId(e.target.value)}
+                            className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none"
+                        >
+                            <option value="all">Todos SDRs</option>
+                            {sdrs.map(s => (
+                                <option key={s.id} value={s.id}>{s.full_name || s.email?.split('@')[0]}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                {/* Day Headers */}
+                <div className="grid grid-cols-7 gap-1 mb-1">
+                    {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(d => (
+                        <div key={d} className="text-center text-[9px] font-black text-slate-400 uppercase tracking-wider py-1">{d}</div>
+                    ))}
+                </div>
+
+                {/* Day Grid */}
+                <div className="grid grid-cols-7 gap-1">
+                    {/* Empty cells for offset */}
+                    {Array.from({ length: firstDay }).map((_, i) => (
+                        <div key={`empty-${i}`} />
+                    ))}
+                    {/* Day cells */}
+                    {Array.from({ length: daysInMonth }).map((_, i) => {
+                        const day = (i + 1).toString();
+                        const events = byDay[day] || [];
+                        const isToday = today.getDate() === i + 1 && today.getMonth() === viewMonth && today.getFullYear() === viewYear;
+                        const isSelected = selectedDay === day;
+                        return (
+                            <button
+                                key={day}
+                                onClick={() => setSelectedDay(isSelected ? null : day)}
+                                className={cn(
+                                    'relative rounded-xl p-2 min-h-[52px] text-left transition-all border',
+                                    isSelected ? 'bg-orange-500 border-orange-600 shadow-lg' :
+                                    isToday ? 'bg-orange-50 border-orange-200' :
+                                    events.length > 0 ? 'bg-blue-50 border-blue-200 hover:bg-blue-100' :
+                                    'bg-white border-slate-100 hover:bg-slate-50'
+                                )}
+                            >
+                                <span className={cn(
+                                    'text-xs font-black block',
+                                    isSelected ? 'text-white' : isToday ? 'text-orange-600' : 'text-slate-600'
+                                )}>{i + 1}</span>
+                                {events.length > 0 && (
+                                    <span className={cn(
+                                        'text-[8px] font-black rounded-full px-1.5 py-0.5 mt-1 inline-block',
+                                        isSelected ? 'bg-white/20 text-white' : 'bg-blue-500 text-white'
+                                    )}>{events.length}</span>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Legend */}
+                <div className="flex items-center gap-4 mt-2 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-200 inline-block" />Hoje</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-400 inline-block" />Com retornos</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-white border border-slate-200 inline-block" />Sem retornos</span>
+                </div>
+            </div>
+
+            {/* Detail Panel Right */}
+            <div className="flex flex-col gap-4">
+                <h4 className="text-sm font-black text-slate-700" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                    {selectedDay ? `Retornos — dia ${selectedDay}/${viewMonth + 1}` : 'Selecione um dia'}
+                </h4>
+
+                {selectedDay && dayEvents.length === 0 && (
+                    <p className="text-xs text-slate-400 italic">Nenhum retorno agendado neste dia.</p>
+                )}
+
+                <div className="space-y-3 overflow-y-auto max-h-[420px] pr-1">
+                    {dayEvents.map((ev, idx) => {
+                        const t = new Date(ev.scheduled_at);
+                        return (
+                            <div key={ev.id || idx} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                        {t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    <span className="text-[9px] text-slate-400 font-bold uppercase">{ev.sdr_name || 'SDR'}</span>
+                                </div>
+                                <p className="text-sm font-black text-slate-800 tracking-tight">{ev.lead_name}</p>
+                                <p className="text-[10px] text-slate-400">{ev.company_name}</p>
+                                {ev.notes && <p className="text-[10px] text-slate-500 mt-1 italic">{ev.notes}</p>}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Quick summary for unfiltered */}
+                {!selectedDay && (
+                    <div className="mt-4 space-y-2">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Retornos este mês</p>
+                        {Object.entries(byDay).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).map(([day, evts]) => (
+                            <button
+                                key={day}
+                                onClick={() => setSelectedDay(day)}
+                                className="w-full flex items-center justify-between bg-white border border-slate-100 rounded-xl px-4 py-2.5 hover:border-orange-200 hover:shadow-sm transition-all"
+                            >
+                                <span className="text-xs font-black text-slate-600">Dia {day}/{viewMonth + 1}</span>
+                                <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{evts.length} retorno{evts.length > 1 ? 's' : ''}</span>
+                            </button>
+                        ))}
+                        {Object.keys(byDay).length === 0 && (
+                            <p className="text-xs text-slate-400 italic">Nenhum retorno agendado neste mês.</p>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 
 /* ─────────────────────────────────────────────
    Stats Sub-Views (Skeleton components for now)
@@ -606,9 +943,12 @@ const StatsProductivityView: React.FC<{ sdrs: SDR[] }> = ({ sdrs }) => {
             {sdrs.map(sdr => (
                 <div key={sdr.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 font-black">
-                            {sdr.email?.[0].toUpperCase()}
-                        </div>
+                        <UserAvatar 
+                            src={sdr.profile_picture_url} 
+                            name={sdr.full_name || sdr.email?.split('@')[0]} 
+                            size="md" 
+                            className="text-orange-600 font-black" 
+                        />
                         <div>
                             <h4 className="font-black text-slate-800 text-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.email?.split('@')[0]}</h4>
                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{sdr.role}</p>
@@ -795,17 +1135,21 @@ const GlassCard: React.FC<{
     className?: string;
     gradient?: [string, string];
     transparent?: boolean;
-}> = ({ children, className, gradient, transparent }) => (
+    onClick?: () => void;
+}> = ({ children, className, gradient, transparent, onClick }) => (
     <motion.div
-        whileHover={{ scale: 1.01, y: -2 }}
+        whileHover={onClick ? { scale: 1.01, y: -2 } : {}}
+        onClick={onClick}
         className={cn(
             'rounded-[2rem] border p-6 transition-all duration-300 overflow-hidden',
+            onClick && 'cursor-pointer',
             gradient
                 ? 'border-white/30 text-white shadow-lg'
                 : transparent
                     ? 'bg-white/20 border-white/40 shadow-sm'
                     : 'bg-white/80 backdrop-blur-2xl border-white shadow-xl shadow-slate-200/50',
             className
+
         )}
         style={{
             ...(gradient ? {
@@ -824,8 +1168,14 @@ const KpiCard: React.FC<{
     icon: React.ElementType;
     gradient: [string, string];
     sub?: string;
-}> = ({ label, value, icon: Icon, gradient, sub }) => (
-    <GlassCard gradient={gradient} className="relative overflow-hidden group shadow-md shadow-slate-900/10">
+    onClick?: () => void;
+    className?: string;
+}> = ({ label, value, icon: Icon, gradient, sub, onClick, className }) => (
+    <GlassCard 
+        gradient={gradient} 
+        className={cn("relative overflow-hidden group shadow-md shadow-slate-900/10 transition-all duration-300", onClick && "cursor-pointer hover:scale-[1.02] hover:shadow-xl", className)}
+        onClick={onClick}
+    >
         <div
             className="absolute -top-4 -right-4 p-4 opacity-[0.08] group-hover:opacity-20 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500"
             style={{ color: '#ffffff' }}
@@ -846,8 +1196,6 @@ const KpiCard: React.FC<{
     </GlassCard>
 );
 
-
-
 /* ═══════════════════════════════════════════
    Tab: Resumo
    ═══════════════════════════════════════════ */
@@ -857,161 +1205,375 @@ const ResumoTab: React.FC<{
     allLeads: Lead[];
     sdrs: SDR[];
     onOpenStats?: () => void;
-    selectedAuditSdrIds: string[];
-    onToggleAuditSdr: (id: string) => void;
-    onSendAudit: () => void;
-    isSendingAudit: boolean;
-}> = ({ stats, activeLeads, allLeads, sdrs, onOpenStats, selectedAuditSdrIds, onToggleAuditSdr, onSendAudit, isSendingAudit }) => {
-    const totalLeads = allLeads.length + activeLeads.length;
+    onNavigateToTab?: (tab: TabId, subTab?: MonitorSubTab) => void;
+    cadenceDashboard: any;
+}> = ({ 
+    stats, activeLeads, allLeads, sdrs, onNavigateToTab, 
+    cadenceDashboard, onOpenStats
+}) => {
+
     const inCadence = activeLeads.length;
+    const totalLeads = (allLeads?.length || 0) + (activeLeads?.length || 0);
+
+    const cadAtivas = cadenceDashboard?.zona_progresso?.total || 0;
+    const cadParadas = cadenceDashboard?.zona_critica?.total || 0;
+    const cadConcluidas = cadenceDashboard?.zona_conversao?.total_concluidas || 0;
+    
+    // Calcula conversão baseada em leads concluídos vs total que entrou no período (simulado como total acumulado)
     const conversionRate = totalLeads > 0 ? Math.round((stats.completed_leads / totalLeads) * 100) : 0;
 
     return (
         <div className="space-y-6">
-            {/* KPI row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard label="Total de Leads" value={totalLeads} icon={Users} gradient={['#3B82F6', '#6366F1']} sub={`${allLeads.length} pendentes`} />
-                <KpiCard label="Em Cadência" value={inCadence} icon={Zap} gradient={['#10B981', '#059669']} sub={`${sdrs.length} SDRs ativos`} />
-                <KpiCard label="Conversão" value={`${conversionRate}%`} icon={TrendingUp} gradient={['#F59E0B', '#EF4444']} sub={`${stats.completed_leads} finalizados`} />
-                <KpiCard label="Atividades" value={stats.calls + stats.emails + stats.whatsapp} icon={Activity} gradient={['#8B5CF6', '#EC4899']} sub="ligações + emails + wpp" />
+            {/* ── Top KPI Row ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard 
+                    label="Total de Leads" 
+                    value={totalLeads} 
+                    icon={Users} 
+                    gradient={['#3B82F6', '#6366F1']} 
+                    sub={`${allLeads?.length || 0} pendentes`} 
+                />
+                <KpiCard 
+                    label="Em Cadência" 
+                    value={inCadence} 
+                    icon={Zap} 
+                    gradient={['#10B981', '#059669']} 
+                    sub={`${sdrs.length} SDRs ativos`} 
+                />
+                <KpiCard 
+                    label="Conversão" 
+                    value={`${conversionRate}%`} 
+                    icon={TrendingUp} 
+                    gradient={['#F59E0B', '#EF4444']} 
+                    sub={`${stats.completed_leads} finalizados`} 
+                />
+                <KpiCard 
+                    label="Atividades" 
+                    value={(stats.calls || 0) + (stats.emails || 0) + (stats.whatsapp || 0)} 
+                    icon={Activity} 
+                    gradient={['#8B5CF6', '#EC4899']} 
+                    sub="ligações + emails + wpp" 
+                />
             </div>
 
-            {/* Activity breakdown */}
-            <div className="grid grid-cols-3 gap-5">
-                <GlassCard className="flex items-center gap-5 hover:border-blue-300/50 hover:shadow-blue-500/10 transition-all cursor-default">
-                    <div className="w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-white shadow-xl bg-gradient-to-br from-blue-500 to-indigo-600 border-[3px] border-white ring-4 ring-blue-50">
-                        <Phone size={22} strokeWidth={2.5} />
-                    </div>
-                    <div>
-                        <p className="text-4xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>{stats.calls}</p>
-                        <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Ligações Feitas</p>
-                    </div>
-                </GlassCard>
-                <GlassCard className="flex items-center gap-5 hover:border-purple-300/50 hover:shadow-purple-500/10 transition-all cursor-default">
-                    <div className="w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-white shadow-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 border-[3px] border-white ring-4 ring-purple-50">
-                        <Mail size={22} strokeWidth={2.5} />
-                    </div>
-                    <div>
-                        <p className="text-4xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>{stats.emails}</p>
-                        <p className="text-[10px] font-bold text-purple-500 uppercase tracking-widest">E-mails Enviados</p>
-                    </div>
-                </GlassCard>
-                <GlassCard className="flex items-center gap-5 hover:border-emerald-300/50 hover:shadow-emerald-500/10 transition-all cursor-default">
-                    <div className="w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-white shadow-xl bg-gradient-to-br from-emerald-500 to-teal-600 border-[3px] border-white ring-4 ring-emerald-50">
-                        <WhatsAppIcon size={24} />
-                    </div>
-                    <div>
-                        <p className="text-4xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>{stats.whatsapp}</p>
-                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">WhatsApp</p>
-                    </div>
-                </GlassCard>
-            </div>
-
-            {/* Quick SDR status & Admin Actions */}
+            {/* ── Status Operacional Cards ── */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {sdrs.length > 0 ? (
-                    <GlassCard className="md:col-span-2">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-black text-slate-700" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                SDRs Ativos no Período
-                            </h3>
-                            {selectedAuditSdrIds.length > 0 && (
-                                <motion.button
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    onClick={onSendAudit}
-                                    disabled={isSendingAudit}
-                                    className={cn(
-                                        "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg",
-                                        isSendingAudit ? "bg-slate-400 cursor-wait" : "bg-gradient-to-r from-orange-500 to-rose-500 text-white hover:shadow-orange-500/30"
-                                    )}
-                                    style={{ fontFamily: 'Comfortaa, cursive' }}
-                                >
-                                    <Send size={12} />
-                                    {isSendingAudit ? 'Enviando...' : `Gerar Auditoria (${selectedAuditSdrIds.length}) no Mattermost`}
-                                </motion.button>
-                            )}
-                        </div>
-                        <div className="space-y-3">
-                            {sdrs.map((sdr: SDR) => {
-                                const sdrLeadsCount = sdr.leads ?? 0;
-                                return (
-                                    <div key={sdr.id} className="flex items-center justify-between py-3 px-4 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all hover:border-orange-200 hover:shadow-md">
-                                        <div className="flex items-center gap-4">
-                                            <input 
-                                                type="checkbox"
-                                                checked={selectedAuditSdrIds.includes(sdr.id)}
-                                                onChange={() => onToggleAuditSdr(sdr.id)}
-                                                className="w-4 h-4 rounded-lg border-slate-200 text-orange-500 focus:ring-orange-500 transition-colors cursor-pointer"
-                                            />
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-xs font-black shadow-md border-2 border-white">
-                                                {sdr.email?.charAt(0).toUpperCase() || 'S'}
-                                            </div>
-                                            <div>
-                                                <span className="text-sm font-bold text-slate-700 capitalize block" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                                    {sdr.email?.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'SDR'}
-                                                </span>
-                                                <span className="text-[10px] text-slate-400 font-bold">
-                                                    {sdr.calls} lig. • {sdr.emails} emails • {sdr.whatsapp} wpp
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 shadow-sm uppercase tracking-wider">
-                                                {sdrLeadsCount} leads
-                                            </span>
-                                            <ChevronRight size={16} className="text-slate-300 group-hover:text-orange-400" />
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                <motion.div 
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    onClick={() => onNavigateToTab && onNavigateToTab('monitoramento', 'operacao')}
+                    className="cursor-pointer"
+                >
+                    <GlassCard className="p-6 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border-emerald-200/30 hover:border-emerald-400/50 transition-colors group">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform">
+                                    <Zap size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-black text-slate-800 tracking-tight">{cadAtivas}</p>
+                                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Cadências Ativas</p>
+                                </div>
+                            </div>
+                            <ChevronRight size={20} className="text-emerald-400 group-hover:translate-x-1 transition-transform" />
                         </div>
                     </GlassCard>
-                ) : (
-                    <div className="md:col-span-2 bg-white/40 animate-pulse rounded-[2.5rem] border border-white/60 p-8 flex flex-col gap-4">
-                        <div className="h-4 w-32 bg-slate-200/50 rounded-full" />
-                        <div className="space-y-3">
-                            <div className="h-16 bg-white/50 rounded-2xl" />
-                            <div className="h-16 bg-white/50 rounded-2xl" />
-                            <div className="h-16 bg-white/50 rounded-2xl" />
-                        </div>
-                    </div>
-                )}
+                </motion.div>
 
-                <motion.button
-                    onClick={onOpenStats}
-                    whileHover={{ scale: 1.02, y: -5 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="bg-white/80 backdrop-blur-2xl rounded-[2rem] border border-orange-200 shadow-xl shadow-orange-500/10 p-8 flex flex-col items-center justify-center gap-4 group transition-all"
+                <motion.div 
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    onClick={() => onNavigateToTab && onNavigateToTab('monitoramento', 'operacao')}
+                    className="cursor-pointer"
                 >
-                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white shadow-2xl shadow-orange-500/40 group-hover:scale-110 group-hover:rotate-3 transition-transform">
-                        <TrendingUp size={40} strokeWidth={2.5} />
-                    </div>
-                    <div className="text-center">
-                        <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                            Estatísticas Full
-                        </h3>
-                        <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mt-1 opacity-80">
-                            Análise de Estratégias
-                        </p>
-                    </div>
-                    <div className="mt-2 px-4 py-1.5 rounded-full bg-orange-50 text-[10px] font-black text-orange-600 border border-orange-100 uppercase tracking-tighter">
-                        Acessar Dashboard Interno
-                    </div>
-                </motion.button>
+                    <GlassCard className="p-6 bg-gradient-to-br from-rose-500/10 to-orange-500/5 border-rose-200/30 hover:border-rose-400/50 transition-colors group">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform">
+                                    <Clock size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-black text-slate-800 tracking-tight">{cadParadas}</p>
+                                    <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">Paradas &gt; 24h</p>
+                                </div>
+                            </div>
+                            <ChevronRight size={20} className="text-rose-400 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    </GlassCard>
+                </motion.div>
 
+                <motion.div 
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    onClick={() => onNavigateToTab && onNavigateToTab('monitoramento', 'operacao')}
+                    className="cursor-pointer"
+                >
+                    <GlassCard className="p-6 bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border-blue-200/30 hover:border-blue-400/50 transition-colors group">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-blue-500 text-white flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform">
+                                    <CheckCircle2 size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-black text-slate-800 tracking-tight">{cadConcluidas}</p>
+                                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Concluídas</p>
+                                </div>
+                            </div>
+                            <ChevronRight size={20} className="text-blue-400 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    </GlassCard>
+                </motion.div>
             </div>
+
+            {/* ── Main Content Area ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Leads em Fluxo List */}
+                <div className="lg:col-span-8">
+                    <GlassCard className="h-full border-slate-100 bg-white/40">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="text-sm font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                    Leads em Fluxo
+                                </h3>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Acompanhamento de retornos agendados</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <select className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[9px] font-black text-slate-500 focus:outline-none">
+                                    <option>SDR: Todos</option>
+                                </select>
+                                <button className="text-[9px] font-black text-blue-500 hover:text-blue-600 uppercase tracking-widest" onClick={() => onNavigateToTab && onNavigateToTab('monitoramento', 'operacao')}>Ver Detalhes</button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            {cadenceDashboard?.zona_progresso?.leads?.slice(0, 5).map((lead: any) => (
+                                <div key={lead.id} className="flex items-center justify-between p-3 rounded-xl bg-white/60 border border-white shadow-sm hover:border-orange-200 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center font-black text-[10px]">
+                                            {lead.lead_name?.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-black text-slate-700">{lead.lead_name}</p>
+                                            <p className="text-[9px] text-slate-400 font-bold">{lead.sdr_name} • Step {lead.step_atual}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="px-2 py-1 bg-slate-100 rounded text-[9px] font-black text-slate-500">
+                                            {lead.horas_parada ? `${lead.horas_parada}h` : 'No prazo'}
+                                        </div>
+                                        <ChevronRight size={14} className="text-slate-300" />
+                                    </div>
+                                </div>
+                            ))}
+                            {(!cadenceDashboard?.zona_progresso?.leads || cadenceDashboard.zona_progresso.leads.length === 0) && (
+                                <div className="text-center py-12 opacity-40 flex flex-col items-center">
+                                    <Target size={32} className="text-slate-300 mb-2" />
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nenhum agendamento pendente</p>
+                                </div>
+                            )}
+                        </div>
+                    </GlassCard>
+                </div>
+
+                {/* Right Area: SDRs Ativos + Estatísticas Full */}
+                <div className="lg:col-span-4 flex flex-col gap-6">
+                    {/* SDRs Ativos */}
+                    <GlassCard className="flex-1 border-slate-100 bg-white/40">
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">SDRs Ativos no Período</h3>
+                        <div className="space-y-4">
+                            {sdrs.slice(0, 4).map(sdr => (
+                                <div key={sdr.id} className="flex items-center justify-between group cursor-pointer" onClick={() => onNavigateToTab && onNavigateToTab('monitoramento', 'operacao')}>
+                                    <div className="flex items-center gap-3">
+                                        <UserAvatar 
+                                            src={sdr.profile_picture_url} 
+                                            name={sdr.full_name || sdr.email?.split('@')[0]} 
+                                            size="xs" 
+                                            className="font-black" 
+                                        />
+                                        <div>
+                                            <p className="text-xs font-black text-slate-800 group-hover:text-blue-600 transition-colors truncate w-24">
+                                                {sdr.full_name || sdr.email?.split('@')[0]}
+                                            </p>
+                                            <p className="text-[9px] text-slate-400 font-bold truncate">{(sdr as any).calls || 0} LIG | {(sdr as any).whatsapp || 0} WPP</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs font-black text-slate-700">{(sdr as any).pending_leads || 0}</p>
+                                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">Leads</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </GlassCard>
+
+                    {/* Estatísticas Full Button Card Alternative */}
+                    <motion.button
+                        onClick={onOpenStats}
+                        whileHover={{ scale: 1.02, y: -5 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="bg-white/80 backdrop-blur-2xl rounded-[2rem] border border-orange-200 shadow-xl shadow-orange-500/10 p-6 flex items-center gap-5 group transition-all text-left"
+                    >
+                        <div className="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/40 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                            <TrendingUp size={28} strokeWidth={2.5} />
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                Estatísticas Full
+                            </h3>
+                            <p className="text-[9px] font-extrabold text-orange-500 uppercase tracking-widest mt-0.5 opacity-80">
+                                Análise de Estratégias
+                            </p>
+                        </div>
+                    </motion.button>
+                </div>
+            </div>
+
+            {/* Outcome Status area (Novo - Mantido para Dados Adicionais) */}
+            {cadenceDashboard?.outcome_summary && Object.keys(cadenceDashboard.outcome_summary).length > 0 && (
+                <GlassCard className="p-6">
+                    <h3 className="text-[11px] font-black text-slate-700 uppercase tracking-widest mb-4">
+                        Performance das Ligações (Últimas 24h)
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                        {[
+                            { key: 'no_answer', label: 'Sem Resposta', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
+                            { key: 'busy', label: 'Ocupado', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' },
+                            { key: 'voicemail', label: 'Caixa Postal', color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
+                            { key: 'invalid_number', label: 'Nº Inválido', color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
+                            { key: 'success', label: 'Atendeu', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+                            { key: 'reschedule', label: 'Reagendado', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+                        ].map(item => (
+                            <div key={item.key} className={`${item.bg} ${item.border} border rounded-2xl p-4 text-center cursor-pointer hover:scale-105 transition-transform`} onClick={() => onNavigateToTab && onNavigateToTab('monitoramento', 'performance')}>
+                                <p className={`text-2xl font-black ${item.color}`}>
+                                    {cadenceDashboard.outcome_summary[item.key] || 0}
+                                </p>
+                                <p className={`text-[9px] font-bold ${item.color} uppercase tracking-widest mt-1`}>
+                                    {item.label}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </GlassCard>
+            )}
+
         </div>
     );
 };
 
 /* ═══════════════════════════════════════════
-   Tab: Acompanhamento
+   Tab: Monitoramento (Unified Tracking)
    ═══════════════════════════════════════════ */
-const AcompanhamentoTab: React.FC<{
+const MonitoramentoTab: React.FC<{
+    activeSubTab: MonitorSubTab;
+    onSubTabChange: (tab: MonitorSubTab) => void;
+    sdrs: SDR[];
+    activeLeads: Lead[];
+    allLeads: Lead[];
+    sdrFilter: string;
+    setSdrFilter: (s: string) => void;
+    period: PeriodId;
+    setPeriod: (p: PeriodId) => void;
+}> = ({ activeSubTab, onSubTabChange, sdrs, activeLeads, allLeads, sdrFilter, setSdrFilter, period, setPeriod }) => {
+
+
+
+    return (
+        <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-6">
+                {/* Sub-tabs Navigation */}
+                <div className="flex bg-white/40 backdrop-blur-md p-1.5 rounded-2xl border border-white/60 shadow-lg">
+                    {[
+                        { id: 'operacao', label: 'Operação', icon: Target },
+                        { id: 'leads', label: 'Base de Leads', icon: Users },
+                    ].map((tab) => {
+                        const isActive = activeSubTab === tab.id;
+                        const Icon = tab.icon;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => onSubTabChange(tab.id as MonitorSubTab)}
+                                className={cn(
+                                    "px-6 py-2.5 rounded-xl flex items-center gap-2 text-[11px] font-black uppercase tracking-widest transition-all",
+                                    isActive 
+                                        ? "bg-white text-blue-600 shadow-md border border-slate-200/50" 
+                                        : "text-slate-500 hover:text-slate-700 hover:bg-white/30"
+                                )}
+                                style={{ fontFamily: 'Comfortaa, cursive' }}
+                            >
+                                <Icon size={14} strokeWidth={2.5} />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Integrated SDR & Period Filters */}
+                <div className="flex bg-slate-100/40 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/50 shadow-inner items-center gap-4">
+                    {/* SDR Selector */}
+                    <div className="flex items-center gap-2 pl-2">
+                        <Users size={14} className="text-slate-400" />
+                        <select 
+                            value={sdrFilter}
+                            onChange={(e) => setSdrFilter(e.target.value)}
+                            className="bg-transparent text-[10px] font-black text-slate-600 uppercase tracking-widest focus:outline-none cursor-pointer border-none p-0"
+                            style={{ fontFamily: 'Comfortaa, cursive' }}
+                        >
+                            <option value="all">SDR: Todos</option>
+                            {sdrs.map(s => (
+                                <option key={s.id} value={s.id}>SDR: {s.email?.split('@')[0]}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="h-4 w-[1px] bg-slate-300/30" />
+
+                    {/* Period Filter */}
+                    <div className="flex gap-1">
+                        {(['hoje', 'semana', 'mes'] as PeriodId[]).map((p) => (
+                            <button
+                                key={p}
+                                onClick={() => setPeriod(p)}
+                                className={cn(
+                                    "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                    period === p 
+                                        ? "bg-white text-orange-600 shadow-sm border border-slate-200/50" 
+                                        : "text-slate-400 hover:text-slate-600"
+                                )}
+                                style={{ fontFamily: 'Comfortaa, cursive' }}
+                            >
+                                {p === 'hoje' ? 'Hoje' : p === 'semana' ? 'Semana' : 'Mês'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+
+            {/* Sub-tab Content */}
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={activeSubTab}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    {activeSubTab === 'operacao' && <CadencesDashboard sdrId={sdrFilter} period={period as any} />}
+                    {activeSubTab === 'performance' && <PerformanceTab sdrs={sdrs} activeLeads={activeLeads} />}
+
+                    {activeSubTab === 'leads' && <LeadsTab allLeads={allLeads} activeLeads={activeLeads} />}
+
+                </motion.div>
+            </AnimatePresence>
+        </div>
+    );
+};
+
+/* ═══════════════════════════════════════════
+   Tab: Performance (formerly Acompanhamento)
+   ═══════════════════════════════════════════ */
+const PerformanceTab: React.FC<{
     sdrs: SDR[];
     activeLeads: Lead[];
 }> = ({ sdrs, activeLeads }) => (
+
     <GlassCard>
         <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -1038,9 +1600,12 @@ const AcompanhamentoTab: React.FC<{
                             >
                                 <td className="px-4 py-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-xs font-black shadow-sm">
-                                            {sdr.email?.charAt(0).toUpperCase()}
-                                        </div>
+                                        <UserAvatar 
+                                            src={sdr.profile_picture_url} 
+                                            name={sdr.full_name || sdr.email?.split('@')[0]} 
+                                            size="sm" 
+                                            className="font-black shadow-sm" 
+                                        />
                                         <div>
                                             <p className="font-black text-slate-800 text-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.email?.split('@')[0]}</p>
                                             <p className="text-[10px] text-slate-600 font-bold">{sdr.email}</p>
@@ -1161,7 +1726,7 @@ const LeadsTab: React.FC<{
 /* ═══════════════════════════════════════════
    Tab: Cadências
    ═══════════════════════════════════════════ */
-const CadenciasTab: React.FC<{
+export const CadenciasTab: React.FC<{
     activeLeads: Lead[];
 }> = ({ activeLeads }) => {
     // Group leads by cadence_name
@@ -1439,7 +2004,11 @@ const PreviewTab: React.FC<{
     sdrs: SDR[];
     activeLeads: Lead[];
     columns: PipelineColumn[];
-}> = ({ sdrs, activeLeads, columns }) => {
+    selectedAuditSdrIds: string[];
+    onToggleAuditSdr: (id: string) => void;
+    onSendAudit: () => void;
+    isSendingAudit: boolean;
+}> = ({ sdrs, activeLeads, columns, selectedAuditSdrIds, onToggleAuditSdr, onSendAudit, isSendingAudit }) => {
     const [selectedSdr, setSelectedSdr] = useState<SDR | null>(null);
 
     const handleDragEnd = async (event: any) => {
@@ -1453,27 +2022,18 @@ const PreviewTab: React.FC<{
         if (!lead || lead.current_column_id === newColId) return;
 
         try {
-            // 1. Move lead in backend
             await leadsAPI.moveLead(leadId, newColId);
-
-            // 2. Track productivity based on destination column
-            // Mapping column positions to activity types
             const col = columns.find(c => c.id === newColId);
             if (col) {
                 if (col.position === 2) await statsAPI.updateActivity('call', selectedSdr.id);
                 if (col.position === 3) await statsAPI.updateActivity('email', selectedSdr.id);
                 if (col.position === 4) await statsAPI.updateActivity('whatsapp', selectedSdr.id);
             }
-
-            // 3. Update local state for immediate feedback (shortcut)
-            // In a real app, we'd refetch or use a setter from parent
-            // since we don't have the setter here, the next periodic fetch (fetchData) will refresh it.
         } catch (err) {
             console.error('Failed to move lead or update activity:', err);
         }
     };
 
-    // Group leads for all active leads to distribute among SDRs
     const leadsBySdr = new Map<string, Lead[]>();
     activeLeads.forEach(lead => {
         const sdrId = lead.assigned_sdr_id || 'unassigned';
@@ -1481,70 +2041,15 @@ const PreviewTab: React.FC<{
     });
 
     const COLUMN_IDENTITY: Record<number, any> = {
-        1: {
-            gradient: ['#FF8C00', '#FF5722'],
-            cardBg: 'bg-orange-50/90 border-orange-200/50',
-            columnBg: 'bg-orange-100/20',
-            shadow: 'shadow-orange-300/30',
-            ring: 'ring-orange-300/40',
-            icon: '🍊',
-            label: 'Leads',
-            subtitle: 'TRIAGEM INICIAL',
-            accent: 'text-orange-500'
-        },
-        2: {
-            gradient: ['#3B82F6', '#6366F1'],
-            cardBg: 'bg-blue-50/90 border-blue-200/50',
-            columnBg: 'bg-blue-100/20',
-            shadow: 'shadow-blue-300/30',
-            ring: 'ring-blue-300/40',
-            icon: '📞',
-            label: 'Chamada',
-            subtitle: 'SCRIPT DE DESCOBERTA',
-            accent: 'text-blue-500'
-        },
-        3: {
-            gradient: ['#8B5CF6', '#EC4899'],
-            cardBg: 'bg-violet-50/90 border-violet-200/50',
-            columnBg: 'bg-violet-100/20',
-            shadow: 'shadow-violet-300/30',
-            ring: 'ring-violet-300/40',
-            icon: '✉️',
-            label: 'Email',
-            subtitle: 'PROPOSTA E VALOR',
-            accent: 'text-violet-500'
-        },
-        4: {
-            gradient: ['#10B981', '#06B6D4'],
-            cardBg: 'bg-emerald-50/90 border-emerald-200/50',
-            columnBg: 'bg-emerald-100/20',
-            shadow: 'shadow-emerald-300/30',
-            ring: 'ring-emerald-300/40',
-            icon: 'wpp',
-            label: 'WhatsApp',
-            subtitle: 'RELACIONAMENTO',
-            accent: 'text-emerald-500'
-        },
-        5: {
-            gradient: ['#EF4444', '#F97316'],
-            cardBg: 'bg-red-50/90 border-red-200/50',
-            columnBg: 'bg-red-100/20',
-            shadow: 'shadow-red-300/30',
-            ring: 'ring-red-300/40',
-            icon: '🎯',
-            label: 'Cadência',
-            subtitle: 'FOLLOW-UP FINAL',
-            accent: 'text-red-500'
-        },
+        1: { gradient: ['#FF8C00', '#FF5722'], columnBg: 'bg-orange-100/20', icon: '🍊', label: 'Leads', subtitle: 'TRIAGEM INICIAL', accent: 'text-orange-500' },
+        2: { gradient: ['#3B82F6', '#6366F1'], columnBg: 'bg-blue-100/20', icon: '📞', label: 'Chamada', subtitle: 'SCRIPT DESCOBERTA', accent: 'text-blue-500' },
+        3: { gradient: ['#8B5CF6', '#EC4899'], columnBg: 'bg-violet-100/20', icon: '✉️', label: 'Email', subtitle: 'PROPOSTA E VALOR', accent: 'text-violet-500' },
+        4: { gradient: ['#10B981', '#06B6D4'], columnBg: 'bg-emerald-100/20', icon: 'wpp', label: 'WhatsApp', subtitle: 'RELACIONAMENTO', accent: 'text-emerald-500' },
+        5: { gradient: ['#EF4444', '#F97316'], columnBg: 'bg-red-100/20', icon: '🎯', label: 'Cadência', subtitle: 'FOLLOW-UP FINAL', accent: 'text-red-500' },
     };
 
-    const WppIconInline = ({ size = 20 }: { size?: number }) => (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12.031 0A12.03 12.03 0 0 0 0 12c0 2.124.553 4.195 1.603 6L.513 24l6.15-1.58A11.96 11.96 0 0 0 12.031 24c6.626 0 12-5.373 12-12S18.658 0 12.031 0zm0 21.996c-1.782 0-3.529-.462-5.071-1.336l-.364-.206-3.766.968 1.004-3.606-.23-.352A9.998 9.998 0 0 1 2.032 12c0-5.485 4.542-9.946 10-9.946s10 4.461 10 9.946-4.542 9.946-10 9.946zm5.424-7.408c-.297-.146-1.755-.845-2.025-.941-.271-.097-.468-.146-.665.146-.197.293-.765.941-.937 1.134-.173.193-.346.218-.643.073-.297-.146-1.252-.451-2.385-1.44-.881-.769-1.477-1.719-1.649-2.013-.173-.293-.018-.45.129-.596.133-.131.297-.338.445-.506.148-.168.197-.291.296-.484.099-.193.05-.366-.024-.512-.074-.146-.665-1.564-.911-2.14-.24-.564-.485-.487-.665-.497-.172-.009-.37-.012-.568-.012s-.518.073-.789.366c-.272.293-1.037.985-1.037 2.4 0 1.415 1.062 2.782 1.21 2.977.149.195 2.072 3.09 5.02 4.331.7.293 1.246.468 1.673.599.704.215 1.345.184 1.849.112.564-.08 1.755-.698 2.003-1.373.247-.675.247-1.252.173-1.373-.075-.122-.273-.195-.57-.342z" />
-        </svg>
-    );
 
-    const orderedColumns = columns.length > 0 ? columns.sort((a, b) => a.position - b.position) : [
+    const orderedColumns = columns.length > 0 ? [...columns].sort((a, b) => a.position - b.position) : [
         { id: 'c1', name: 'Leads', position: 1, color: '#FF8C00' },
         { id: 'c2', name: 'Chamada', position: 2, color: '#3B82F6' },
         { id: 'c3', name: 'Email', position: 3, color: '#8B5CF6' },
@@ -1552,175 +2057,132 @@ const PreviewTab: React.FC<{
         { id: 'c5', name: 'Cadência', position: 5, color: '#EF4444' },
     ];
 
-    /** Modal View Renderer */
-    const renderModalKanban = () => {
-        if (!selectedSdr) return null;
-        const myLeads = leadsBySdr.get(selectedSdr.id) || [];
-        const myColumnMap = new Map<string, Lead[]>();
-        myLeads.forEach(lead => {
-            const colId = lead.current_column_id || 'unknown';
-            myColumnMap.set(colId, [...(myColumnMap.get(colId) || []), lead]);
-        });
-
-        return (
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-md p-4 sm:p-8"
-                onClick={() => setSelectedSdr(null)}
-            >
-                <motion.div
-                    initial={{ scale: 0.9, y: 20, opacity: 0 }}
-                    animate={{ scale: 1, y: 0, opacity: 1 }}
-                    exit={{ scale: 0.95, y: 10, opacity: 0 }}
-                    transition={springPop}
-                    className="w-full max-w-5xl h-[75vh] bg-slate-50 border border-white/20 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden relative"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {/* macOS styling header */}
-                    <div className="h-14 bg-white border-b border-slate-100 flex items-center justify-between px-6 shrink-0">
-                        <div className="flex gap-2 items-center">
-                            <button onClick={() => setSelectedSdr(null)} className="w-3.5 h-3.5 rounded-full bg-red-500 hover:bg-red-600 transition-colors shadow-inner" />
-                            <div className="w-3.5 h-3.5 rounded-full bg-amber-400 shadow-inner" />
-                            <div className="w-3.5 h-3.5 rounded-full bg-green-500 shadow-inner" />
-                        </div>
-                        <h3 className="text-sm font-black text-slate-700 absolute left-1/2 -translate-x-1/2" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                            Pipeline: {selectedSdr.email?.split('@')[0]}
-                        </h3>
-                        <div className="w-10"></div>
-                    </div>
-
-                    {/* Detailed Kanban View */}
-                    <div className="flex-1 overflow-hidden">
-                        <DndContext onDragEnd={handleDragEnd}>
-                            <div className="h-full flex gap-4 md:gap-5 overflow-x-auto p-4 sm:p-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IiNlNGRlNTQiLz48L3N2Zz4=')] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                                {orderedColumns.map((col) => {
-                                    const colLeads = myColumnMap.get(col.id) || [];
-                                    const tok = COLUMN_IDENTITY[col.position] ?? COLUMN_IDENTITY[1];
-                                    return (
-                                        <DroppableColumn key={col.id} col={col} colLeads={colLeads} tok={tok} />
-                                    );
-                                })}
-                            </div>
-                        </DndContext>
-                    </div>
-                </motion.div>
-            </motion.div>
-        );
-    };
-
-    const DroppableColumn = ({ col, colLeads, tok }: any) => {
-        const { setNodeRef } = useDroppable({ id: col.id });
-
-        return (
-            <div ref={setNodeRef} className={cn("w-[270px] shrink-0 flex flex-col h-full rounded-2xl p-1.5 transition-all duration-300 backdrop-blur-md border border-white/60 shadow-lg relative overflow-hidden", tok.columnBg, tok.shadow)}>
-                {/* ── Header ── */}
-                <div className="relative mb-4 shrink-0 px-1">
-                    <div className="rounded-2xl px-4 py-3.5 flex items-center gap-3 bg-white/60 backdrop-blur-md border border-white/80 shadow-sm">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white shadow-sm border border-slate-100" style={{ color: tok.gradient[0] }}>
-                            <span className="text-lg leading-none select-none drop-shadow-sm">
-                                {tok.icon === 'wpp' ? <WppIconInline size={18} /> : tok.icon}
-                            </span>
-                        </div>
-                        <div className="min-w-0">
-                            <h3 className="font-black text-xs text-slate-800 tracking-tight leading-none" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                {col.name}
-                            </h3>
-                            <p className="text-[8px] text-slate-500 font-extrabold mt-1 tracking-wider uppercase truncate" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                {tok.subtitle}
-                            </p>
-                        </div>
-                    </div>
-                    <span className="absolute -top-2 -right-1 min-w-[20px] h-[20px] px-1 flex items-center justify-center rounded-full text-[9px] font-black shadow-md border-[2px] border-white/60 text-white" style={{ background: `linear-gradient(135deg, ${tok.gradient[0]}, ${tok.gradient[1]})`, fontFamily: 'Comfortaa, cursive' }}>
-                        {colLeads.length}
-                    </span>
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-280px)] overflow-hidden">
+            {/* Sidebar selector */}
+            <div className="lg:col-span-3 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-1">
+                <div className="flex items-center justify-between px-2 mb-2">
+                    <h3 className="text-[11px] font-black text-slate-700 uppercase tracking-[0.2em]" style={{ fontFamily: 'Comfortaa, cursive' }}>Preview SDR</h3>
+                    {selectedAuditSdrIds.length > 0 && (
+                        <button onClick={onSendAudit} disabled={isSendingAudit} className={cn("text-[8px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all", isSendingAudit ? "bg-slate-100 text-slate-400" : "bg-orange-500 text-white shadow-lg")}>
+                            Auditoria ({selectedAuditSdrIds.length})
+                        </button>
+                    )}
                 </div>
-
-                <div 
-                    className="flex-1 overflow-y-auto space-y-3 pb-8 pt-2 px-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-300/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
-                    style={{
-                        maskImage: 'linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%)',
-                        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%)'
-                    }}
-                >
-                    {colLeads.map((lead: Lead) => (
-                        <LeadCard key={lead.id} lead={lead} columnPosition={col.position} />
-                    ))}
+                <div className="space-y-3">
+                    {sdrs.map(sdr => {
+                        const isSelected = selectedSdr?.id === sdr.id;
+                        return (
+                            <motion.div
+                                key={sdr.id}
+                                whileHover={{ x: 4 }}
+                                onClick={() => setSelectedSdr(sdr)}
+                                className={cn(
+                                    "p-4 rounded-[2rem] border transition-all cursor-pointer group relative overflow-hidden",
+                                    isSelected 
+                                        ? "bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700 shadow-xl shadow-slate-500/20 text-white" 
+                                        : "bg-white border-slate-100 hover:border-orange-200 text-slate-800"
+                                )}
+                            >
+                                <div className="flex items-center gap-3 relative z-10">
+                                    <input 
+                                        type="checkbox"
+                                        checked={selectedAuditSdrIds.includes(sdr.id)}
+                                        onChange={(e) => {
+                                            e.stopPropagation();
+                                            onToggleAuditSdr(sdr.id);
+                                        }}
+                                        className="w-3.5 h-3.5 rounded border-slate-200 text-orange-500 focus:ring-orange-500 cursor-pointer"
+                                    />
+                                    <UserAvatar 
+                                        src={sdr.profile_picture_url} 
+                                        name={sdr.full_name || sdr.email?.split('@')[0]} 
+                                        size="sm" 
+                                        className="font-black" 
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-black truncate">{sdr.full_name || sdr.email?.split('@')[0]}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className={cn("text-[9px] font-black uppercase tracking-[0.1em]", isSelected ? "text-slate-400" : "text-slate-400")}>
+                                                {sdr.calls || 0} calls
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={14} className={cn("transition-transform", isSelected ? "text-orange-500 translate-x-1" : "text-slate-300")} />
+                                </div>
+                            </motion.div>
+                        );
+                    })}
                 </div>
             </div>
-        );
-    };
+
+            {/* Funnel Preview */}
+            <div className="lg:col-span-9 bg-white/40 backdrop-blur-md rounded-[3rem] border border-white/80 shadow-inner flex flex-col overflow-hidden">
+                {!selectedSdr ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
+                        <div className="w-20 h-20 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm flex items-center justify-center text-slate-300 mb-6">
+                            <Users size={32} />
+                        </div>
+                        <h4 className="text-xl font-black text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>Selecione um Especialista</h4>
+                        <p className="text-xs text-slate-400 font-bold mt-2 uppercase tracking-widest">Para visualizar o pipeline individual em tempo real</p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="p-8 border-b border-slate-100/50 flex items-center justify-between bg-white/40 backdrop-blur-xl">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+                                    <Zap size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Operação Real-Time</h3>
+                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">{selectedSdr.full_name || selectedSdr.email}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 p-8 overflow-x-auto overflow-y-hidden">
+                            <DndContext onDragEnd={handleDragEnd}>
+                                <div className="flex gap-6 h-full min-w-[1200px]">
+                                    {orderedColumns.map(col => (
+                                        <PreviewColumn 
+                                            key={col.id}
+                                            id={col.id}
+                                            leads={leadsBySdr.get(selectedSdr.id)?.filter(l => l.current_column_id === col.id) || []}
+                                            identity={COLUMN_IDENTITY[col.position] || {}}
+                                        />
+                                    ))}
+                                </div>
+                            </DndContext>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const PreviewColumn: React.FC<{ id: string; leads: Lead[]; identity: any }> = ({ id, leads, identity }) => {
+    const { setNodeRef } = useDroppable({ id });
 
     return (
-        <div className="space-y-6 relative h-full flex flex-col z-0">
-            {/* Modal Overlay Render - Elevated Z-Index utilizing Portal */}
-            {createPortal(
-                <AnimatePresence>
-                    {renderModalKanban()}
-                </AnimatePresence>,
-                document.body
-            )}
+        <div ref={setNodeRef} className={cn("w-[260px] h-full flex flex-col rounded-[2.5rem] p-4 transition-all border border-transparent shadow-inner", identity.columnBg || 'bg-slate-50/50')}>
+            <div className="flex items-center justify-between mb-4 px-2">
+                <div className="flex items-center gap-2">
+                    <span className="text-sm">{identity.icon === 'wpp' ? '📱' : identity.icon}</span>
+                    <div>
+                        <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{identity.label}</h4>
+                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tight">{identity.subtitle}</p>
+                    </div>
+                </div>
+                <div className={cn("px-2.5 py-1 rounded-full text-[10px] font-black bg-white shadow-sm border border-slate-100", identity.accent)}>
+                    {leads.length}
+                </div>
+            </div>
 
-            <h3 className="text-sm font-bold text-slate-600 tracking-widest uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                Visão Geral das Operações
-            </h3>
-
-            {/* Grid of SDRs Minimaps */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
-                {sdrs.map(sdr => {
-                    const myLeads = leadsBySdr.get(sdr.id) || [];
-
-                    return (
-                        <motion.div
-                            key={sdr.id}
-                            whileHover={{ scale: 1.02, y: -4 }}
-                            onClick={() => setSelectedSdr(sdr)}
-                            className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-orange-100 transition-all p-6 cursor-pointer group"
-                        >
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-rose-400 flex items-center justify-center text-white font-black shadow-md border-2 border-white">
-                                        {sdr.email?.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div>
-                                        <p className="font-black text-sm text-slate-800 tracking-tight capitalize" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                            {sdr.email?.split('@')[0].replace(/[^a-zA-Z]/g, ' ')}
-                                        </p>
-                                        <p className="text-[10px] text-orange-500 font-bold uppercase tracking-wider">{myLeads.length} leads</p>
-                                    </div>
-                                </div>
-                                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors">
-                                    <Eye size={16} strokeWidth={2.5} />
-                                </div>
-                            </div>
-
-                            {/* Ultra Mini Kanban Bars */}
-                            <div className="flex items-end gap-1.5 h-16 w-full">
-                                {orderedColumns.map(col => {
-                                    const count = myLeads.filter(l => l.current_column_id === col.id).length;
-                                    const maxCount = Math.max(...orderedColumns.map(c => myLeads.filter(l => l.current_column_id === c.id).length), 1);
-                                    const heightPercent = count === 0 ? 8 : (count / maxCount) * 100;
-                                    const tok = COLUMN_IDENTITY[col.position] ?? COLUMN_IDENTITY[1];
-                                    const grad = tok.gradient;
-
-                                    return (
-                                        <div key={col.id} className="flex-1 flex flex-col justify-end items-center gap-2 group/bar">
-                                            <span className="text-[10px] font-black text-slate-300 group-hover/bar:text-slate-600 transition-colors">{count}</span>
-                                            <div
-                                                className="w-full rounded-md shadow-sm opacity-60 group-hover/bar:opacity-100 transition-all"
-                                                style={{
-                                                    height: `${heightPercent}%`,
-                                                    background: `linear-gradient(to top, ${grad[1]}, ${grad[0]})`
-                                                }}
-                                            />
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </motion.div>
-                    );
-                })}
+            <div className="flex-1 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
+                {leads.map(lead => (
+                    <LeadCard key={lead.id} lead={lead} simple={true} />
+                ))}
             </div>
         </div>
     );
@@ -1754,14 +2216,27 @@ const AssistenteTab: React.FC<{
         setAiResponse(null);
         try {
             // Prepare context data based on selection
+            let filteredLeads = [...activeLeads, ...allLeads];
+            if (dataSource === 'tags' && selectedItems.length > 0) {
+                filteredLeads = filteredLeads.filter(l => l.tags?.some(t => selectedItems.includes(t)));
+            } else if (dataSource === 'campeonatos' && selectedItems.length > 0) {
+                filteredLeads = filteredLeads.filter(l => selectedItems.includes(l.cadence_name || ''));
+            }
+
             const contextData = {
                 source: dataSource,
                 selectedItems,
                 summary: {
-                    total_leads: allLeads.length + activeLeads.length,
-                    active_in_cadence: activeLeads.length,
+                    total_leads: filteredLeads.length,
+                    active_in_cadence: filteredLeads.filter(l => l.cadence_status === 'ativa').length,
                     sdrs_count: sdrs.length,
-                    leads_sample: activeLeads.slice(0, 50).map(l => ({ name: l.full_name, company: l.company_name, cadence: l.cadence_name, status: (l as any).current_column }))
+                    leads_sample: filteredLeads.slice(0, 50).map(l => ({ 
+                        name: l.full_name, 
+                        company: l.company_name, 
+                        cadence: l.cadence_name, 
+                        status: (l as any).current_column,
+                        tags: l.tags
+                    }))
                 }
             };
 

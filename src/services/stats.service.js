@@ -56,10 +56,8 @@ class StatsService {
             'emails': 'emails'
         };
 
-        const dbType = typeMap[type];
-        if (!dbType) {
-            console.log(`[StatsService] Skipping activity update for type: ${type}`);
-            return null;
+        if (!['contato', 'agendamento', 'reuniao', 'conexao', 'no-show', 'venda', 'perda'].includes(type)) {
+            return;
         }
 
         // 1. Try to find the SDR by ID or user_id
@@ -170,25 +168,43 @@ class StatsService {
         const dateFilterMove = moveWhere.length > 0 ? `WHERE ${moveWhere.join(' AND ')}` : '';
 
         // Add SDR filtering if provided
-        let sdrFilterLog = '';
-        let sdrFilterLeads = '';
+        let sdrFilterLog = ''; // For interactions_log (uses sdrs.id)
+        let sdrFilterLeads = ''; // For leads (uses assigned_sdr_id)
+        let userFilterLog = ''; // For call_logs and cadence_completions (uses users.id)
+        
+        const params = sdrIds && sdrIds.length > 0 ? [...sdrIds] : [];
+        
         if (sdrIds && sdrIds.length > 0) {
             const placeholders = sdrIds.map((_, i) => `$${i + 1}`).join(',');
             sdrFilterLog = `AND sdr_id IN (${placeholders})`;
             sdrFilterLeads = `AND assigned_sdr_id IN (${placeholders})`;
+            
+            // Resolve User IDs for SDRs
+            const userRes = await db.query(`SELECT user_id FROM sdrs WHERE id IN (${placeholders})`, sdrIds);
+            const userIds = userRes.rows.map(r => r.user_id).filter(Boolean);
+            
+            if (userIds.length > 0) {
+                // Add userIds to params for next queries
+                const startIdx = params.length + 1;
+                const userPlaceholders = userIds.map((_, i) => `$${startIdx + i}`).join(',');
+                userFilterLog = `AND sdr_id IN (${userPlaceholders})`;
+                userIds.forEach(uid => params.push(uid));
+            } else {
+                // If no user IDs found, ensure the filter returns nothing if it was intended to filter
+                userFilterLog = `AND sdr_id IS NULL`; 
+            }
         }
 
         // 1. Get activity stats from logs
         const activitySql = `
             SELECT 
-                (SELECT COUNT(*)::integer FROM call_logs ${dateFilterCall} ${dateFilterCall ? sdrFilterLog : (sdrFilterLog ? 'WHERE ' + sdrFilterLog.slice(4) : '')}) as total_calls,
+                (SELECT COUNT(*)::integer FROM call_logs ${dateFilterCall} ${dateFilterCall ? userFilterLog : (userFilterLog ? 'WHERE ' + userFilterLog.slice(4) : '')}) as total_calls,
                 (SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'EMAIL_SENT' ${andFilterInt} ${sdrFilterLog}) as total_emails,
                 (SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'WHATSAPP_SENT' ${andFilterInt} ${sdrFilterLog}) as total_whatsapp,
-                (SELECT COUNT(*)::integer FROM cadence_completions ${dateFilterComp} ${dateFilterComp ? sdrFilterLog : (sdrFilterLog ? 'WHERE ' + sdrFilterLog.slice(4) : '')}) as total_completed
+                (SELECT COUNT(*)::integer FROM cadence_completions ${dateFilterComp} ${dateFilterComp ? userFilterLog : (userFilterLog ? 'WHERE ' + userFilterLog.slice(4) : '')}) as total_completed
         `;
         
-        console.log('[DEBUG] activitySql:', activitySql);
-        const activityRes = await db.query(activitySql, sdrIds && sdrIds.length > 0 ? sdrIds : []);
+        const activityRes = await db.query(activitySql, params);
 
         // 2. Get lead counts per column from leads table
         const columnSql = `
@@ -218,30 +234,51 @@ class StatsService {
                 FROM leads
                 WHERE status = 'active'
                 GROUP BY assigned_sdr_id
+            ),
+            cadence_counts AS (
+                SELECT sdr_id,
+                    COUNT(*) FILTER (WHERE status IN ('ativo','pausado','concluido','esgotado')) as total_in_cadence,
+                    COUNT(*) FILTER (WHERE status IN ('concluido','esgotado')) as total_finished
+                FROM lead_cadence
+                GROUP BY sdr_id
             )
             SELECT 
                 s.id,
                 s.full_name,
                 s.email,
+                s.user_id,
+                u.profile_picture_url,
                 s.total_leads_assigned,
                 COALESCE(ac.pending_leads, 0)::integer as pending_leads,
                 COALESCE(mc.movements, 0)::integer as pipeline_movements,
-                (SELECT COUNT(*)::integer FROM call_logs cl WHERE cl.sdr_id = s.id ${andFilterCall}) as calls,
+                (SELECT COUNT(*)::integer FROM call_logs cl WHERE cl.sdr_id = s.user_id ${andFilterCall}) as calls,
                 (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'EMAIL_SENT' ${andFilterInt}) as emails,
                 (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'WHATSAPP_SENT' ${andFilterInt}) as whatsapp,
-                (SELECT COUNT(*)::integer FROM cadence_completions cc WHERE cc.sdr_id = s.id ${andFilterComp}) as completed,
+                (SELECT COUNT(*)::integer FROM cadence_completions cc WHERE cc.sdr_id = s.user_id ${andFilterComp}) as completed,
+                COALESCE(cdc.total_in_cadence, 0)::integer as total_in_cadence,
+                COALESCE(cdc.total_finished, 0)::integer as total_finished,
+                CASE WHEN COALESCE(s.total_leads_assigned, 0) > 0
+                    THEN ROUND(
+                        (COALESCE((SELECT COUNT(DISTINCT lead_id) FROM call_logs WHERE sdr_id = s.user_id), 0)
+                         + COALESCE((SELECT COUNT(DISTINCT lead_id) FROM interactions_log WHERE sdr_id = s.id), 0))::numeric
+                        / s.total_leads_assigned * 100, 1)
+                    ELSE 0 END as pct_tratativa,
+                CASE WHEN COALESCE(cdc.total_in_cadence, 0) > 0
+                    THEN ROUND(COALESCE(cdc.total_finished, 0)::numeric / cdc.total_in_cadence * 100, 1)
+                    ELSE 0 END as pct_conclusao,
                 s.goal_calls,
                 s.goal_emails,
                 s.goal_whatsapp,
                 s.goal_completed
             FROM sdrs s
+            LEFT JOIN users u ON s.user_id = u.id
             LEFT JOIN movement_counts mc ON s.id = mc.moved_by_sdr_id
             LEFT JOIN active_counts ac ON s.id = ac.assigned_sdr_id
+            LEFT JOIN cadence_counts cdc ON s.id = cdc.sdr_id
             WHERE s.is_active = true ${sdrIds && sdrIds.length > 0 ? `AND s.id IN (${sdrIds.map((_, i) => `$${i + 1}`).join(',')})` : ''}
             ORDER BY s.full_name ASC
         `;
         
-        console.log('[DEBUG] sdrSql:', sdrSql);
         const sdrRes = await db.query(sdrSql, sdrIds && sdrIds.length > 0 ? sdrIds : []);
 
         return {

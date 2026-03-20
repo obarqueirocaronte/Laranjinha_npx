@@ -1,181 +1,240 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, X } from 'lucide-react';
-
+import { X, Trophy, MessageSquare, Target, Phone, PhoneOff, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import clsx from 'clsx';
 import type { Lead } from '../../types';
 
 interface CycleCompleteModalProps {
     isOpen: boolean;
-    onClose: () => void;
     lead: Lead | null;
-    onResult?: (result: 'connected' | 'rejected' | 'not_connected' | 'opportunity', notes?: string) => void;
+    onComplete: (outcome: 'opportunity' | 'connected' | 'not_connected' | 'rejected', notes?: string) => void;
+    onClose: () => void;
 }
 
-export const CycleCompleteModal: React.FC<CycleCompleteModalProps> = ({ isOpen, onClose, lead, onResult }) => {
-    const [notes, setNotes] = React.useState('');
-    const [isOpportunitySelected, setIsOpportunitySelected] = React.useState(false);
+export const CycleCompleteModal: React.FC<CycleCompleteModalProps> = ({ isOpen, lead, onComplete, onClose }) => {
+    const [step, setStep] = useState<'outcome' | 'opportunity_flow' | 'notes'>('outcome');
+    const [notes, setNotes] = useState('');
+    const [addNotes, setAddNotes] = useState(false);
+    const [selectedOutcome, setSelectedOutcome] = useState<'opportunity' | 'connected' | 'not_connected' | 'rejected' | null>(null);
 
     useEffect(() => {
         if (isOpen) {
-            try {
-                if (typeof confetti === 'function') {
-                    confetti({
-                        particleCount: 150,
-                        spread: 70,
-                        origin: { y: 0.6 },
-                        colors: ['#f97316', '#fbbf24', '#3b82f6'],
-                    });
-                } else if (confetti && typeof (confetti as any).default === 'function') {
-                    (confetti as any).default({
-                        particleCount: 150,
-                        spread: 70,
-                        origin: { y: 0.6 },
-                        colors: ['#f97316', '#fbbf24', '#3b82f6'],
-                    });
-                }
-            } catch (e) {
-                console.error('Confetti error:', e);
-            }
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#F97316', '#FB923C', '#FDBA74', '#FFFFFF'],
+                zIndex: 200
+            });
         }
     }, [isOpen]);
 
-    if (!lead) return null;
-
-    const handleResult = (result: 'connected' | 'rejected' | 'not_connected' | 'opportunity') => {
-        if (result === 'opportunity' && !isOpportunitySelected) {
-            setIsOpportunitySelected(true);
-            return;
+    const handleOutcomeClick = (outcome: 'opportunity' | 'connected' | 'not_connected' | 'rejected') => {
+        if (addNotes || outcome === 'opportunity') {
+            setSelectedOutcome(outcome);
+            setStep(outcome === 'opportunity' ? 'opportunity_flow' : 'notes');
+        } else {
+            onComplete(outcome, '');
+            onClose();
+            setTimeout(() => {
+                setStep('outcome');
+                setNotes('');
+                setSelectedOutcome(null);
+                setAddNotes(false);
+            }, 300);
         }
-
-        if (onResult) {
-            // @ts-ignore - explicitly passing notes if it's an opportunity
-            onResult(result, notes);
-        }
-        onClose();
     };
+
+    const handleFinish = () => {
+        if (selectedOutcome) {
+            onComplete(selectedOutcome, notes);
+            handleClose();
+        }
+    };
+
+    const handleClose = () => {
+        onClose();
+        setTimeout(() => {
+            setStep('outcome');
+            setNotes('');
+            setSelectedOutcome(null);
+            setAddNotes(false);
+        }, 300);
+    };
+
+    if (!isOpen || !lead) return null;
 
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 text-left">
-                    {/* Backdrop */}
+                <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                        className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+                        onClick={handleClose}
                     />
 
-                    {/* Modal Content */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.8, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                         className="relative w-full max-w-sm bg-white/40 border border-white/60 shadow-glass rounded-[40px] overflow-hidden p-8 text-center backdrop-blur-2xl"
                     >
-                        {/* Soft Nude Background */}
+                        {/* Premium Background Elements */}
                         <div className="absolute inset-0 bg-gradient-to-br from-orange-50/80 via-white/40 to-orange-100/60 pointer-events-none" />
-                        
-                        {/* Premium Reflections */}
-                        <div className="absolute -top-32 -left-32 w-64 h-64 bg-emerald-100/30 rounded-full blur-3xl pointer-events-none" />
-                        <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -top-32 -left-32 w-64 h-64 bg-orange-200/30 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-rose-200/20 rounded-full blur-3xl pointer-events-none" />
 
                         <button
-                            onClick={onClose}
-                            className="absolute top-6 right-6 p-2 bg-black/5 hover:bg-black/10 rounded-full transition-colors text-slate-400 shadow-sm border border-white/40 z-10"
+                            onClick={handleClose}
+                            className="absolute top-6 right-6 p-2 bg-black/5 hover:bg-black/10 rounded-full transition-colors text-slate-400 z-10"
                         >
                             <X size={18} strokeWidth={2.5} />
                         </button>
 
-                        <div className="relative z-10 flex flex-col items-center gap-2">
-                            <div className="w-16 h-16 rounded-[28px] bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center mb-3 shadow-[0_12px_24px_rgba(249,115,22,0.3)] border border-white/40">
-                                <CheckCircle size={28} className="text-white drop-shadow-md" strokeWidth={2.5} />
+                        <div className="relative z-10">
+                            <div className="w-16 h-16 rounded-[28px] bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center mx-auto mb-4 shadow-[0_12px_24px_rgba(249,115,22,0.3)] border border-white/40">
+                                <Trophy size={28} className="text-white drop-shadow-md" strokeWidth={2.5} />
                             </div>
 
-                            <h2 className="text-2xl font-black text-slate-800 leading-tight mt-1" style={{ fontFamily: 'Comfortaa, cursive' }}>{isOpportunitySelected ? '🚀 Nova Oportunidade' : 'Ciclo Concluído!'}</h2>
-
-                            <p className="text-sm text-slate-500 font-medium px-4 mb-2" style={{ fontFamily: 'Quicksand, sans-serif' }}>
-                                As tentativas para {lead.full_name} foram finalizadas. Qual o resultado final?
+                            <h2 className="text-2xl font-black text-slate-800 leading-tight mb-2" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                Ciclo Finalizado!
+                            </h2>
+                            <p className="text-sm text-slate-500 font-medium mb-8 px-4" style={{ fontFamily: 'Quicksand, sans-serif' }}>
+                                {step === 'outcome' ? (
+                                    <>A cadência de <strong className="text-orange-600 font-black">{lead.full_name}</strong> chegou ao fim. Qual o resultado final?</>
+                                ) : step === 'opportunity_flow' ? (
+                                    <>Confirmar <strong className="text-emerald-600 font-black">Nova Oportunidade</strong>? Isso moverá o lead para o CRM.</>
+                                ) : (
+                                    <>Alguma observação final sobre <strong className="text-slate-700 font-black">{lead.full_name}</strong>?</>
+                                )}
                             </p>
 
-                            <div className="w-full relative group">
-                                <textarea
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                    placeholder="Notas da oportunidade ou motivo do descarte..."
-                                    className="w-full mt-4 h-24 p-4 bg-white/60 border border-white/80 rounded-2xl text-[11px] font-bold text-slate-700 outline-none focus:ring-2 focus:ring-orange-100 transition-all font-[Quicksand] resize-none"
-                                />
-                            </div>
+                            <AnimatePresence mode="wait">
+                                {step === 'outcome' ? (
+                                    <motion.div
+                                        key="outcome"
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        className="grid grid-cols-2 gap-4 mt-2"
+                                    >
+                                        {[
+                                            { id: 'opportunity', label: 'Oportunidade', sub: 'Mover p/ CRM', icon: <Target size={24} strokeWidth={2.5} />, color: 'emerald' },
+                                            { id: 'connected', label: 'Conectado', sub: 'Falou com lead', icon: <Phone size={24} strokeWidth={2.5} />, color: 'blue' },
+                                            { id: 'not_connected', label: 'Sem Contato', sub: 'Não respondeu', icon: <PhoneOff size={24} strokeWidth={2.5} />, color: 'orange' },
+                                            { id: 'rejected', label: 'Spam/Descarte', sub: 'Lead inválido', icon: <Trash2 size={24} strokeWidth={2.5} />, color: 'rose' },
+                                        ].map((item) => (
+                                            <div key={item.id} className="relative group">
+                                                <button
+                                                    onClick={() => handleOutcomeClick(item.id as any)}
+                                                    className={clsx(
+                                                        "w-full aspect-[4/3] rounded-[28px] border-2 flex flex-col items-center justify-center gap-2 transition-all duration-300 shadow-sm",
+                                                        item.color === 'emerald' && "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400/30 hover:bg-emerald-700 hover:shadow-lg",
+                                                        item.color === 'blue' && "bg-blue-50 border-blue-100/50 text-blue-600 hover:bg-blue-500 hover:text-white hover:shadow-blue-200",
+                                                        item.color === 'orange' && "bg-orange-50 border-orange-100/50 text-orange-600 hover:bg-orange-500 hover:text-white hover:shadow-orange-200",
+                                                        item.color === 'rose' && "bg-rose-50 border-rose-100/50 text-rose-600 hover:bg-rose-500 hover:text-white hover:shadow-rose-200"
+                                                    )}
+                                                >
+                                                    <div className="transition-transform group-hover:scale-110 duration-500">
+                                                        {item.icon}
+                                                    </div>
+                                                    <span className="text-[10px] font-black tracking-wider uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>{item.label}</span>
+                                                </button>
 
-                            <div className="w-full space-y-3 mt-5">
-                                {isOpportunitySelected ? (
-                                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
-                                        <button
-                                            onClick={() => handleResult('opportunity')}
-                                            className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:from-emerald-600 hover:to-teal-600 transition-all"
-                                        >
-                                            Confirmar e Enviar Relatório
-                                        </button>
-                                        <button onClick={() => setIsOpportunitySelected(false)} className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-orange-500 transition-colors">Voltar</button>
+                                                <div className="absolute -top-12 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:-translate-y-1 z-20">
+                                                    <div className="bg-slate-800 text-white text-[10px] py-2 px-4 rounded-xl whitespace-nowrap shadow-2xl font-bold border border-white/10">
+                                                        {item.sub}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        
+                                        {/* Toggle for notes */}
+                                        <div className="col-span-2 mt-4 flex items-center justify-between px-6 py-4 bg-white/40 border border-white/60 rounded-3xl shadow-inner group">
+                                            <div className="flex flex-col items-start gap-0.5 text-left">
+                                                <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest leading-none">Anotações</span>
+                                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tight opacity-70">
+                                                    {addNotes ? 'Janela de comentário ativa' : 'Pular anotações'}
+                                                </span>
+                                            </div>
+                                            
+                                            <button
+                                                onClick={() => setAddNotes(!addNotes)}
+                                                className={clsx(
+                                                    "relative inline-flex h-7 w-14 items-center rounded-full transition-all duration-300 focus:outline-none shadow-sm",
+                                                    addNotes ? "bg-emerald-500 shadow-emerald-200" : "bg-slate-300 shadow-slate-200"
+                                                )}
+                                            >
+                                                <span className={clsx(
+                                                    "absolute left-1.5 text-[8px] font-black text-white transition-opacity duration-300",
+                                                    addNotes ? "opacity-100" : "opacity-0"
+                                                )}>ON</span>
+                                                <span className={clsx(
+                                                    "absolute right-1.5 text-[8px] font-black text-slate-500 transition-opacity duration-300",
+                                                    addNotes ? "opacity-0" : "opacity-100"
+                                                )}>OFF</span>
+                                                <span
+                                                    className={clsx(
+                                                        "inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-300 shadow-md z-10",
+                                                        addNotes ? "translate-x-8" : "translate-x-1"
+                                                    )}
+                                                />
+                                            </button>
+                                        </div>
                                     </motion.div>
                                 ) : (
-                                    <>
-                                        <button
-                                            onClick={() => handleResult('opportunity')}
-                                            className="w-full p-4 bg-gradient-to-r from-emerald-50 to-white/60 hover:from-emerald-100 hover:to-white/90 border border-emerald-200 rounded-[28px] flex items-center justify-between group transition-all"
-                                        >
-                                            <div className="text-left pl-2">
-                                                <span className="block text-sm font-black text-emerald-800" style={{ fontFamily: 'Comfortaa, cursive' }}>Nova Oportunidade</span>
-                                                <span className="block text-[10px] text-emerald-600 font-bold uppercase tracking-widest" style={{ fontFamily: 'Quicksand, sans-serif' }}>Enviar p/ Novos Negócios</span>
+                                    <motion.div
+                                        key="notes"
+                                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                        className="space-y-4"
+                                    >
+                                        <div className="relative group">
+                                            <textarea
+                                                value={notes}
+                                                onChange={(e) => setNotes(e.target.value)}
+                                                placeholder={step === 'opportunity_flow' ? "Detalhes da oportunidade..." : "Notas finais..."}
+                                                rows={4}
+                                                className="w-full p-6 bg-white/60 border border-white/80 rounded-[32px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-orange-100 focus:bg-white/90 transition-all resize-none shadow-inner"
+                                                style={{ fontFamily: 'Quicksand, sans-serif' }}
+                                                autoFocus
+                                            />
+                                            <div className="absolute bottom-5 right-5 text-orange-300 pointer-events-none group-focus-within:text-orange-500 transition-colors">
+                                                <MessageSquare size={20} />
                                             </div>
-                                            <div className="w-9 h-9 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-110">
-                                                <CheckCircle size={18} strokeWidth={2.5} />
-                                            </div>
-                                        </button>
+                                        </div>
 
-                                        <button
-                                            onClick={() => handleResult('connected')}
-                                            className="w-full p-4 bg-white/60 hover:bg-white/90 border border-white/80 rounded-[28px] flex items-center justify-between group transition-all"
-                                        >
-                                            <div className="text-left pl-2">
-                                                <span className="block text-sm font-black text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>Sucesso / Conectou</span>
-                                                <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-widest" style={{ fontFamily: 'Quicksand, sans-serif' }}>Lead qualificado</span>
-                                            </div>
-                                            <div className="w-9 h-9 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-110">
-                                                <CheckCircle size={18} strokeWidth={2.5} />
-                                            </div>
-                                        </button>
-
-                                        <button
-                                            onClick={() => handleResult('not_connected')}
-                                            className="w-full p-4 bg-white/60 hover:bg-white/90 border border-white/80 rounded-[28px] flex items-center justify-between group transition-all"
-                                        >
-                                            <div className="text-left pl-2">
-                                                <span className="block text-sm font-black text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>Não Conectou</span>
-                                                <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-widest" style={{ fontFamily: 'Quicksand, sans-serif' }}>Tentativas esgotadas</span>
-                                            </div>
-                                            <div className="w-9 h-9 rounded-2xl bg-slate-400 flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-110">
-                                                <X size={18} strokeWidth={2.5} />
-                                            </div>
-                                        </button>
-
-                                        <button
-                                            onClick={() => handleResult('rejected')}
-                                            className="w-full p-4 bg-rose-50/50 hover:bg-rose-100/80 border border-rose-200/60 rounded-[28px] flex items-center justify-between group transition-all"
-                                        >
-                                            <div className="text-left pl-2">
-                                                <span className="block text-sm font-black text-rose-800" style={{ fontFamily: 'Comfortaa, cursive' }}>Descartado / Spam</span>
-                                                <span className="block text-[10px] text-rose-600 font-bold uppercase tracking-widest" style={{ fontFamily: 'Quicksand, sans-serif' }}>Lead sem perfil</span>
-                                            </div>
-                                            <div className="w-9 h-9 rounded-2xl bg-rose-500 flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-110">
-                                                <X size={18} strokeWidth={2.5} />
-                                            </div>
-                                        </button>
-                                    </>
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={() => setStep('outcome')}
+                                                className="flex-1 py-4 px-6 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-full text-blue-600 font-black text-xs uppercase tracking-widest transition-all shadow-sm"
+                                                style={{ fontFamily: 'Comfortaa, cursive' }}
+                                            >
+                                                Voltar
+                                            </button>
+                                            <motion.button
+                                                onClick={handleFinish}
+                                                whileHover={{ scale: 1.02, y: -2 }}
+                                                whileTap={{ scale: 0.98 }}
+                                                animate={{ 
+                                                    y: [0, -2, 0],
+                                                    transition: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                                                }}
+                                                className="flex-[2] py-4 px-6 bg-emerald-600 text-white rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-400/40 hover:bg-emerald-700"
+                                                style={{ fontFamily: 'Comfortaa, cursive' }}
+                                            >
+                                                {selectedOutcome === 'opportunity' ? 'Confirmar' : 'Finalizar'}
+                                            </motion.button>
+                                        </div>
+                                    </motion.div>
                                 )}
-                            </div>
+                            </AnimatePresence>
                         </div>
                     </motion.div>
                 </div>

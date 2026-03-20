@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     UserPlus, Mail, Shield, CheckCircle2, ArrowRight,
-    Crown, Search, Filter, Briefcase, Zap, Settings, Phone, MessageSquare, Save, Loader2, Trash2
+    Crown, Search, Filter, Briefcase, Zap, Settings, Phone, MessageSquare, Save, Loader2, Trash2, Send, Check
 } from 'lucide-react';
 import { UserAvatar } from '../common/UserAvatar';
 import { cn } from '../../lib/utils';
-import api, { usersAPI } from '../../lib/api';
+import api, { usersAPI, statsAPI } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface UserZoneProps {
@@ -624,11 +624,160 @@ const TestView = ({ users, setView }: any) => {
     );
 };
 
+// --- Mattermost Config View ---
+const MattermostConfigView = ({ users, setView }: any) => {
+    const [selectedIds, setSelectedIds] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem('selectedAuditSdrIds');
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+    });
+    const [isSending, setIsSending] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'sent'>('idle');
+
+    const sdrUsers = users.filter((u: any) => u.role === 'sdr' || u.role === 'ops');
+
+    const toggleSdr = (id: string) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+        setSaveStatus('idle');
+    };
+
+    const handleSave = () => {
+        localStorage.setItem('selectedAuditSdrIds', JSON.stringify(selectedIds));
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+    };
+
+    const handleSendNow = async () => {
+        if (selectedIds.length === 0) return;
+        // Salva antes de enviar
+        localStorage.setItem('selectedAuditSdrIds', JSON.stringify(selectedIds));
+        setIsSending(true);
+        try {
+            await statsAPI.sendManualReport(selectedIds);
+            setSaveStatus('sent');
+            setTimeout(() => setSaveStatus('idle'), 4000);
+        } catch (err) {
+            console.error('Erro ao enviar relatório:', err);
+            alert('Erro ao enviar relatório ao Mattermost.');
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full gap-6 pb-6">
+            <div className="bg-gradient-soft border border-orange-200/50 shadow-glass p-6 rounded-[32px] flex items-center justify-between backdrop-blur-md">
+                <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white shadow-lg border-2 border-white/50">
+                        <Send size={28} />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Mattermost Config</h2>
+                        <p className="text-slate-600 font-medium text-sm">Selecione os SDRs que terão relatório enviado ao Mattermost</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <AnimatePresence>
+                        {saveStatus === 'saved' && (
+                            <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg text-sm font-bold border border-emerald-200">
+                                <CheckCircle2 size={16} /> Salvo!
+                            </motion.div>
+                        )}
+                        {saveStatus === 'sent' && (
+                            <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-2 text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg text-sm font-bold border border-blue-200">
+                                <CheckCircle2 size={16} /> Relatório enviado!
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                    <button
+                        onClick={handleSave}
+                        className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg"
+                    >
+                        <Save size={16} /> Salvar
+                    </button>
+                    <button
+                        onClick={handleSendNow}
+                        disabled={isSending || selectedIds.length === 0}
+                        className={cn(
+                            "px-5 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2 shadow-lg",
+                            selectedIds.length > 0
+                                ? "bg-gradient-to-r from-orange-400 to-rose-500 text-white hover:scale-[1.02]"
+                                : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                        )}
+                    >
+                        {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                        Enviar Agora ({selectedIds.length})
+                    </button>
+                    <button onClick={() => setView('list')} className="w-10 h-10 bg-white border border-slate-200 shadow-sm text-slate-600 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center justify-center">
+                        <ArrowRight size={18} className="rotate-180" />
+                    </button>
+                </div>
+            </div>
+
+            <div className="bg-white border border-orange-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden flex-1 flex flex-col">
+                <div className="p-6 border-b border-orange-100/60 bg-gradient-to-b from-orange-50/60 to-transparent">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <Shield size={16} className="text-orange-500" />
+                            <span className="text-sm font-black text-slate-700 uppercase tracking-widest" style={{ fontFamily: 'Comfortaa, cursive' }}>SDRs para Relatório</span>
+                        </div>
+                        <span className="text-xs font-bold text-slate-400">{selectedIds.length} de {sdrUsers.length} selecionados</span>
+                    </div>
+                </div>
+
+                <div className="p-6 overflow-y-auto flex-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {sdrUsers.map((sdr: any) => {
+                            const isSelected = selectedIds.includes(sdr.id);
+                            return (
+                                <div
+                                    key={sdr.id}
+                                    onClick={() => toggleSdr(sdr.id)}
+                                    className={cn(
+                                        "p-5 rounded-[1.5rem] border-2 transition-all cursor-pointer flex items-center gap-4 group",
+                                        isSelected
+                                            ? "bg-orange-50 border-orange-300 shadow-md shadow-orange-100 scale-[1.02]"
+                                            : "bg-white border-slate-100 hover:border-orange-200 hover:bg-orange-50/30"
+                                    )}
+                                >
+                                    <div className={cn(
+                                        "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors shrink-0",
+                                        isSelected ? "bg-orange-500 border-orange-500 text-white" : "border-slate-200 bg-white group-hover:border-orange-300"
+                                    )}>
+                                        {isSelected && <Check size={14} strokeWidth={4} />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className={cn(
+                                            "text-sm font-black truncate",
+                                            isSelected ? "text-orange-900" : "text-slate-700"
+                                        )}>
+                                            {sdr.name || sdr.email?.split('@')[0]}
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase truncate mt-0.5">{sdr.email}</p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {sdrUsers.length === 0 && (
+                        <div className="text-center py-16 text-slate-400">
+                            <Shield size={48} className="mx-auto mb-4 opacity-20" />
+                            <p className="font-bold text-sm">Nenhum SDR cadastrado</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- Main Component ---
 
 export const UserZone: React.FC<UserZoneProps> = ({ onClose }) => {
     const { user: currentUser } = useAuth();
-    const [view, setView] = useState<'list' | 'invite' | 'success' | 'profile' | 'test'>('list');
+    const [view, setView] = useState<'list' | 'invite' | 'success' | 'profile' | 'test' | 'mattermost'>('list');
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -746,6 +895,11 @@ export const UserZone: React.FC<UserZoneProps> = ({ onClose }) => {
 
                     <div className="flex items-center gap-3">
                         {view === 'list' && (currentUser?.role === 'salesops' || currentUser?.role === 'manager') && (
+                            <button onClick={() => setView('mattermost')} className="px-5 py-3 bg-gradient-to-r from-orange-500 to-rose-500 text-white rounded-xl font-black text-xs shadow-orange-500/20 shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                <Send size={16} /> Mattermost
+                            </button>
+                        )}
+                        {view === 'list' && (currentUser?.role === 'salesops' || currentUser?.role === 'manager') && (
                             <button onClick={() => setView('test')} className="px-5 py-3 bg-gradient-to-r from-sky-400 to-sky-500 text-white rounded-xl font-black text-xs shadow-sky-500/20 shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2" style={{ fontFamily: 'Comfortaa, cursive' }}>
                                 <Phone size={16} /> Tester de Ramal
                             </button>
@@ -795,6 +949,11 @@ export const UserZone: React.FC<UserZoneProps> = ({ onClose }) => {
                         {view === 'test' && (
                             <motion.div key="test" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="h-full">
                                 <TestView users={users} setView={setView} />
+                            </motion.div>
+                        )}
+                        {view === 'mattermost' && (
+                            <motion.div key="mattermost" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="h-full">
+                                <MattermostConfigView users={users} setView={setView} />
                             </motion.div>
                         )}
                     </AnimatePresence>

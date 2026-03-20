@@ -7,7 +7,7 @@ import {
     ListFilter, Users, Building2, Briefcase, ChevronRight
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { leadsAPI } from '../../lib/api';
+import { leadsAPI, cadencesAPI } from '../../lib/api';
 import { SchedulingRuleModal } from './SchedulingRuleModal';
 
 interface CadenceZoneProps { onClose: () => void; }
@@ -265,15 +265,23 @@ export const CadenceZone: React.FC<CadenceZoneProps> = ({ onClose }) => {
             (config.whatsapp.active ? config.whatsapp.rolls : 0) +
             (config.email.active ? config.email.rolls : 0);
 
+        // 1. Fazer o map do state de schedulingRule para intervalo_retorno_horas
+        let intervalo_retorno_horas: number | null = null;
+        if (config.schedulingRule === 'Automático (+24h)') {
+            intervalo_retorno_horas = 24;
+        } else if (config.schedulingRule === 'Automático (+48h)') {
+            intervalo_retorno_horas = 48;
+        } // "SDR define / Livre" or unexpected remain null
+
         try {
-            const r = await leadsAPI.bulkAssignWithCadence(
-                config.name,
-                activeFilter.type,
-                activeFilter.type !== 'all_pending' ? activeFilter.label : undefined,
-                assignments,
-                config.schedulingRule || 'Sugerido Pela Plataforma',
-                totalSteps
-            );
+            const r = await cadencesAPI.apply({
+                lead_ids: [], // passed empty to rely on filter_type backend logic
+                filter_type: activeFilter.type,
+                filter_value: activeFilter.type !== 'all_pending' ? activeFilter.label : undefined,
+                sdr_assignments: assignments,
+                intervalo_retorno_horas,
+                max_steps: totalSteps
+            } as any);
             if (r.success) setResult(r.data);
         } catch (err: any) {
             alert('Erro ao aplicar: ' + (err?.response?.data?.error?.message || err.message));

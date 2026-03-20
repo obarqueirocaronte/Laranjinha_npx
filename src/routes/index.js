@@ -22,6 +22,9 @@ router.use('/stats', require('./stats.routes'));
 // Notification Routes
 router.use('/notifications', require('./notifications.routes'));
 
+// Cadences Routes (reconstrução do sistema de cadências)
+router.use('/cadences', require('./cadences.routes'));
+
 // Aurora Chat Routes
 router.use('/aurora', require('./aurora.routes'));
 

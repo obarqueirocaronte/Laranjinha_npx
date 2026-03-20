@@ -283,5 +283,48 @@ export const usersAPI = {
     saveIntegrations: (id: string, integrations: any) => api.post(`/users/${id}/integrations`, integrations).then(res => res.data),
 };
 
-export default api;
+// Cadences API (Sistema de Cadências Reconstruído)
+export const cadencesAPI = {
+    /** Etapa 5: Manager aplica cadência em lote */
+    apply: (data: {
+        cadence_config_id?: string;
+        lead_ids: string[];
+        sdr_assignments?: { sdr_id: string; lead_ids: string[] }[];
+        intervalo_retorno_horas?: number | null;
+        allow_sdr_override?: boolean;
+    }) => api.post('/cadences/apply', data).then(res => res.data),
 
+    /** Etapa 6: SDR registra resultado de tentativa */
+    registerStep: (leadCadenceId: string, data: {
+        outcome: 'success' | 'no_answer' | 'busy' | 'voicemail' | 'invalid_number' | 'reschedule';
+        canal: 'call' | 'whatsapp' | 'email';
+        notes?: string;
+        retorno_manual_em?: string;
+    }) => api.put(`/cadences/${leadCadenceId}/step`, data).then(res => res.data),
+
+    /** Etapa 7: SDR agenda retorno manualmente */
+    reschedule: (leadCadenceId: string, data: {
+        retorno_em: string;
+        notes: string;
+    }) => api.put(`/cadences/${leadCadenceId}/reschedule`, data).then(res => res.data),
+
+    /** Etapa 9: Status geral de cadências */
+    getStatus: (params?: { sdr_id?: string; status?: string }) =>
+        api.get('/cadences/status', { params }).then(res => res.data),
+
+    /** Etapa 10: Dashboard com 4 zonas */
+    getDashboard: (period?: 'today' | '7d' | '30d', sdr_id?: string) =>
+        api.get('/cadences/dashboard', { params: { period, sdr_id } }).then(res => res.data),
+
+
+    /** Etapa 11: Cadências paradas */
+    getStalled: (params?: { sdr_id?: string; min_hours?: number }) =>
+        api.get('/cadences/stalled', { params }).then(res => res.data),
+
+    /** Etapa 12: Logs de auditoria */
+    getLogs: (params?: { lead_id?: string; lead_cadence_id?: string; sdr_id?: string; outcome?: string; period?: string }) =>
+        api.get('/cadences/logs', { params }).then(res => res.data),
+
+};
+
+export default api;

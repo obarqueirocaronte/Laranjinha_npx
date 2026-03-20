@@ -1,12 +1,13 @@
 import React, { useRef, useState, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useDraggable } from '@dnd-kit/core';
+import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Lead } from '../../types';
-import { Building2, Undo2, Check, Mail, Phone, Tag, Linkedin, User, Calendar } from 'lucide-react';
+import { Building2, Undo2, Check, Mail, Phone, Tag, Linkedin, User, Calendar, CalendarClock } from 'lucide-react';
 import { useVoip } from '../../contexts/VoipContext';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CadenceRescheduleModal } from './CadenceRescheduleModal';
 
 const ICON_BASE = { strokeWidth: 1.5 };
 const ICON_BOLD = { strokeWidth: 2.2 };
@@ -20,9 +21,12 @@ interface LeadCardProps {
     onSchedule?: (lead: Lead) => void;
     accentColor?: string;
     model?: 'MODERN_FULL' | 'MODERN_COMPACT' | 'MODERN_MINIMAL' | 'MODERN_ACTION';
+    simple?: boolean;
+    isCadenceColumn?: boolean;
+    isOverlay?: boolean;
 }
 
-export const LeadCard: React.FC<LeadCardProps> = ({
+export const LeadCard = React.memo<LeadCardProps>(({
     lead,
     columnPosition,
     onClick,
@@ -30,16 +34,28 @@ export const LeadCard: React.FC<LeadCardProps> = ({
     onFinish,
     onSchedule,
     accentColor,
+    simple,
+    isCadenceColumn: isCadenceProp,
+    isOverlay,
 }) => {
-    const isCadenceColumn = columnPosition === 5;
+    const isCadenceColumn = isCadenceProp ?? (columnPosition === 5);
     const voip = useVoip();
     const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
 
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    const sortable = useSortable({
         id: lead.id,
         data: { lead, type: 'lead' },
-        disabled: isCadenceColumn,
+        disabled: isOverlay
     });
+
+    const { 
+        attributes, 
+        listeners, 
+        setNodeRef, 
+        transform, 
+        transition,
+        isDragging 
+    } = sortable;
 
     const handlePointerDown = (e: React.PointerEvent) => {
         listeners?.onPointerDown?.(e);
@@ -62,6 +78,10 @@ export const LeadCard: React.FC<LeadCardProps> = ({
 
     // ── Idle "Impatience" Animation Logic ──
     const [shakeVariant, setShakeVariant] = useState<string | null>(null);
+    const [isRescheduling, setIsRescheduling] = useState(false);
+
+    const isManualRescheduleNeeded = isCadenceColumn && (lead as any).cadence_status === 'ativa' && (lead as any).intervalo_retorno_horas === null;
+
     React.useEffect(() => {
         if (!isFirstColumn) return;
 
@@ -125,9 +145,9 @@ export const LeadCard: React.FC<LeadCardProps> = ({
 
     // ── Unified macOS-style spring config for all popovers ──
     const POPOVER_SPRING = { type: 'spring' as const, stiffness: 500, damping: 30, mass: 0.8 };
-    const HOVER_DELAY_MS = 300; // Delay before showing popovers to avoid drag interference
+    const HOVER_DELAY_MS = 200; // Standardized snap timing
 
-    const ActionButton = ({ icon: Icon, color, text, previewText, onClick: btnClick, isMini }: any) => {
+    const ActionButton = ({ icon: Icon, color, text, previewText, onClick: btnClick, isMini, isConclusion }: any) => {
         const [isHovered, setIsHovered] = useState(false);
         const [coords, setCoords] = useState({ top: 0, left: 0 });
         const triggerRef = useRef<HTMLButtonElement>(null);
@@ -161,13 +181,22 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                     ref={triggerRef}
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
-                    whileHover={{ scale: 1.12 }}
-                    whileTap={{ scale: 0.92 }}
-                    transition={POPOVER_SPRING}
+                    whileHover={{ 
+                        scale: 1.15,
+                        y: isConclusion ? -3 : 0,
+                        transition: { type: "spring", stiffness: 400, damping: 10 }
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    animate={isConclusion && !isHovered ? {
+                        y: [0, -2, 0],
+                        transition: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                    } : {}}
                     className={clsx(
-                        "relative flex items-center justify-center rounded-full bg-white/60 shadow-sm border border-white/80 gap-2 px-0",
+                        "relative flex items-center justify-center rounded-full shadow-sm border gap-2 px-0 transition-colors duration-200",
                         isMini ? "h-6 min-w-[24px]" : "h-7 min-w-[28px]",
-                        isHovered && hasData && "bg-white z-[100] shadow-md ring-1 ring-white/50",
+                        !color?.includes('bg-') && "bg-white/60 border-white/80",
+                        isHovered && hasData && "z-[100] shadow-md ring-1 ring-white/50",
+                        isConclusion && "shadow-emerald-200/50",
                         color
                     )}
                     onClick={(e) => {
@@ -199,7 +228,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                                 <motion.span
                                     initial={{ opacity: 0, y: 4 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ ...POPOVER_SPRING, delay: 0.04 }}
+                                    transition={{ ...POPOVER_SPRING, delay: 0.05 }}
                                     className="text-[11px] font-black text-slate-800 uppercase tracking-widest whitespace-nowrap drop-shadow-[0_1px_1px_rgba(255,255,255,0.5)]"
                                 >
                                     {text || 'Ação'}
@@ -208,7 +237,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                                     <motion.span
                                         initial={{ opacity: 0, y: 4 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ ...POPOVER_SPRING, delay: 0.08 }}
+                                        transition={{ ...POPOVER_SPRING, delay: 0.1 }}
                                         className="text-[13px] font-bold text-slate-900 tracking-tight whitespace-nowrap mt-1 drop-shadow-[0_1px_1px_rgba(255,255,255,0.5)]"
                                     >
                                         {previewText}
@@ -305,24 +334,30 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                                 <div className="flex flex-col gap-3">
                                     {title === 'Explorar Empresa' && (
                                         <div className="flex flex-col gap-2.5">
-                                            <motion.div className="flex flex-col" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...POPOVER_SPRING, delay: 0.03 }}>
-                                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">CNPJ</span>
-                                                <span className="text-[13px] font-bold text-slate-900 tracking-tight mt-0.5">{lead.metadata?.cnpj || '-'}</span>
-                                            </motion.div>
-                                            <motion.div className="flex flex-col border-t border-orange-100/30 pt-2" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...POPOVER_SPRING, delay: 0.06 }}>
-                                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">Cidade</span>
-                                                <span className="text-[13px] font-bold text-slate-900 tracking-tight mt-0.5">{lead.metadata?.city || '-'}</span>
-                                            </motion.div>
+                                            {lead.metadata?.cnpj && (
+                                                <motion.div className="flex flex-col" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...POPOVER_SPRING, delay: 0.05 }}>
+                                                    <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">CNPJ</span>
+                                                    <span className="text-[13px] font-bold text-slate-900 tracking-tight mt-0.5">{lead.metadata.cnpj}</span>
+                                                </motion.div>
+                                            )}
+                                            {lead.metadata?.city && (
+                                                <motion.div className={clsx("flex flex-col pt-2", lead.metadata?.cnpj && "border-t border-orange-100/30")} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...POPOVER_SPRING, delay: 0.1 }}>
+                                                    <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">Cidade</span>
+                                                    <span className="text-[13px] font-bold text-slate-900 tracking-tight mt-0.5">{lead.metadata.city}</span>
+                                                </motion.div>
+                                            )}
                                         </div>
                                     )}
                                     {title === 'Explorar Contato' && (
                                         <div className="flex flex-col gap-2.5">
-                                            <motion.div className="flex flex-col" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...POPOVER_SPRING, delay: 0.03 }}>
-                                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">Telefone</span>
-                                                <span className="text-[13px] font-bold text-slate-900 tracking-tight mt-0.5">{lead.phone || '-'}</span>
-                                            </motion.div>
+                                            {lead.phone && (
+                                                <motion.div className="flex flex-col" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...POPOVER_SPRING, delay: 0.05 }}>
+                                                    <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">Telefone</span>
+                                                    <span className="text-[13px] font-bold text-slate-900 tracking-tight mt-0.5">{lead.phone}</span>
+                                                </motion.div>
+                                            )}
                                             {lead.email && (
-                                                <motion.div className="flex flex-col border-t border-orange-100/30 pt-2" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...POPOVER_SPRING, delay: 0.06 }}>
+                                                <motion.div className={clsx("flex flex-col pt-2", lead.phone && "border-t border-orange-100/30")} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...POPOVER_SPRING, delay: 0.1 }}>
                                                     <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70">Email</span>
                                                     <span className="text-[12px] font-bold text-slate-900 tracking-tight mt-0.5 truncate">{lead.email}</span>
                                                 </motion.div>
@@ -357,12 +392,46 @@ export const LeadCard: React.FC<LeadCardProps> = ({
         );
     };
 
+    if (simple) {
+        return (
+            <motion.div
+                ref={setNodeRef}
+                {...attributes}
+                {...listeners}
+                onClick={handleClick}
+                whileHover={{ scale: 1.02, y: -2 }}
+                className={clsx(
+                    "relative flex flex-col p-3 gap-2 w-full rounded-2xl border transition-all duration-300 bg-white/80 backdrop-blur-sm border-slate-100 shadow-sm hover:shadow-md",
+                    isDragging && "opacity-40 grayscale-[0.5] scale-95"
+                )}
+                style={{
+                    ...dynamicStyle,
+                    transform: CSS.Translate.toString(transform),
+                    transition,
+                }}
+            >
+                <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                        <Building2 size={12} className="text-emerald-500" {...ICON_BOLD} />
+                    </div>
+                    <h4 className="font-bold text-slate-700 text-[10px] truncate flex-1">{lead.company_name}</h4>
+                </div>
+                <div className="flex items-center gap-2 min-w-0 bg-slate-50/50 rounded-xl p-1.5 border border-slate-100/50">
+                    <div className="w-5 h-5 rounded-full bg-white border border-slate-100 flex items-center justify-center shrink-0">
+                        <User size={10} className="text-slate-400" />
+                    </div>
+                    <p className="font-bold text-slate-600 text-[9px] truncate flex-1">{lead.full_name || 'Sem Contato'}</p>
+                </div>
+            </motion.div>
+        );
+    }
 
     return (
         <motion.div
             ref={setNodeRef}
             {...attributes}
-            onPointerDown={!isCadenceColumn ? handlePointerDown : undefined}
+            {...listeners} // Always spread listeners to ensure dragging works
+            onPointerDown={handlePointerDown} // Merge our custom logic (which calls listeners.onPointerDown)
             onClick={handleClick}
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ 
@@ -377,8 +446,11 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                 isDragging && "opacity-40 grayscale-[0.5] scale-95",
                 "min-h-[190px]" // Fixed height for consistency
             )}
-            style={dynamicStyle}
-            {...(!isCadenceColumn ? listeners : {})}
+            style={{
+                ...dynamicStyle,
+                transform: CSS.Translate.toString(transform),
+                transition,
+            }}
         >
             {/* 1. Header: Company Info and Quick Actions */}
             <div className="flex items-start justify-between">
@@ -466,47 +538,58 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                     <div className="px-2 py-1 rounded-lg bg-emerald-50/50 border border-emerald-100/50 text-emerald-700 text-[9px] font-black shadow-xs tracking-tight">
                         {cadenceProgress}%
                     </div>
+                    {isManualRescheduleNeeded && (
+                        <ActionButton 
+                            icon={CalendarClock} 
+                            color="text-amber-600 bg-amber-50 border-amber-200" 
+                            text="Retorno" 
+                            onClick={() => setIsRescheduling(true)} 
+                        />
+                    )}
                     <ActionButton icon={Calendar} color="text-orange-500 bg-orange-50 border-orange-100" text="Agenda" onClick={() => onSchedule?.(lead)} />
+                    {isCadenceColumn && (
+                        <>
+                            <div className="w-[1px] h-3.5 bg-orange-200/50 mx-0.5 rounded-full" />
+                            <ActionButton 
+                                icon={Undo2} 
+                                color="text-white bg-blue-500 border-blue-400 hover:bg-blue-600 shadow-blue-500/20" 
+                                text="Voltar" 
+                                isConclusion
+                                onClick={(e: any) => { e.stopPropagation(); onReturn?.(lead); }} 
+                            />
+                            <ActionButton 
+                                icon={Check} 
+                                color="text-white bg-emerald-600 border-emerald-500 hover:bg-emerald-700 shadow-emerald-600/30" 
+                                text="Concluir"
+                                isConclusion
+                                onClick={(e: any) => { e.stopPropagation(); onFinish?.(lead); }} 
+                            />
+                        </>
+                    )}
                 </div>
             </div>
 
-            {/* Cadence controls (Floating lateral zone) */}
-            <AnimatePresence>
-                {isCadenceColumn && (
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 20 }}
-                        className="absolute -right-3 top-1/2 -translate-y-1/2 flex flex-col gap-2.5 z-[100]"
-                        onPointerDown={e => e.stopPropagation()}
-                    >
-                        <motion.button 
-                            whileHover={{ scale: 1.1, backgroundColor: '#f8fafc' }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={e => { e.stopPropagation(); onReturn?.(lead); }} 
-                            className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-500 rounded-full shadow-lg ring-4 ring-white/50 transition-all"
-                            title="Voltar"
-                        >
-                            <Undo2 size={14} {...ICON_BOLD} />
-                        </motion.button>
-                        
-                        <motion.button 
-                            whileHover={{ scale: 1.1, filter: 'brightness(1.1)' }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={e => { e.stopPropagation(); onFinish?.(lead); }} 
-                            className="w-8 h-8 flex items-center justify-center bg-emerald-500 text-white rounded-full shadow-lg shadow-emerald-200/50 ring-4 ring-emerald-500/20 transition-all font-bold"
-                            title="Concluir"
-                        >
-                            <Check size={14} {...ICON_BOLD} />
-                        </motion.button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+
+
+
             {lead.metadata?.is_paused && (
                 <span className="absolute -bottom-3 right-8 text-[10px] font-black px-3 py-1 bg-amber-100 text-amber-700 border border-amber-300 rounded-xl uppercase tracking-widest shadow-sm">
                     Pausado
                 </span>
             )}
+
+            <CadenceRescheduleModal
+                isOpen={isRescheduling}
+                onClose={() => setIsRescheduling(false)}
+                leadCadenceId={(lead as any).lead_cadence_id}
+                leadName={lead.full_name}
+                companyName={lead.company_name}
+                currentStep={(lead as any).cadence_step}
+                maxSteps={(lead as any).cadence_max_steps}
+                onSuccess={() => onFinish?.(lead)}
+            />
         </motion.div>
     );
-};
+});
+
+LeadCard.displayName = 'LeadCard';

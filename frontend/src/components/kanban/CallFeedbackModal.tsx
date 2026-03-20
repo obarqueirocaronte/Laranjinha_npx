@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, CheckCircle, X, XCircle, Voicemail, MessageSquare, CalendarClock } from 'lucide-react';
 import type { ActiveCall } from '../../contexts/VoipContext';
+import clsx from 'clsx';
 
 interface CallFeedbackModalProps {
     isOpen: boolean;
@@ -13,11 +14,23 @@ interface CallFeedbackModalProps {
 export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, callData, onResult, onClose }) => {
     const [step, setStep] = useState<'feedback' | 'notes'>('feedback');
     const [noteText, setNoteText] = useState('');
+    const [addNotes, setAddNotes] = useState(false);
     const [selectedResult, setSelectedResult] = useState<'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer' | null>(null);
 
     const handleResultClick = (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer') => {
-        setSelectedResult(result);
-        setStep('notes');
+        if (addNotes || result === 'reschedule') {
+            setSelectedResult(result);
+            setStep('notes');
+        } else {
+            onResult(result, '');
+            onClose();
+            setTimeout(() => {
+                setStep('feedback');
+                setNoteText('');
+                setSelectedResult(null);
+                setAddNotes(false);
+            }, 300);
+        }
     };
 
     const handleSaveNotes = () => {
@@ -35,6 +48,7 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
             setStep('feedback');
             setNoteText('');
             setSelectedResult(null);
+            setAddNotes(false);
         }, 300);
     };
 
@@ -50,17 +64,17 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
                     />
 
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="relative w-full max-w-sm bg-white/40 border border-white/60 shadow-glass rounded-[40px] overflow-hidden p-8 text-center backdrop-blur-2xl"
+                        className="relative w-full max-w-md bg-white/60 border border-white/80 shadow-2xl shadow-orange-500/10 rounded-[40px] overflow-hidden p-8 text-center backdrop-blur-3xl"
                     >
                         {/* Soft Nude/Orange Glass Background */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-orange-50/80 via-white/40 to-orange-100/60 pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-orange-50/90 via-white/60 to-orange-100/80 pointer-events-none" />
                         
                         {/* Premium Reflections */}
-                        <div className="absolute -top-32 -left-32 w-64 h-64 bg-orange-200/30 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -top-32 -left-32 w-64 h-64 bg-orange-300/20 rounded-full blur-3xl pointer-events-none" />
                         <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-rose-200/20 rounded-full blur-3xl pointer-events-none" />
 
                         <button
@@ -97,94 +111,75 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
                                 {step === 'feedback' ? (
                                     <motion.div
                                         key="feedback"
-                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        initial={{ opacity: 0, scale: 0.95 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        className="w-full space-y-3 mt-2"
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        className="w-full grid grid-cols-2 gap-3 mt-6"
                                     >
-                                        {/* Sucesso */}
-                                        <button
-                                            onClick={() => handleResultClick('success')}
-                                            className="w-full relative overflow-hidden p-4 bg-white/60 hover:bg-white/90 border border-white/80 rounded-[28px] flex items-center justify-between group transition-all shadow-sm hover:shadow-md"
-                                        >
-                                            <div className="relative z-10 text-left pl-2">
-                                                <span className="block text-sm font-black text-emerald-700 tracking-wide uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>CONTATO FEITO</span>
-                                                <span className="block text-[10px] text-emerald-600/80 font-bold uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Qualificou o lead</span>
+                                        {[
+                                            { id: 'success', label: 'Contato Feito', sub: 'Qualificou o lead', icon: <CheckCircle size={24} strokeWidth={2.5} />, color: 'emerald' },
+                                            { id: 'busy', label: 'Ocupado', sub: 'Tentar novamente', icon: <Phone size={24} strokeWidth={2.5} className="rotate-90" />, color: 'amber' },
+                                            { id: 'voicemail', label: 'Caixa Postal', sub: 'Não atendeu', icon: <Voicemail size={24} strokeWidth={2.5} />, color: 'slate' },
+                                            { id: 'no-answer', label: 'Sem Resposta', sub: 'Ligação perdida', icon: <X size={24} strokeWidth={2.5} />, color: 'orange' },
+                                            { id: 'invalid', label: 'Número Inválido', sub: 'Descartar lead', icon: <XCircle size={24} strokeWidth={2.5} />, color: 'rose' },
+                                            { id: 'reschedule', label: 'Agendar', sub: 'Definir retorno', icon: <CalendarClock size={24} strokeWidth={2.5} className="text-indigo-400 group-hover:text-white transition-colors" />, color: 'indigo' },
+                                        ].map((item) => (
+                                            <button
+                                                key={item.id}
+                                                onClick={() => handleResultClick(item.id as any)}
+                                                className={clsx(
+                                                    "relative w-full p-4 rounded-3xl flex flex-col items-center justify-center gap-1 transition-all duration-300 border shadow-sm group overflow-hidden",
+                                                    item.color === 'emerald' && "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400/30 hover:bg-emerald-700 hover:shadow-lg",
+                                                    item.color === 'amber' && "bg-amber-50/80 border-amber-200 text-amber-700 hover:bg-amber-500 hover:text-white hover:shadow-amber-500/30 hover:shadow-lg",
+                                                    item.color === 'slate' && "bg-slate-50/80 border-slate-200 text-slate-700 hover:bg-slate-500 hover:text-white hover:shadow-slate-500/30 hover:shadow-lg",
+                                                    item.color === 'orange' && "bg-orange-50/80 border-orange-200 text-orange-700 hover:bg-orange-500 hover:text-white hover:shadow-orange-500/30 hover:shadow-lg",
+                                                    item.color === 'rose' && "bg-rose-50/80 border-rose-200 text-rose-700 hover:bg-rose-500 hover:text-white hover:shadow-rose-500/30 hover:shadow-lg",
+                                                    item.color === 'indigo' && "bg-indigo-50/80 border-indigo-200 text-indigo-700 hover:bg-indigo-500 hover:text-white hover:shadow-indigo-500/30 hover:shadow-lg"
+                                                )}
+                                            >
+                                                <div className="relative z-10 transition-transform group-hover:scale-110 duration-300 mb-1">
+                                                    {item.icon}
+                                                </div>
+                                                <div className="relative z-10 font-black text-[13px] tracking-tight">{item.label}</div>
+                                                <div className="relative z-10 text-[9px] uppercase tracking-widest font-bold opacity-70">{item.sub}</div>
+                                                
+                                                {/* Hover Glow Behind Content */}
+                                                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </button>
+                                        ))}
+                                        
+                                        {/* Toggle for notes */}
+                                        <div className="col-span-2 mt-4 flex items-center justify-between px-6 py-4 bg-white/40 border border-white/60 rounded-3xl shadow-inner group">
+                                            <div className="flex flex-col items-start gap-0.5">
+                                                <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest leading-none">Anotações</span>
+                                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tight opacity-70">
+                                                    {addNotes ? 'Janela de comentário ativa' : 'Pular anotações'}
+                                                </span>
                                             </div>
-                                            <div className="relative z-10 w-9 h-9 rounded-2xl bg-emerald-500 shadow-sm flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                                                <CheckCircle size={18} strokeWidth={2.5} />
-                                            </div>
-                                        </button>
-
-                                        {/* Ocupado */}
-                                        <button
-                                            onClick={() => handleResultClick('busy')}
-                                            className="w-full relative overflow-hidden p-4 bg-white/60 hover:bg-white/90 border border-white/80 rounded-[28px] flex items-center justify-between group transition-all shadow-sm hover:shadow-md"
-                                        >
-                                            <div className="relative z-10 text-left pl-2">
-                                                <span className="block text-sm font-black text-amber-700 tracking-wide uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>OCUPADO / RECUSOU</span>
-                                                <span className="block text-[10px] text-amber-600/80 font-bold uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Tentar novamente</span>
-                                            </div>
-                                            <div className="relative z-10 w-9 h-9 rounded-2xl bg-amber-500 shadow-sm flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                                                <Phone size={16} strokeWidth={2.5} className="rotate-90" />
-                                            </div>
-                                        </button>
-
-                                        {/* Caixa Postal */}
-                                        <button
-                                            onClick={() => handleResultClick('voicemail')}
-                                            className="w-full relative overflow-hidden p-4 bg-white/60 hover:bg-white/90 border border-white/80 rounded-[28px] flex items-center justify-between group transition-all shadow-sm hover:shadow-md"
-                                        >
-                                            <div className="relative z-10 text-left pl-2">
-                                                <span className="block text-sm font-black text-slate-700 tracking-wide uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>CAIXA POSTAL</span>
-                                                <span className="block text-[10px] text-slate-500/80 font-bold uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Não atendeu / Recado</span>
-                                            </div>
-                                            <div className="relative z-10 w-9 h-9 rounded-2xl bg-slate-500 shadow-sm flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                                                <Voicemail size={18} strokeWidth={2.5} />
-                                            </div>
-                                        </button>
-
-                                        {/* Não Atendeu */}
-                                        <button
-                                            onClick={() => handleResultClick('no-answer')}
-                                            className="w-full relative overflow-hidden p-4 bg-white/60 hover:bg-white/90 border border-white/80 rounded-[28px] flex items-center justify-between group transition-all shadow-sm hover:shadow-md"
-                                        >
-                                            <div className="relative z-10 text-left pl-2">
-                                                <span className="block text-sm font-black text-orange-700 tracking-wide uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>NÃO ATENDEU</span>
-                                                <span className="block text-[10px] text-orange-600/80 font-bold uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Ligação perdida</span>
-                                            </div>
-                                            <div className="relative z-10 w-9 h-9 rounded-2xl bg-orange-500 shadow-sm flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                                                <X size={18} strokeWidth={2.5} />
-                                            </div>
-                                        </button>
-
-                                        {/* Inválido */}
-                                        <button
-                                            onClick={() => handleResultClick('invalid')}
-                                            className="w-full relative overflow-hidden p-4 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-[28px] flex items-center justify-between group transition-all mt-6"
-                                        >
-                                            <div className="relative z-10 text-left pl-2">
-                                                <span className="block text-sm font-black text-rose-700 tracking-wide uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>NÚMERO INVÁLIDO</span>
-                                                <span className="block text-[10px] text-rose-500/80 font-bold uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Descartar lead</span>
-                                            </div>
-                                            <div className="relative z-10 w-9 h-9 rounded-2xl bg-rose-500 shadow-sm flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                                                <XCircle size={18} strokeWidth={2.5} />
-                                            </div>
-                                        </button>
-
-                                        {/* Agendar Retorno */}
-                                        <button
-                                            onClick={() => handleResultClick('reschedule')}
-                                            className="w-full relative overflow-hidden p-4 bg-slate-100/80 hover:bg-slate-200/80 border border-slate-300/40 rounded-[28px] flex items-center justify-between group transition-all mt-3"
-                                        >
-                                            <div className="relative z-10 text-left pl-2">
-                                                <span className="block text-sm font-black text-slate-800 tracking-wide uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>AGENDAR RETORNO</span>
-                                                <span className="block text-[10px] text-slate-500/80 font-bold uppercase tracking-widest mt-0.5" style={{ fontFamily: 'Quicksand, sans-serif' }}>Definir data e hora</span>
-                                            </div>
-                                            <div className="relative z-10 w-9 h-9 rounded-2xl bg-slate-800 shadow-sm flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                                                <CalendarClock size={18} strokeWidth={2.5} className="text-orange-400" />
-                                            </div>
-                                        </button>
+                                            
+                                            <button
+                                                onClick={() => setAddNotes(!addNotes)}
+                                                className={clsx(
+                                                    "relative inline-flex h-7 w-14 items-center rounded-full transition-all duration-300 focus:outline-none shadow-sm",
+                                                    addNotes ? "bg-emerald-500 shadow-emerald-200" : "bg-slate-300 shadow-slate-200"
+                                                )}
+                                            >
+                                                <span className={clsx(
+                                                    "absolute left-1.5 text-[8px] font-black text-white transition-opacity duration-300",
+                                                    addNotes ? "opacity-100" : "opacity-0"
+                                                )}>ON</span>
+                                                <span className={clsx(
+                                                    "absolute right-1.5 text-[8px] font-black text-slate-500 transition-opacity duration-300",
+                                                    addNotes ? "opacity-0" : "opacity-100"
+                                                )}>OFF</span>
+                                                <span
+                                                    className={clsx(
+                                                        "inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-300 shadow-md z-10",
+                                                        addNotes ? "translate-x-8" : "translate-x-1"
+                                                    )}
+                                                />
+                                            </button>
+                                        </div>
                                     </motion.div>
                                 ) : (
                                     <motion.div
@@ -212,19 +207,25 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
                                         <div className="flex gap-3">
                                             <button
                                                 onClick={() => setStep('feedback')}
-                                                className="flex-1 py-4 px-4 bg-white/40 hover:bg-white/60 border border-white/80 rounded-full text-slate-600 font-bold transition-all shadow-sm"
+                                                className="flex-1 py-4 px-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-full text-blue-600 font-bold transition-all shadow-sm"
                                                 style={{ fontFamily: 'Quicksand, sans-serif' }}
                                             >
                                                 Voltar
                                             </button>
-                                            <button
+                                            <motion.button
                                                 onClick={handleSaveNotes}
                                                 disabled={!noteText.trim()}
-                                                className="flex-[2] py-4 px-4 bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white rounded-full font-black text-sm uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                                whileHover={{ scale: 1.02, y: -2 }}
+                                                whileTap={{ scale: 0.98 }}
+                                                animate={{ 
+                                                    y: [0, -2, 0],
+                                                    transition: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                                                }}
+                                                className="flex-[2] py-4 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-black text-sm uppercase tracking-widest transition-all shadow-md shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                                                 style={{ fontFamily: 'Comfortaa, cursive' }}
                                             >
                                                 Salvar Anotação
-                                            </button>
+                                            </motion.button>
                                         </div>
                                     </motion.div>
                                 )}
@@ -236,4 +237,3 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
         </AnimatePresence>
     );
 };
-

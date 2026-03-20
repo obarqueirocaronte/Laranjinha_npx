@@ -1,5 +1,6 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { PipelineColumn, Lead } from '../../types';
 import { LeadCard } from './LeadCard';
 import clsx from 'clsx';
@@ -56,8 +57,8 @@ const COLUMN_IDENTITY: Record<number, {
         columnBg: 'bg-emerald-100/20',
         shadow: 'shadow-emerald-300/30',
         ring: 'ring-emerald-300/40',
-        icon: '✉️',    // Email
-        label: 'Email',
+        icon: 'wpp',   // WhatsApp
+        label: 'WhatsApp',
         subtitle: 'RELACIONAMENTO',
     },
     4: {
@@ -66,8 +67,8 @@ const COLUMN_IDENTITY: Record<number, {
         columnBg: 'bg-violet-100/20',
         shadow: 'shadow-violet-300/30',
         ring: 'ring-violet-300/40',
-        icon: 'wpp',   // WhatsApp
-        label: 'WhatsApp',
+        icon: '✉️',    // Email
+        label: 'Email',
         subtitle: 'PROPOSTA E VALOR',
     },
     5: {
@@ -160,7 +161,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
                     initial={{ scale: 0.6, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: 'spring', stiffness: 550, damping: 25 }}
-                    className="absolute top-1 right-1 min-w-[20px] h-[20px] px-1.5 flex items-center justify-center rounded-full text-[9px] font-black shadow-lg z-[2]"
+                    className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 flex items-center justify-center rounded-full text-[10px] font-black shadow-xl z-[100]"
                     style={{
                         fontFamily: 'Comfortaa, cursive',
                         background: headerGradient,
@@ -176,7 +177,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
             <div
                 ref={setNodeRef}
                 className={clsx(
-                    'flex-1 px-1.5 pt-2 pb-20 space-y-5 relative z-[10]',
+                    'flex-1 pt-2 pb-20 space-y-5 relative z-[10]',
+                    'px-1.5',
                     'overflow-y-auto overflow-x-visible custom-scrollbar',
                     isOver ? 'bg-white/25 ring-2 ring-white/50 ring-inset rounded-2xl' : 'bg-transparent'
                 )}
@@ -187,21 +189,24 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
                     msOverflowStyle: 'none'
                 } as any}
             >
-                <AnimatePresence mode="sync">
-                    {leads.map((lead) => (
-                        <LeadCard
-                            key={lead.id}
-                            lead={lead}
-                            columnPosition={column.position}
-                            onClick={() => onCardClick(lead)}
-                            onReturn={onReturn}
-                            onFinish={onFinish}
-                            onSchedule={onSchedule}
-                            /* pass accent for card stripe */
-                            accentColor={cardAccentColor}
-                        />
-                    ))}
-                </AnimatePresence>
+                <SortableContext items={leads.map(l => l.id)} strategy={verticalListSortingStrategy}>
+                    <AnimatePresence mode="sync">
+                        {leads.map((lead) => (
+                            <LeadCard
+                                key={lead.id}
+                                lead={lead}
+                                columnPosition={column.position}
+                                isCadenceColumn={column.position === 5 || column.name.toLowerCase().includes('conclusão')}
+                                onClick={() => onCardClick(lead)}
+                                onReturn={onReturn}
+                                onFinish={onFinish}
+                                onSchedule={onSchedule}
+                                /* pass accent for card stripe */
+                                accentColor={cardAccentColor}
+                            />
+                        ))}
+                    </AnimatePresence>
+                </SortableContext>
             </div>
         </div>
     );

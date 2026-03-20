@@ -116,6 +116,10 @@ app.use((err, req, res, next) => {
 // Start Management Report Scheduler
 notificationScheduler.start();
 
+// Start Cadence Worker (Etapa 8 — processa cadências elegíveis a cada 5 min)
+const cadenceWorker = require('./workers/cadence.worker');
+cadenceWorker.start();
+
 app.listen(port, () => {
     console.log(`🚀 API Server running on port ${port}`);
 });

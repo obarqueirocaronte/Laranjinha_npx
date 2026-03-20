@@ -10,10 +10,11 @@
  * 3. Disparar automações e modais baseados na movimentação dos cards 
  *    (ex: mandar WhatsApp ao mover para a coluna respectiva).
  */
-import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
-import type { DragStartEvent, DragEndEvent, DragOverEvent } from '@dnd-kit/core';
+import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, defaultDropAnimationSideEffects } from '@dnd-kit/core';
+
+import type { DragStartEvent, DragEndEvent, DragOverEvent, DropAnimation } from '@dnd-kit/core';
 import { useState, useCallback, useEffect } from 'react';
-import { leadsAPI, aiAPI } from '../../lib/api';
+import { leadsAPI, aiAPI, cadencesAPI } from '../../lib/api';
 import type { PipelineColumn } from '../../types';
 import { KanbanColumn } from './KanbanColumn';
 import { LeadCard } from './LeadCard';
@@ -65,6 +66,7 @@ export const KanbanBoard = ({
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [dialerLead, setDialerLead] = useState<Lead | null>(null);
+    const [manualFeedbackLead, setManualFeedbackLead] = useState<Lead | null>(null);
     const voip = useVoip();
 
     useEffect(() => {
@@ -73,6 +75,22 @@ export const KanbanBoard = ({
             onScheduleCountChange(count);
         }
     }, [leads, onScheduleCountChange]);
+
+    const [zoom, setZoom] = useState(1);
+
+    // Auto-adjust zoom to fit 5 columns on smaller screens without horizontal scroll
+    useEffect(() => {
+        const handleResize = () => {
+            const width = window.innerWidth;
+            if (width < 1440 && width >= 1200) setZoom(0.9);
+            else if (width < 1200 && width >= 1024) setZoom(0.85);
+            else if (width < 1024) setZoom(0.8);
+            else setZoom(1);
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         const fetchBoardData = async () => {
@@ -126,6 +144,24 @@ export const KanbanBoard = ({
         setNotifications(prev => prev.filter(n => n.id !== id));
     }, []);
 
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5,
+            },
+        })
+    );
+
+    const dropAnimation: DropAnimation = {
+        sideEffects: defaultDropAnimationSideEffects({
+            styles: {
+                active: {
+                    opacity: '0.4',
+                },
+            },
+        }),
+    };
+
     const updateLead = useCallback((updatedLead: Lead) => {
         setLeads(prev => prev.map(l => l.id === updatedLead.id ? updatedLead : l));
         if (selectedLead?.id === updatedLead.id) {
@@ -138,13 +174,6 @@ export const KanbanBoard = ({
         setIsModalOpen(true);
     };
 
-    const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: {
-                distance: 8,
-            },
-        })
-    );
 
     const handleDragStart = (event: DragStartEvent) => {
         setActiveId(event.active.id as string);
@@ -175,7 +204,30 @@ export const KanbanBoard = ({
         const targetLead = leads.find(l => l.id === leadIdToUpdate);
 
         try {
-            // Registrar desfecho da ligação e anotações
+            // ── New Cadence Logic: Advance step if in active cadence ──
+            if (targetLead?.lead_cadence_id) {
+                const outcomeMap: any = {
+                    'success': 'success',
+                    'busy': 'busy',
+                    'voicemail': 'voicemail',
+                    'invalid': 'invalid_number',
+                    'no-answer': 'no_answer',
+                    'reschedule': 'reschedule'
+                };
+                
+                const cadRes = await cadencesAPI.registerStep(targetLead.lead_cadence_id, {
+                    outcome: outcomeMap[result] || 'success',
+                    canal: 'call',
+                    notes
+                });
+
+                if (cadRes.success && cadRes.data.novo_status === 'concluida') {
+                    setCompletedLead(targetLead);
+                    setIsCycleCompleteOpen(true);
+                }
+            }
+
+            // Registrar desfecho da ligação e anotações (legacy support)
             const updates: any = { last_call_outcome: result };
             if (notes) {
                 updates.metadata = { last_call_notes: notes };
@@ -203,7 +255,7 @@ export const KanbanBoard = ({
 
             // Notificar UI externa (ex: dashboard updates)
             onActivity?.('call');
-
+            
             const resultMsg = {
                 success: 'Sucesso',
                 busy: 'Ocupado',
@@ -215,8 +267,8 @@ export const KanbanBoard = ({
 
             addNotification(`Registro salvo: ${resultMsg}`, 'success');
 
-            // Auto-schedule logic for negative outcomes
-            if (['busy', 'voicemail', 'reschedule'].includes(result) && targetLead) {
+            // Auto-schedule logic for negative outcomes (kept for non-cadence leads or specific flows)
+            if (['busy', 'voicemail', 'reschedule'].includes(result) && targetLead && !targetLead.lead_cadence_id) {
                 // Update targetLead with the latest notes before passing to modal
                 const updatedTarget = {
                     ...targetLead,
@@ -328,8 +380,7 @@ export const KanbanBoard = ({
         );
 
         // ── PERSISTENCE: Skip mock/imported leads (no real UUID in DB) ──
-        if (active.id.toString().startsWith('mock-') || active.id.toString().startsWith('import-')) {
-            console.log(`[Kanban] Skipping DB sync for local lead: ${active.id}`);
+        if (active.id.toString().startsWith('mock-') || active.id.toString().startsWith('import-') || active.id.toString().startsWith('temp-')) {
             return;
         }
 
@@ -349,47 +400,89 @@ export const KanbanBoard = ({
     }
 
     return (
-        <div className="relative h-full flex flex-col gap-6">
+        <div className="relative h-full flex flex-col gap-6 overflow-hidden">
+            {/* Zoom Control Helper (Subtle floating badge) */}
+            <div className="absolute top-0 right-0 z-[110] flex items-center gap-2 p-1 bg-white/40 backdrop-blur-md rounded-full border border-white/60 shadow-sm scale-75 origin-right translate-y-[-120%] group-hover:translate-y-0 transition-transform duration-300">
+                <button onClick={() => setZoom(prev => Math.max(0.5, prev - 0.05))} className="w-6 h-6 flex items-center justify-center hover:bg-black/5 rounded-full text-slate-500 font-bold">-</button>
+                <span className="text-[10px] font-black text-slate-400 w-8 text-center">{Math.round(zoom * 100)}%</span>
+                <button onClick={() => setZoom(prev => Math.min(1.2, prev + 0.05))} className="w-6 h-6 flex items-center justify-center hover:bg-black/5 rounded-full text-slate-500 font-bold">+</button>
+            </div>
+
             <DndContext
                 sensors={sensors}
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
             >
-                <div className="grid grid-cols-5 gap-4 h-full">
-                    {columns.slice(0, 5).map((col) => (
-                        <div key={col.id} className="flex flex-col min-h-0">
-                            <KanbanColumn
-                                column={col}
-                                leads={leads.filter((l) => l.current_column_id === col.id)}
-                                onCardClick={handleCardClick}
-                                onReturn={(lead) => {
-                                    const whatsappCol = columns.find(c => c.position === 4);
-                                    if (whatsappCol) {
-                                        setLeads(prev => prev.map(l =>
-                                            l.id === lead.id ? { ...l, current_column_id: whatsappCol.id, cadence_progress: 70 } : l
-                                        ));
-                                        addNotification(`Lead ${lead.full_name} retornado para WhatsApp.`, 'info');
-                                    }
-                                }}
-                                onFinish={(lead) => {
-                                    setLeads(prev => prev.filter(l => l.id !== lead.id));
-                                    addNotification(`Lead ${lead.full_name} encerrado com sucesso! 🏆`, 'success');
-                                    if (onLeadComplete) onLeadComplete();
-                                }}
-                                onSchedule={(lead) => {
-                                    setCompletedLead(lead);
-                                    setIsScheduleModalOpen(true);
-                                }}
-                            />
-                        </div>
-                    ))}
+                <div 
+                    className="flex-1 w-full overflow-x-auto overflow-y-hidden custom-scrollbar pb-4"
+                    style={{ 
+                        perspective: '1000px',
+                        WebkitOverflowScrolling: 'touch'
+                    }}
+                >
+                    <div 
+                        className="grid grid-cols-5 gap-4 h-full transition-transform duration-500 ease-out"
+                        style={{ 
+                            transform: `scale(${zoom})`,
+                            transformOrigin: 'top center',
+                            width: `${100 / zoom}%`,
+                            minWidth: `${1200 / zoom}px`
+                        }}
+                    >
+                        {columns.slice(0, 5).map((col) => (
+                            <div key={col.id} className="flex flex-col min-h-0 h-full">
+                                <KanbanColumn
+                                    column={col}
+                                    leads={leads.filter((l) => l.current_column_id === col.id)}
+                                    onCardClick={handleCardClick}
+                                    onReturn={(lead) => {
+                                        const whatsappCol = columns.find(c => c.position === 4);
+                                        if (whatsappCol) {
+                                            setLeads(prev => prev.map(l =>
+                                                l.id === lead.id ? { ...l, current_column_id: whatsappCol.id, cadence_progress: 70 } : l
+                                            ));
+                                            
+                                            // PERSISTENCE: Sync with DB
+                                            leadsAPI.updateLead(lead.id, {
+                                                current_column_id: whatsappCol.id
+                                            }).catch(err => {
+                                                console.error('Failed to sync return move:', err);
+                                                addNotification('Falha ao sincronizar retorno com o servidor.', 'error');
+                                            });
+
+                                            addNotification(`Lead ${lead.full_name} retornado para WhatsApp.`, 'info');
+                                        }
+                                    }}
+                                    onFinish={(lead) => {
+                                        // Open feedback registration screen instead of auto-completing
+                                        if (lead.lead_cadence_id) {
+                                            setManualFeedbackLead(lead);
+                                        } else {
+                                            setCompletedLead(lead);
+                                            setIsCycleCompleteOpen(true);
+                                        }
+                                    }}
+                                    onSchedule={(lead) => {
+                                        setCompletedLead(lead);
+                                        setIsScheduleModalOpen(true);
+                                    }}
+                                />
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
-                <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+
+                <DragOverlay dropAnimation={dropAnimation}>
                     {activeLead ? (
-                        <div className="transform rotate-2 scale-[1.03] opacity-90 cursor-grabbing">
-                            <LeadCard lead={activeLead} />
+                        <div style={{ width: '300px', cursor: 'grabbing' }}>
+                            <LeadCard 
+                                lead={activeLead} 
+                                onClick={() => {}} 
+                                columnPosition={columns.find(c => c.id === activeLead.current_column_id)?.position}
+                                isOverlay
+                            />
                         </div>
                     ) : null}
                 </DragOverlay>
@@ -409,11 +502,11 @@ export const KanbanBoard = ({
                 columnColor={columns.find(c => c.id === selectedLead?.current_column_id)?.color}
             />
 
-        <CycleCompleteModal
+            <CycleCompleteModal
                 isOpen={isCycleCompleteOpen}
                 onClose={() => setIsCycleCompleteOpen(false)}
                 lead={completedLead}
-                onResult={async (result, opportunityNotes) => {
+                onComplete={async (result, opportunityNotes) => {
                     if (!completedLead) return;
                     try {
                         if (result === 'opportunity') {
@@ -510,10 +603,50 @@ export const KanbanBoard = ({
 
             {/* Post-Call Feedback Modal */}
             <CallFeedbackModal
-                isOpen={!!voip.callRequiresFeedback}
-                callData={voip.callRequiresFeedback}
-                onResult={handleCallFeedback}
-                onClose={voip.clearFeedback}
+                isOpen={!!voip.callRequiresFeedback || !!manualFeedbackLead}
+                callData={voip.callRequiresFeedback || (manualFeedbackLead ? { 
+                    leadId: manualFeedbackLead.id, 
+                    leadName: manualFeedbackLead.full_name,
+                    phoneNumber: manualFeedbackLead.phone || '',
+                    startedAt: new Date()
+                } : null)}
+                onResult={async (result, notes) => {
+                    if (voip.callRequiresFeedback) {
+                        return handleCallFeedback(result, notes);
+                    }
+                    if (manualFeedbackLead) {
+                        try {
+                            const outcomeMap: any = {
+                                'success': 'success',
+                                'busy': 'busy',
+                                'voicemail': 'voicemail',
+                                'invalid': 'invalid_number',
+                                'no-answer': 'no_answer',
+                                'reschedule': 'reschedule'
+                            };
+                            const res = await cadencesAPI.registerStep(manualFeedbackLead.lead_cadence_id!, {
+                                outcome: outcomeMap[result] || 'success',
+                                canal: 'call', // Treat manual completions as calls for now if using this modal
+                                notes: notes || 'Conclusão manual via Kanban'
+                            });
+
+                            if (res.success && res.data.novo_status === 'concluida') {
+                                setCompletedLead(manualFeedbackLead);
+                                setIsCycleCompleteOpen(true);
+                            }
+                            
+                            setLeads(prev => prev.filter(l => l.id !== manualFeedbackLead.id));
+                            addNotification(`Lead ${manualFeedbackLead.full_name} registrado com sucesso! 🏆`, 'success');
+                            if (onLeadComplete) onLeadComplete();
+                        } catch (err) {
+                            console.error('Failed to register cadence finish:', err);
+                            addNotification('Erro ao registrar conclusão da cadência.', 'error');
+                        } finally {
+                            setManualFeedbackLead(null);
+                        }
+                    }
+                }}
+                onClose={() => { voip.clearFeedback(); setManualFeedbackLead(null); }}
             />
 
             {/* Schedule Preview Modal */}
@@ -526,6 +659,7 @@ export const KanbanBoard = ({
                     handleCardClick(lead);
                 }}
             />
+
 
             <div className="fixed bottom-8 right-8 z-[200] flex flex-col gap-3">
                 <AnimatePresence>

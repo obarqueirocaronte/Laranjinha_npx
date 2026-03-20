@@ -296,6 +296,9 @@ class LeadsService {
                 u.profile_picture_url as sdr_profile_picture_url,
                 u.role as sdr_role,
                 (l.metadata->'tags') as tags,
+                lc.id as lead_cadence_id,
+                lc.step_atual as cadence_step,
+                lc.max_steps as cadence_max_steps,
                 LEAST(COALESCE((
                     SELECT (COUNT(*)::numeric * 100) / NULLIF(COALESCE((l.metadata->>'total_steps')::numeric, 4), 0)
                     FROM (
@@ -308,6 +311,7 @@ class LeadsService {
             LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
             LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
             LEFT JOIN users u ON s.user_id = u.id
+            LEFT JOIN lead_cadence lc ON lc.lead_id = l.id AND lc.status = 'ativa'
             WHERE (l.status = 'active' OR l.status IS NULL)
         `;
         const params = [];
@@ -349,6 +353,15 @@ class LeadsService {
                 }
             }
         }
+
+        // Only show leads that are ready to be worked on (no future schedule)
+        queryStr += ` AND (
+            (l.metadata->>'next_contact_at') IS NULL 
+            OR (l.metadata->>'next_contact_at')::timestamp <= CURRENT_TIMESTAMP
+        ) AND (
+            lc.proxima_acao_em IS NULL 
+            OR lc.proxima_acao_em <= CURRENT_TIMESTAMP
+        )`;
 
         queryStr += ` ORDER BY l.created_at DESC LIMIT 100`;
 
@@ -722,11 +735,15 @@ class LeadsService {
             LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
             LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
             LEFT JOIN users u ON s.user_id = u.id
+            LEFT JOIN lead_cadence lc ON lc.lead_id = l.id AND lc.status = 'ativa'
             WHERE l.status NOT IN ('qualified', 'archived', 'lost')
               AND l.assigned_sdr_id IS NOT NULL
               AND (
                 (l.metadata->>'next_contact_at') IS NULL 
                 OR (l.metadata->>'next_contact_at')::timestamp <= CURRENT_TIMESTAMP
+              ) AND (
+                lc.proxima_acao_em IS NULL 
+                OR lc.proxima_acao_em <= CURRENT_TIMESTAMP
               )
         `;
         const params = [];

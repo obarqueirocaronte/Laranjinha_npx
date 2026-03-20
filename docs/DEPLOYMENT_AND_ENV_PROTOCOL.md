@@ -28,7 +28,7 @@ Em `/Users/rodrigodantas/Antigravity - Projetos/inside-sales-pipeline-beta`. Tod
 
 - **Frontend**: [http://localhost:3000](http://localhost:3000)
 - **Backend API**: [http://localhost:3001](http://localhost:3001)
-- **Banco de Dados**: `inside_sales_pipeline` (PostgreSQL local no Mac)
+- **Banco de Dados**: `inside_sales_pipeline` (supabase local no Mac)
 
 ### 🧪 Testando e Validando no Mac (Local)
 1. Inicie o Backend (porta 3001): `npm run dev` na raiz.
