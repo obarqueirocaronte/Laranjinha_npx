@@ -451,6 +451,7 @@ async function getCurrentUser(req, res) {
                     isAdmin: user.is_admin,
                     isVerified: user.is_verified,
                     createdAt: user.created_at,
+                    profile_picture_url: user.profile_picture_url || null,
                 },
             },
         });

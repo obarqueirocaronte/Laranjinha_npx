@@ -400,6 +400,41 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                     </div>
                                 </div>
                             </div>
+
+                            {/* ── Period Filter Mini-Buttons ── */}
+                            <div className="flex items-center gap-2 bg-white/40 backdrop-blur-xl p-1.5 rounded-2xl border border-white/60 shadow-lg">
+                                {([
+                                    { id: 'hoje' as PeriodId, label: 'Dia', gradient: 'from-blue-500 to-cyan-500', glow: 'shadow-blue-400/30' },
+                                    { id: 'semana' as PeriodId, label: 'Semana', gradient: 'from-violet-500 to-purple-500', glow: 'shadow-violet-400/30' },
+                                    { id: 'mes' as PeriodId, label: 'Mês', gradient: 'from-orange-500 to-rose-500', glow: 'shadow-orange-400/30' },
+                                ]).map((btn) => {
+                                    const isActive = period === btn.id;
+                                    return (
+                                        <motion.button
+                                            key={btn.id}
+                                            onClick={() => setPeriod(btn.id)}
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            className={cn(
+                                                "px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all relative overflow-hidden",
+                                                isActive
+                                                    ? `bg-gradient-to-r ${btn.gradient} text-white shadow-lg ${btn.glow}`
+                                                    : "text-slate-500 hover:text-slate-700 hover:bg-white/60"
+                                            )}
+                                            style={{ fontFamily: 'Comfortaa, cursive' }}
+                                        >
+                                            {isActive && (
+                                                <motion.div 
+                                                    layoutId="periodIndicator"
+                                                    className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"
+                                                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                                />
+                                            )}
+                                            <span className="relative z-10">{btn.label}</span>
+                                        </motion.button>
+                                    );
+                                })}
+                            </div>
                         </div>
 
                         {/* Tab Content */}

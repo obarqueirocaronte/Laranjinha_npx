@@ -77,13 +77,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         const roleMap: Record<string, 'manager' | 'sdr' | 'salesops'> = {
                             manager: 'manager', salesops: 'salesops', sdr: 'sdr'
                         };
-                        setUser({
+                        const updatedUser = {
                             id: u.id,
                             email: u.email,
                             role: roleMap[u.role] || (u.is_admin ? 'manager' : 'sdr'),
                             isAdmin: u.is_admin || u.role === 'salesops',
-                            profile_picture_url: u.profile_picture_url
-                        });
+                            profile_picture_url: u.profile_picture_url || null
+                        };
+                        setUser(updatedUser);
+                        // Sync localStorage with fresh data from server
+                        localStorage.setItem('user', JSON.stringify(updatedUser));
                     }
                 } catch (err) {
                     console.error('Auth check failed:', err);

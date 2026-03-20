@@ -41,6 +41,21 @@ interface DashboardData {
         taxa_conversao: string;
     };
     zona_sdr: any[];
+    activity_stats?: {
+        total_ligacoes: number;
+        total_emails: number;
+        total_whatsapp: number;
+        total_atividades: number;
+    };
+    cadencias_pendentes?: number;
+    activity_by_sdr?: {
+        sdr_id: string;
+        sdr_name: string;
+        ligacoes: number;
+        emails: number;
+        whatsapp: number;
+        total: number;
+    }[];
 }
 
 interface CadencesDashboardProps {
@@ -271,6 +286,77 @@ export const CadencesDashboard: React.FC<CadencesDashboardProps> = ({
                         ))}
                     </div>
                 </motion.div>
+
+                {/* 3.5. RELATÓRIO DE ATIVIDADES (DB) */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                    className="col-span-12 grid grid-cols-2 md:grid-cols-4 gap-4"
+                >
+                    {[
+                        { label: 'Ligações', value: data?.activity_stats?.total_ligacoes || 0, icon: <Phone size={20} />, gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/20', text: 'text-blue-700' },
+                        { label: 'Emails', value: data?.activity_stats?.total_emails || 0, icon: <Mail size={20} />, gradient: 'from-violet-500 to-purple-600', shadow: 'shadow-violet-500/20', text: 'text-violet-700' },
+                        { label: 'WhatsApp', value: data?.activity_stats?.total_whatsapp || 0, icon: <MessageSquare size={20} />, gradient: 'from-emerald-500 to-green-600', shadow: 'shadow-emerald-500/20', text: 'text-emerald-700' },
+                        { label: 'Cadências Pendentes', value: data?.cadencias_pendentes || 0, icon: <Clock size={20} />, gradient: 'from-orange-500 to-rose-500', shadow: 'shadow-orange-500/20', text: 'text-orange-700' },
+                    ].map((item) => (
+                        <div key={item.label} className={clsx("bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white/60 p-5 relative overflow-hidden group hover:shadow-xl transition-all", item.shadow)}>
+                            <div className="flex items-center justify-between mb-3">
+                                <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center text-white bg-gradient-to-br shadow-lg", item.gradient)}>
+                                    {item.icon}
+                                </div>
+                                <span className={clsx("text-3xl font-black tracking-tight", item.text)}>{item.value}</span>
+                            </div>
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.15em]">{item.label}</p>
+                        </div>
+                    ))}
+                </motion.div>
+
+                {/* 3.6. ATIVIDADES POR SDR (DB) */}
+                {data?.activity_by_sdr && data.activity_by_sdr.length > 0 && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
+                        className="col-span-12 bg-white/80 backdrop-blur-2xl border border-sky-100 rounded-[2.5rem] p-7 shadow-xl shadow-sky-500/10 relative overflow-hidden"
+                    >
+                        <div className="absolute -top-24 -right-24 w-48 h-48 bg-sky-400/10 rounded-full blur-3xl pointer-events-none" />
+                        <div className="flex items-center gap-4 mb-6 relative z-10">
+                            <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-sky-500/40">
+                                <Activity size={22} strokeWidth={2.5} />
+                            </div>
+                            <div>
+                                <h3 className="font-black text-slate-800 text-lg tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Atividades por SDR</h3>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Detalhamento de contatos realizados no período</p>
+                            </div>
+                        </div>
+                        <div className="space-y-2 relative z-10">
+                            {data.activity_by_sdr.map((sdr) => (
+                                <div key={sdr.sdr_id || sdr.sdr_name} className="flex items-center justify-between p-4 bg-white/60 backdrop-blur-sm rounded-2xl border border-sky-50 hover:bg-white hover:shadow-md transition-all group">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-100 to-blue-100 text-sky-700 flex items-center justify-center text-[11px] font-black uppercase shadow-inner shrink-0">
+                                            {sdr.sdr_name?.charAt(0) || '?'}
+                                        </div>
+                                        <span className="text-sm font-bold text-slate-700 truncate">{sdr.sdr_name || 'Sem SDR'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-6">
+                                        <div className="flex items-center gap-1.5 text-blue-600">
+                                            <Phone size={12} />
+                                            <span className="text-sm font-black">{sdr.ligacoes || 0}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-violet-600">
+                                            <Mail size={12} />
+                                            <span className="text-sm font-black">{sdr.emails || 0}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-emerald-600">
+                                            <MessageSquare size={12} />
+                                            <span className="text-sm font-black">{sdr.whatsapp || 0}</span>
+                                        </div>
+                                        <div className="bg-slate-100 px-3 py-1 rounded-xl">
+                                            <span className="text-xs font-black text-slate-600">{sdr.total || 0} total</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* 4. DETALHAMENTO DE ATIVIDADES (LOGS) */}
                 <motion.div 

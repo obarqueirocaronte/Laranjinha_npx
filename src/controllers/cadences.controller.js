@@ -854,6 +854,66 @@ exports.getCadencesDashboard = async (req, res, next) => {
     }
 
 
+    // ── ACTIVITY STATS: ligações, emails, whatsapp do banco ──
+    const activityDateFilter = period === 'today'
+      ? "AND cl2.timestamp >= CURRENT_DATE"
+      : period === '7d'
+        ? "AND cl2.timestamp >= NOW() - INTERVAL '7 days'"
+        : period === '30d'
+          ? "AND cl2.timestamp >= NOW() - INTERVAL '30 days'"
+          : '';
+
+    const activitySdrFilter = sdr_id ? `AND cl2.sdr_id = $1` : '';
+
+    const activityRes = await db.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE cl2.canal = 'call') AS total_ligacoes,
+         COUNT(*) FILTER (WHERE cl2.canal = 'email') AS total_emails,
+         COUNT(*) FILTER (WHERE cl2.canal = 'whatsapp') AS total_whatsapp,
+         COUNT(*) AS total_atividades
+       FROM cadence_logs cl2
+       WHERE cl2.acao = 'tentativa'
+         ${activityDateFilter}
+         ${activitySdrFilter}`,
+      paramsSdr
+    );
+
+    const activityStats = activityRes.rows[0] || {
+      total_ligacoes: 0, total_emails: 0, total_whatsapp: 0, total_atividades: 0
+    };
+
+    // ── CADÊNCIAS PENDENTES: leads sem cadência ativa ────────
+    const pendentesRes = await db.query(
+      `SELECT COUNT(*) AS total
+       FROM leads l
+       WHERE l.status = 'active'
+         AND NOT EXISTS (
+           SELECT 1 FROM lead_cadence lc_inner
+           WHERE lc_inner.lead_id = l.id AND lc_inner.status = 'ativa'
+         )`
+    );
+
+    const cadenciasPendentes = parseInt(pendentesRes.rows[0]?.total) || 0;
+
+    // ── ATIVIDADES POR SDR (do banco) ────────────────────────
+    const activityBySdrRes = await db.query(
+      `SELECT
+         s.id AS sdr_id,
+         s.name AS sdr_name,
+         COUNT(*) FILTER (WHERE cl3.canal = 'call') AS ligacoes,
+         COUNT(*) FILTER (WHERE cl3.canal = 'email') AS emails,
+         COUNT(*) FILTER (WHERE cl3.canal = 'whatsapp') AS whatsapp,
+         COUNT(*) AS total
+       FROM cadence_logs cl3
+       LEFT JOIN sdrs s ON cl3.sdr_id = s.id
+       WHERE cl3.acao = 'tentativa'
+         ${activityDateFilter.replace(/cl2/g, 'cl3')}
+         ${activitySdrFilter.replace(/cl2/g, 'cl3')}
+       GROUP BY s.id, s.name
+       ORDER BY total DESC`,
+      paramsSdr
+    );
+
     return res.json({
       success: true,
       data: {
@@ -877,6 +937,14 @@ exports.getCadencesDashboard = async (req, res, next) => {
         outcome_summary: outcomeTotals,
         outcome_by_sdr: outcomeBySdr,
         scheduled_returns: scheduledReturnsRes.rows,
+        activity_stats: {
+          total_ligacoes: parseInt(activityStats.total_ligacoes) || 0,
+          total_emails: parseInt(activityStats.total_emails) || 0,
+          total_whatsapp: parseInt(activityStats.total_whatsapp) || 0,
+          total_atividades: parseInt(activityStats.total_atividades) || 0,
+        },
+        cadencias_pendentes: cadenciasPendentes,
+        activity_by_sdr: activityBySdrRes.rows,
       },
     });
   } catch (err) {

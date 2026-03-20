@@ -345,7 +345,7 @@ exports.bulkUpdateLeads = async (req, res, next) => {
 exports.scheduleNextContact = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { scheduled_at, type, notes, sdr_id } = req.body;
+        const { scheduled_at, type, notes, sdr_id, return_to_queue } = req.body;
 
         if (!scheduled_at) {
             return res.status(400).json({
@@ -354,11 +354,30 @@ exports.scheduleNextContact = async (req, res, next) => {
             });
         }
 
+        // Resolve: frontend sends user ID as sdr_id, but schedules table expects SDR ID
+        let resolvedSdrId = sdr_id;
+        if (sdr_id) {
+            try {
+                const sdrRes = await db.query('SELECT id FROM sdrs WHERE user_id = $1 LIMIT 1', [sdr_id]);
+                if (sdrRes.rows.length > 0) {
+                    resolvedSdrId = sdrRes.rows[0].id;
+                } else {
+                    // Maybe it's already an SDR ID; check
+                    const directRes = await db.query('SELECT id FROM sdrs WHERE id = $1 LIMIT 1', [sdr_id]);
+                    resolvedSdrId = directRes.rows[0]?.id || null;
+                }
+            } catch (resolveErr) {
+                console.warn('Could not resolve sdr_id, using null:', resolveErr.message);
+                resolvedSdrId = null;
+            }
+        }
+
         const result = await leadsService.scheduleLead(id, {
-            sdr_id,
+            sdr_id: resolvedSdrId,
             scheduled_at,
             type: type || 'manual',
-            notes
+            notes,
+            return_to_queue: !!return_to_queue
         });
 
         // Automação para enviar email padrão
