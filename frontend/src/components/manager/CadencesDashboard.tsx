@@ -104,8 +104,12 @@ export const CadencesDashboard: React.FC<CadencesDashboardProps> = ({
         try {
             const apiPeriod = mapPeriod(period);
             const res = await cadencesAPI.getLogs({ sdr_id: sdrId === 'all' ? undefined : sdrId, period: apiPeriod });
-            if (res.success) {
+            if (res.success && res.data?.logs) {
+                setLogs(res.data.logs);
+            } else if (res.success && Array.isArray(res.data)) {
                 setLogs(res.data);
+            } else {
+                setLogs([]);
             }
         } catch (error) {
             console.error('Error fetching logs:', error);
