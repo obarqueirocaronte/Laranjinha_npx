@@ -1378,31 +1378,62 @@ const ResumoTab: React.FC<{
                         </div>
 
                         <div className="space-y-3">
-                            {cadenceDashboard?.zona_progresso?.leads?.slice(0, 5)?.map((lead: any) => (
-                                <div key={lead.id} className="flex items-center justify-between p-3 rounded-xl bg-white/60 border border-white shadow-sm hover:border-orange-200 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center font-black text-[10px]">
-                                            {lead.lead_name?.charAt(0)}
+                            {(() => {
+                                const allLeads = [
+                                    ...(cadenceDashboard?.zona_progresso?.leads || []),
+                                    ...(cadenceDashboard?.zona_critica?.leads || [])
+                                ].sort((a: any, b: any) => {
+                                    if (!a.proxima_acao_em) return 1;
+                                    if (!b.proxima_acao_em) return -1;
+                                    return new Date(a.proxima_acao_em).getTime() - new Date(b.proxima_acao_em).getTime();
+                                });
+
+                                if (allLeads.length === 0) {
+                                    return (
+                                        <div className="text-center py-12 opacity-40 flex flex-col items-center">
+                                            <Target size={32} className="text-slate-300 mb-2" />
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nenhum agendamento pendente</p>
                                         </div>
-                                        <div>
-                                            <p className="text-xs font-black text-slate-700">{lead.lead_name}</p>
-                                            <p className="text-[9px] text-slate-400 font-bold">{lead.sdr_name} • Step {lead.step_atual}</p>
+                                    );
+                                }
+
+                                return allLeads.slice(0, 6).map((lead: any) => {
+                                    const isStalled = cadenceDashboard?.zona_critica?.leads?.some((l: any) => l.id === lead.id);
+                                    return (
+                                        <div key={lead.id} className={cn(
+                                            "flex items-center justify-between p-3 rounded-xl border transition-colors",
+                                            isStalled ? "bg-rose-50/50 border-rose-100 hover:border-rose-200" : "bg-white/60 border-white shadow-sm hover:border-orange-200"
+                                        )}>
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px]",
+                                                    isStalled ? "bg-rose-100 text-rose-600" : "bg-orange-100 text-orange-600"
+                                                )}>
+                                                    {lead.lead_name?.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-xs font-black text-slate-700">{lead.lead_name}</p>
+                                                        {isStalled && (
+                                                            <span className="px-1.5 py-0.5 bg-rose-100 text-rose-600 text-[7px] font-black uppercase rounded">Atrasado</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[9px] text-slate-400 font-bold">{lead.sdr_name} • Step {lead.step_atual}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <div className={cn(
+                                                    "px-2 py-1 rounded text-[9px] font-black",
+                                                    isStalled ? "bg-rose-100 text-rose-600" : "bg-slate-100 text-slate-500"
+                                                )}>
+                                                    {lead.horas_parada ? `${lead.horas_parada}h` : 'No prazo'}
+                                                </div>
+                                                <ChevronRight size={14} className="text-slate-300" />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="px-2 py-1 bg-slate-100 rounded text-[9px] font-black text-slate-500">
-                                            {lead.horas_parada ? `${lead.horas_parada}h` : 'No prazo'}
-                                        </div>
-                                        <ChevronRight size={14} className="text-slate-300" />
-                                    </div>
-                                </div>
-                            ))}
-                            {(!cadenceDashboard?.zona_progresso?.leads || cadenceDashboard.zona_progresso.leads.length === 0) && (
-                                <div className="text-center py-12 opacity-40 flex flex-col items-center">
-                                    <Target size={32} className="text-slate-300 mb-2" />
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nenhum agendamento pendente</p>
-                                </div>
-                            )}
+                                    );
+                                });
+                            })()}
                         </div>
                     </GlassCard>
                 </div>
