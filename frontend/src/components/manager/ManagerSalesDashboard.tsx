@@ -1378,7 +1378,7 @@ const ResumoTab: React.FC<{
                         </div>
 
                         <div className="space-y-3">
-                            {cadenceDashboard?.zona_progresso?.leads?.slice(0, 5).map((lead: any) => (
+                            {cadenceDashboard?.zona_progresso?.leads?.slice(0, 5)?.map((lead: any) => (
                                 <div key={lead.id} className="flex items-center justify-between p-3 rounded-xl bg-white/60 border border-white shadow-sm hover:border-orange-200 transition-colors">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center font-black text-[10px]">

@@ -176,7 +176,7 @@ export const CadencesDashboard: React.FC<CadencesDashboardProps> = ({
                     </div>
                     
                     <div className="space-y-3 mt-6 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar relative z-10">
-                        {data?.zona_critica.leads.map((lead) => (
+                        {data?.zona_critica?.leads?.map((lead) => (
                             <div key={lead.id} className="group/item bg-white/60 backdrop-blur-sm p-3.5 rounded-2xl border border-red-100/50 shadow-sm hover:bg-white hover:border-red-200 hover:shadow-md transition-all flex items-center justify-between">
                                 <div className="min-w-0">
                                     <p className="text-sm font-bold text-slate-800 truncate">{lead.lead_name}</p>
@@ -328,7 +328,7 @@ export const CadencesDashboard: React.FC<CadencesDashboardProps> = ({
                             </div>
                         </div>
                         <div className="space-y-2 relative z-10">
-                            {data.activity_by_sdr.map((sdr) => (
+                            {data?.activity_by_sdr?.map((sdr) => (
                                 <div key={sdr.sdr_id || sdr.sdr_name} className="flex items-center justify-between p-4 bg-white/60 backdrop-blur-sm rounded-2xl border border-sky-50 hover:bg-white hover:shadow-md transition-all group">
                                     <div className="flex items-center gap-3 min-w-0">
                                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-100 to-blue-100 text-sky-700 flex items-center justify-center text-[11px] font-black uppercase shadow-inner shrink-0">
