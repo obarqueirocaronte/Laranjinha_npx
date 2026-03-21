@@ -3,7 +3,6 @@ import { motion, AnimatePresence, useMotionValue, type PanInfo } from 'framer-mo
 import {
     Settings,
     Phone,
-    MessageSquare,
     Layers,
     Zap,
     Calendar,
@@ -12,6 +11,7 @@ import {
     Sparkles,
     Trophy,
 } from 'lucide-react';
+import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 import { cn } from '../../lib/utils';
 import { UserAvatar } from '../common/UserAvatar';
 
@@ -159,7 +159,7 @@ export const ControlHub: React.FC<ControlHubProps> = ({
                     <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform"><Mail size={48} /></div>
                     <div className="relative z-10">
                         <div className="text-3xl font-black mb-1 drop-shadow-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>{activityStats.emails}</div>
-                        <div className="text-[11px] font-bold text-purple-100 tracking-wide">Emails</div>
+                        <div className="text-[11px] font-bold text-purple-100 tracking-wide">Email</div>
                         <div className="w-full bg-black/20 h-1.5 rounded-full mt-3 overflow-hidden">
                             <div className="bg-white w-[90%] h-full rounded-full shadow-sm" />
                         </div>
@@ -191,11 +191,11 @@ export const ControlHub: React.FC<ControlHubProps> = ({
                     className="col-span-2 bg-emerald-500 rounded-2xl p-4 shadow-lg shadow-emerald-500/20 text-white relative overflow-hidden group flex items-center justify-between"
                     style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
                 >
-                    <div className="absolute -right-4 -bottom-4 opacity-10 rotate-12 group-hover:rotate-0 transition-transform"><MessageSquare size={88} /></div>
+                    <div className="absolute -right-4 -bottom-4 opacity-10 rotate-12 group-hover:rotate-0 transition-transform"><WhatsAppIcon size={88} /></div>
 
                     <div className="relative z-10">
                         <div className="text-3xl font-black mb-1 drop-shadow-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>{activityStats.whatsapp}</div>
-                        <div className="text-[11px] font-bold text-emerald-100 tracking-wide">Mensagens WhatsApp</div>
+                        <div className="text-[11px] font-bold text-emerald-100 tracking-wide">WhatsApp</div>
                     </div>
 
                     <div className="text-right relative z-10 bg-white/10 px-3 py-2 rounded-xl backdrop-blur-sm border border-white/20">

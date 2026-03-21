@@ -2075,12 +2075,21 @@ const PreviewTab: React.FC<{
         leadsBySdr.set(sdrId, [...(leadsBySdr.get(sdrId) || []), lead]);
     });
 
-    const COLUMN_IDENTITY: Record<number, any> = {
-        1: { gradient: ['#FF8C00', '#FF5722'], columnBg: 'bg-orange-100/20', icon: '🍊', label: 'Leads', subtitle: 'TRIAGEM INICIAL', accent: 'text-orange-500' },
-        2: { gradient: ['#3B82F6', '#6366F1'], columnBg: 'bg-blue-100/20', icon: '📞', label: 'Chamada', subtitle: 'SCRIPT DESCOBERTA', accent: 'text-blue-500' },
-        3: { gradient: ['#8B5CF6', '#EC4899'], columnBg: 'bg-violet-100/20', icon: '✉️', label: 'Email', subtitle: 'PROPOSTA E VALOR', accent: 'text-violet-500' },
-        4: { gradient: ['#10B981', '#06B6D4'], columnBg: 'bg-emerald-100/20', icon: 'wpp', label: 'WhatsApp', subtitle: 'RELACIONAMENTO', accent: 'text-emerald-500' },
-        5: { gradient: ['#EF4444', '#F97316'], columnBg: 'bg-red-100/20', icon: '🎯', label: 'Cadência', subtitle: 'FOLLOW-UP FINAL', accent: 'text-red-500' },
+    const getColumnIdentity = (name: string) => {
+        const n = name.toLowerCase();
+        if (n.includes('whatsapp') || n.includes('wpp')) {
+            return { gradient: ['#10B981', '#06B6D4'], columnBg: 'bg-emerald-100/20', icon: 'wpp', label: 'WhatsApp', subtitle: 'RELACIONAMENTO', accent: 'text-emerald-500' };
+        }
+        if (n.includes('email')) {
+            return { gradient: ['#8B5CF6', '#EC4899'], columnBg: 'bg-violet-100/20', icon: '✉️', label: 'Email', subtitle: 'PROPOSTA E VALOR', accent: 'text-violet-500' };
+        }
+        if (n.includes('chamada') || n.includes('ligação')) {
+            return { gradient: ['#3B82F6', '#6366F1'], columnBg: 'bg-blue-100/20', icon: '📞', label: 'Chamada', subtitle: 'SCRIPT DESCOBERTA', accent: 'text-blue-500' };
+        }
+        if (n.includes('cadência') || n.includes('follow')) {
+            return { gradient: ['#EF4444', '#F97316'], columnBg: 'bg-red-100/20', icon: '🎯', label: 'Cadência', subtitle: 'FOLLOW-UP FINAL', accent: 'text-red-500' };
+        }
+        return { gradient: ['#FF8C00', '#FF5722'], columnBg: 'bg-orange-100/20', icon: '🍊', label: name, subtitle: 'TRIAGEM INICIAL', accent: 'text-orange-500' };
     };
 
 
@@ -2183,7 +2192,7 @@ const PreviewTab: React.FC<{
                                             key={col.id}
                                             id={col.id}
                                             leads={leadsBySdr.get(selectedSdr.id)?.filter(l => l.current_column_id === col.id) || []}
-                                            identity={COLUMN_IDENTITY[col.position] || {}}
+                                            identity={getColumnIdentity(col.name)}
                                         />
                                     ))}
                                 </div>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
-    AlertTriangle, Activity, CheckCircle2, Clock, Phone, Mail, MessageSquare
+    AlertTriangle, Activity, CheckCircle2, Clock, Phone, Mail
 } from 'lucide-react';
+import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 
 import clsx from 'clsx';
 import { cadencesAPI } from '../../lib/api';
@@ -134,7 +135,7 @@ export const CadencesDashboard: React.FC<CadencesDashboardProps> = ({
         switch (canal) {
             case 'call': return <Phone size={12} />;
             case 'email': return <Mail size={12} />;
-            case 'whatsapp': return <MessageSquare size={12} />;
+            case 'whatsapp': return <WhatsAppIcon size={12} />;
             default: return <Activity size={12} />;
         }
     };
@@ -295,7 +296,7 @@ export const CadencesDashboard: React.FC<CadencesDashboardProps> = ({
                     {[
                         { label: 'Ligações', value: data?.activity_stats?.total_ligacoes || 0, icon: <Phone size={20} />, gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/20', text: 'text-blue-700' },
                         { label: 'Emails', value: data?.activity_stats?.total_emails || 0, icon: <Mail size={20} />, gradient: 'from-violet-500 to-purple-600', shadow: 'shadow-violet-500/20', text: 'text-violet-700' },
-                        { label: 'WhatsApp', value: data?.activity_stats?.total_whatsapp || 0, icon: <MessageSquare size={20} />, gradient: 'from-emerald-500 to-green-600', shadow: 'shadow-emerald-500/20', text: 'text-emerald-700' },
+                        { label: 'WhatsApp', value: data?.activity_stats?.total_whatsapp || 0, icon: <WhatsAppIcon size={20} />, gradient: 'from-emerald-500 to-green-600', shadow: 'shadow-emerald-500/20', text: 'text-emerald-700' },
                         { label: 'Cadências Pendentes', value: data?.cadencias_pendentes || 0, icon: <Clock size={20} />, gradient: 'from-orange-500 to-rose-500', shadow: 'shadow-orange-500/20', text: 'text-orange-700' },
                     ].map((item) => (
                         <div key={item.label} className={clsx("bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white/60 p-5 relative overflow-hidden group hover:shadow-xl transition-all", item.shadow)}>
@@ -345,7 +346,7 @@ export const CadencesDashboard: React.FC<CadencesDashboardProps> = ({
                                             <span className="text-sm font-black">{sdr.emails || 0}</span>
                                         </div>
                                         <div className="flex items-center gap-1.5 text-emerald-600">
-                                            <MessageSquare size={12} />
+                                            <WhatsAppIcon size={12} />
                                             <span className="text-sm font-black">{sdr.whatsapp || 0}</span>
                                         </div>
                                         <div className="bg-slate-100 px-3 py-1 rounded-xl">
