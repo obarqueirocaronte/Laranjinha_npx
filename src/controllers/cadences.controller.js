@@ -563,7 +563,7 @@ exports.getCadenceStatus = async (req, res, next) => {
          lc.lead_id,
          l.full_name        AS lead_name,
          lc.sdr_id,
-         s.name             AS sdr_name,
+         s.full_name        AS sdr_name,
          lc.step_atual,
          lc.max_steps,
          lc.status,
@@ -661,7 +661,7 @@ exports.getCadenceLogs = async (req, res, next) => {
          cl.notas,
          cl.retorno_agendado_em,
          cl.timestamp,
-         s.name AS sdr_name,
+         s.full_name AS sdr_name,
          l.full_name AS lead_name
        FROM cadence_logs cl
        JOIN leads l ON cl.lead_id = l.id
@@ -723,7 +723,7 @@ exports.getCadencesDashboard = async (req, res, next) => {
     // ── ZONA CRÍTICA: cadências paradas > 24h ──────────────────
     const criticaRes = await db.query(
       `SELECT lc.id, lc.lead_id, l.full_name AS lead_name, l.company_name,
-              s.name AS sdr_name, lc.step_atual, lc.max_steps,
+              s.full_name AS sdr_name, lc.step_atual, lc.max_steps,
               lc.proxima_acao_em,
               ROUND(EXTRACT(EPOCH FROM (NOW() - lc.proxima_acao_em))/3600) AS horas_parada
        FROM lead_cadence lc
@@ -749,7 +749,7 @@ exports.getCadencesDashboard = async (req, res, next) => {
 
     const progressoLeadsRes = await db.query(
       `SELECT lc.id, lc.lead_id, l.full_name AS lead_name,
-              s.name AS sdr_name, lc.step_atual, lc.max_steps,
+              s.full_name AS sdr_name, lc.step_atual, lc.max_steps,
               lc.proxima_acao_em, lc.resultado_anterior,
               lc.intervalo_retorno_horas
        FROM lead_cadence lc
@@ -786,7 +786,7 @@ exports.getCadencesDashboard = async (req, res, next) => {
     const sdrRes = await db.query(
       `SELECT
          s.id AS sdr_id,
-         s.name AS sdr_name,
+         s.full_name AS sdr_name,
          COUNT(*) FILTER (WHERE lc.status = 'ativa') AS leads_ativos,
          COUNT(*) FILTER (WHERE lc.status = 'ativa' AND lc.proxima_acao_em IS NOT NULL AND lc.proxima_acao_em >= NOW() - INTERVAL '24 hours') AS em_progresso,
          COUNT(*) FILTER (WHERE lc.status = 'concluida') AS concluidas,
@@ -800,7 +800,7 @@ exports.getCadencesDashboard = async (req, res, next) => {
        FROM sdrs s
        LEFT JOIN lead_cadence lc ON lc.sdr_id = s.id ${dateFilter ? dateFilter.replace('lc.', 'lc.') : ''}
        ${sdr_id ? `WHERE s.id = $1` : ''}
-       GROUP BY s.id, s.name
+       GROUP BY s.id, s.full_name
        ORDER BY leads_ativos DESC`,
       paramsSdr
     );
@@ -810,13 +810,13 @@ exports.getCadencesDashboard = async (req, res, next) => {
       `SELECT
          cl.resultado,
          COUNT(*) AS total,
-         s.name AS sdr_name,
+         s.full_name AS sdr_name,
          cl.sdr_id
        FROM cadence_logs cl
        LEFT JOIN sdrs s ON cl.sdr_id = s.id
        WHERE cl.resultado IS NOT NULL ${dateFilter ? dateFilter.replace('lc.', 'cl.') : ''}
        ${sdr_id ? `AND cl.sdr_id = $1` : ''}
-       GROUP BY cl.resultado, s.name, cl.sdr_id
+       GROUP BY cl.resultado, s.full_name, cl.sdr_id
        ORDER BY total DESC`,
       paramsSdr
     );
@@ -836,7 +836,7 @@ exports.getCadencesDashboard = async (req, res, next) => {
       `SELECT
          sc.id, sc.lead_id, sc.sdr_id, sc.scheduled_at, sc.status, sc.notes,
          l.full_name AS lead_name, l.company_name,
-         s.name AS sdr_name
+         s.full_name AS sdr_name
        FROM schedules sc
        JOIN leads l ON sc.lead_id = l.id
        LEFT JOIN sdrs s ON sc.sdr_id = s.id
@@ -899,7 +899,7 @@ exports.getCadencesDashboard = async (req, res, next) => {
     const activityBySdrRes = await db.query(
       `SELECT
          s.id AS sdr_id,
-         s.name AS sdr_name,
+         s.full_name AS sdr_name,
          COUNT(*) FILTER (WHERE cl3.canal = 'call') AS ligacoes,
          COUNT(*) FILTER (WHERE cl3.canal = 'email') AS emails,
          COUNT(*) FILTER (WHERE cl3.canal = 'whatsapp') AS whatsapp,
@@ -909,7 +909,7 @@ exports.getCadencesDashboard = async (req, res, next) => {
        WHERE cl3.acao = 'tentativa'
          ${activityDateFilter.replace(/cl2/g, 'cl3')}
          ${activitySdrFilter.replace(/cl2/g, 'cl3')}
-       GROUP BY s.id, s.name
+       GROUP BY s.id, s.full_name
        ORDER BY total DESC`,
       paramsSdr
     );
@@ -977,7 +977,7 @@ exports.getStalledCadences = async (req, res, next) => {
          lc.lead_id,
          l.full_name AS lead_name,
          l.company_name,
-         s.name AS sdr_name,
+         s.full_name AS sdr_name,
          s.id AS sdr_id,
          lc.step_atual,
          lc.max_steps,
