@@ -152,25 +152,25 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
                         >
                             {column.position === 5 ? 'Conclusão' : column.name}
                         </h3>
+
+                        {/* Lead count badge inline inside the header */}
+                        <motion.span
+                            key={leads.length}
+                            initial={{ scale: 0.6, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: 'spring', stiffness: 550, damping: 25 }}
+                            className="ml-2 px-2 py-0.5 min-w-[24px] rounded-full text-[11px] font-bold flex items-center justify-center shadow-inner"
+                            style={{
+                                background: 'rgba(255,255,255,0.2)',
+                                backdropFilter: 'blur(4px)',
+                                color: 'white',
+                                border: '1px solid rgba(255,255,255,0.3)',
+                            }}
+                        >
+                            {leads.length}
+                        </motion.span>
                     </div>
                 </div>
-
-                {/* Lead count badge — floating top-right, same gradient */}
-                <motion.span
-                    key={leads.length}
-                    initial={{ scale: 0.6, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 550, damping: 25 }}
-                    className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 flex items-center justify-center rounded-full text-[10px] font-black shadow-xl z-[100]"
-                    style={{
-                        fontFamily: 'Comfortaa, cursive',
-                        background: headerGradient,
-                        color: 'white',
-                        border: '1px solid rgba(255,255,255,0.8)',
-                    }}
-                >
-                    {leads.length}
-                </motion.span>
             </div>
 
             {/* ── Cards zone ── */}
