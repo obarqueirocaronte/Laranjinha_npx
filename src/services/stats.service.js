@@ -485,16 +485,88 @@ class StatsService {
 
         const sdrPerfRes = await q(`
             SELECT 
-                s.full_name, 
+                s.full_name, s.id as sdr_id,
                 (SELECT COUNT(*) FROM call_logs cl WHERE cl.sdr_id = s.id ${sdrCallClauses.length ? 'AND ' + sdrCallClauses.join(' AND ') : ''}) as calls,
-                (SELECT COUNT(*) FROM cadence_completions cc WHERE cc.sdr_id = s.id AND cc.final_outcome IN ('opportunity','won') ${sdrDateFilter}) as meetings
+                (SELECT COUNT(*) FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'EMAIL_SENT') as emails,
+                (SELECT COUNT(*) FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'WHATSAPP_SENT') as whatsapp,
+                (SELECT COUNT(*) FROM cadence_completions cc WHERE cc.sdr_id = s.id AND cc.final_outcome IN ('opportunity','won') ${sdrDateFilter}) as meetings,
+                (SELECT COUNT(*) FROM lead_cadence lc2 WHERE lc2.sdr_id = s.id AND lc2.status = 'concluida') as cadences_done,
+                (SELECT COUNT(*) FROM lead_cadence lc3 WHERE lc3.sdr_id = s.id AND lc3.status = 'ativa') as cadences_active
             FROM sdrs s WHERE s.is_active = true ORDER BY meetings DESC
         `, sdrPerfParams);
+
+        // ── Operational Data ──
+
+        // Critical leads (no interaction > 24h with active cadences)
+        const criticalRes = await q(`
+            SELECT l.id, l.full_name as lead_name, l.company_name, l.last_interaction_at,
+                   lc.step_atual, s.full_name as sdr_name
+            FROM leads l
+            JOIN lead_cadence lc ON l.id = lc.lead_id
+            JOIN sdrs s ON l.assigned_sdr_id = s.id
+            WHERE lc.status = 'ativa' AND (l.last_interaction_at IS NULL OR l.last_interaction_at < NOW() - INTERVAL '24 hours')
+            ORDER BY l.last_interaction_at ASC NULLS FIRST
+            LIMIT 20
+        `, []);
+
+        // Cadence step distribution
+        const stepsRes = await q(`
+            SELECT step_atual as step, COUNT(*)::integer as lead_count
+            FROM lead_cadence WHERE status = 'ativa'
+            GROUP BY step_atual ORDER BY step_atual
+        `, []);
+
+        // Completion outcomes breakdown
+        const outcomesRes = await q(`
+            SELECT final_outcome, COUNT(*)::integer as count
+            FROM cadence_completions GROUP BY final_outcome
+        `, []);
+
+        // Average progress of active cadences
+        const avgProgressRes = await q(`
+            SELECT COALESCE(ROUND(AVG(current_percentage), 1), 0) as avg_pct
+            FROM lead_cadence WHERE status = 'ativa'
+        `, []);
+
+        // Average completion time
+        const avgTimeRes = await q(`
+            SELECT EXTRACT(EPOCH FROM AVG(updated_at - created_at))/3600 as avg_hours
+            FROM lead_cadence WHERE status = 'concluida'
+        `, []);
+
+        // Conversion by batch
+        const batchConvRes = await q(`
+            SELECT lb.original_filename as name,
+                   COUNT(DISTINCT l.id)::integer as leads,
+                   COUNT(DISTINCT CASE WHEN lc.status = 'concluida' THEN l.id END)::integer as concluded,
+                   COUNT(DISTINCT CASE WHEN cc.final_outcome IN ('opportunity','won') THEN l.id END)::integer as won
+            FROM lead_batches lb
+            LEFT JOIN leads l ON l.lead_batch_id = lb.id
+            LEFT JOIN lead_cadence lc ON lc.lead_id = l.id
+            LEFT JOIN cadence_completions cc ON cc.lead_id = l.id
+            GROUP BY lb.id, lb.original_filename
+            ORDER BY leads DESC LIMIT 10
+        `, []);
+
+        // Pipeline distribution
+        const pipelineRes = await q(`
+            SELECT pc.name, COUNT(l.id)::integer as count
+            FROM pipeline_columns pc
+            LEFT JOIN leads l ON l.current_column_id = pc.id
+            GROUP BY pc.name, pc.position ORDER BY pc.position
+        `, []);
 
         return {
             ...basicStats,
             timeline,
             sdr_performance: sdrPerfRes.rows,
+            critical_leads: criticalRes.rows,
+            steps_breakdown: stepsRes.rows,
+            completion_outcomes: outcomesRes.rows,
+            avg_progress: Number(avgProgressRes.rows[0]?.avg_pct) || 0,
+            avg_completion_hours: Math.round(Number(avgTimeRes.rows[0]?.avg_hours) || 0),
+            conversion_by_batch: batchConvRes.rows,
+            pipeline_distribution: pipelineRes.rows,
         };
     }
 }
