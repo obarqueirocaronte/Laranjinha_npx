@@ -510,7 +510,6 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                     <FullBIDashboard 
                         onClose={() => setShowStats(false)} 
                         sdrs={enrichedSdrs} 
-                        cadenceDashboard={cadenceDashboard}
                     />
                 )}
             </AnimatePresence>
