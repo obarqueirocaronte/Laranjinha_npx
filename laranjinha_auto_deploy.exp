@@ -1,0 +1,11 @@
+#!/usr/bin/expect -f
+set timeout 300
+set pass "Esseanoemeu@2026"
+spawn ssh -o StrictHostKeyChecking=no -p 55535 rodrigo@178.156.234.198 "cd /opt/laranjinha && git fetch origin main && git reset --hard origin/main && export HOME=/tmp && npm install && cd frontend && npm install && npm run build && cd .. && (echo Esseanoemeu@2026 | sudo -S fuser -k 3001/tcp || true) && nohup npm start > nohup.out 2>&1 &"
+expect {
+    "assword" {
+        send "$pass\r"
+        exp_continue
+    }
+    eof
+}

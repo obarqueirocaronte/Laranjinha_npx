@@ -58,7 +58,7 @@ export const LeadCard = React.memo<LeadCardProps>(({
     } = sortable;
 
     const handlePointerDown = (e: React.PointerEvent) => {
-        listeners?.onPointerDown?.(e);
+        // We no longer manually call listeners.onPointerDown here because we put listeners on the outer div
         pointerDownPos.current = { x: e.clientX, y: e.clientY };
     };
 
@@ -427,31 +427,38 @@ export const LeadCard = React.memo<LeadCardProps>(({
     }
 
     return (
-        <motion.div
+        <div
             ref={setNodeRef}
             {...attributes}
-            {...listeners} // Always spread listeners to ensure dragging works
-            onPointerDown={handlePointerDown} // Merge our custom logic (which calls listeners.onPointerDown)
-            onClick={handleClick}
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ 
-                opacity: 1, 
-                scale: 1,
-                ...(shakeVariant ? (impatienceVariants as any)[shakeVariant] : {})
-            }}
-            whileHover={{ y: -4, zIndex: 1000, boxShadow: "0 20px 40px -12px rgba(251, 146, 60, 0.2)" }}
+            {...listeners}
             className={clsx(
-                "relative flex flex-col p-4 gap-3 w-full rounded-[32px] border transition-all duration-500",
+                "relative flex flex-col w-full transition-opacity duration-300",
                 !isCadenceColumn ? "cursor-grab active:cursor-grabbing" : "cursor-default",
-                isDragging && "opacity-40 grayscale-[0.5] scale-95",
-                "min-h-[190px]" // Fixed height for consistency
+                isDragging ? "opacity-40 grayscale-[0.5] z-[9999]" : "z-10",
+                "touch-none"
             )}
             style={{
-                ...dynamicStyle,
                 transform: CSS.Translate.toString(transform),
                 transition,
             }}
         >
+            <motion.div
+                onPointerDown={handlePointerDown}
+                onClick={handleClick}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ 
+                    opacity: 1, 
+                    scale: 1,
+                    ...(shakeVariant ? (impatienceVariants as any)[shakeVariant] : {})
+                }}
+                whileHover={!isDragging ? { y: -4, zIndex: 1000, boxShadow: "0 20px 40px -12px rgba(251, 146, 60, 0.2)" } : {}}
+                className={clsx(
+                    "relative flex flex-col p-4 gap-3 w-full rounded-[32px] border transition-all duration-500",
+                    isDragging && "scale-95",
+                    "min-h-[190px]" // Fixed height for consistency
+                )}
+                style={dynamicStyle}
+            >
             {/* 1. Header: Company Info and Quick Actions */}
             <div className="flex items-start justify-between">
                 <ExplorationBalloon title="Explorar Empresa" icon={Building2} position="top">
@@ -588,7 +595,8 @@ export const LeadCard = React.memo<LeadCardProps>(({
                 maxSteps={(lead as any).cadence_max_steps}
                 onSuccess={() => onFinish?.(lead)}
             />
-        </motion.div>
+            </motion.div>
+        </div>
     );
 });
 

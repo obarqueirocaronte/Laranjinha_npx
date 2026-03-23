@@ -856,9 +856,9 @@ exports.getCadencesDashboard = async (req, res, next) => {
          COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'ativa' AND lc.proxima_acao_em IS NOT NULL AND lc.proxima_acao_em >= NOW() - INTERVAL '24 hours') AS em_progresso,
          COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida') AS concluidas,
          COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida' AND lc.resultado_anterior = 'success') AS conversoes,
-         (SELECT COUNT(*)::integer FROM cadence_logs cl_acc WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'call' AND cl_acc.acao = 'tentativa' ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}) AS ligacoes,
-         (SELECT COUNT(*)::integer FROM cadence_logs cl_acc WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'email' AND cl_acc.acao = 'tentativa' ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}) AS emails,
-         (SELECT COUNT(*)::integer FROM cadence_logs cl_acc WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'whatsapp' AND cl_acc.acao = 'tentativa' ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}) AS whatsapp,
+         (SELECT COUNT(*)::integer FROM cadence_logs cl_acc WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'call' AND cl_acc.acao = 'tentativa' AND cl_acc.resultado IS NOT NULL ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}) AS ligacoes,
+         (SELECT COUNT(*)::integer FROM cadence_logs cl_acc WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'email' AND cl_acc.acao = 'tentativa' AND cl_acc.resultado IS NOT NULL ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}) AS emails,
+         (SELECT COUNT(*)::integer FROM cadence_logs cl_acc WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'whatsapp' AND cl_acc.acao = 'tentativa' AND cl_acc.resultado IS NOT NULL ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}) AS whatsapp,
          CASE
            WHEN COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida') > 0
            THEN ROUND((COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida' AND lc.resultado_anterior = 'success')::numeric /
@@ -899,18 +899,36 @@ exports.getCadencesDashboard = async (req, res, next) => {
       outcomeBySdr[row.sdr_id].outcomes[r] = parseInt(row.total);
     }
 
-    // ── SCHEDULED RETURNS: retornos agendados com data ──────
+    // ── SCHEDULED RETURNS: retornos agendados com data (MANUAL) ──────
     const scheduledReturnsRes = await db.query(
       `SELECT
          sc.id, sc.lead_id, sc.sdr_id, sc.scheduled_at, sc.status, sc.notes,
          l.full_name AS lead_name, l.company_name,
-         s.full_name AS sdr_name
+         s.full_name AS sdr_name, 'manual' as type
        FROM schedules sc
        JOIN leads l ON sc.lead_id = l.id
        LEFT JOIN sdrs s ON sc.sdr_id = s.id
-       WHERE sc.status = 'pending' AND sc.scheduled_at >= NOW() - INTERVAL '7 days'
+       WHERE sc.status = 'pending' AND sc.scheduled_at >= NOW() - INTERVAL '30 days'
        ${sdr_id ? `AND sc.sdr_id = $1` : ''}
        ORDER BY sc.scheduled_at ASC
+       LIMIT 100`,
+      paramsSdr
+    );
+
+    // ── CADENCE RETURNS: retornos automáticos da cadência ────────────
+    const cadenceReturnsRes = await db.query(
+      `SELECT
+         lc.id, lc.lead_id, lc.sdr_id, lc.proxima_acao_em as scheduled_at, 'ativa' as status,
+         l.full_name AS lead_name, l.company_name,
+         s.full_name AS sdr_name, 'cadence' as type,
+         lc.step_atual, lc.max_steps
+       FROM lead_cadence lc
+       JOIN leads l ON lc.lead_id = l.id
+       LEFT JOIN sdrs s ON lc.sdr_id = s.id
+       WHERE lc.status = 'ativa' AND lc.proxima_acao_em IS NOT NULL
+         AND lc.proxima_acao_em >= NOW() - INTERVAL '30 days'
+       ${sdr_id ? `AND lc.sdr_id = $1` : ''}
+       ORDER BY lc.proxima_acao_em ASC
        LIMIT 100`,
       paramsSdr
     );
@@ -953,7 +971,7 @@ exports.getCadencesDashboard = async (req, res, next) => {
          COUNT(*) FILTER (WHERE cl2.canal = 'whatsapp') AS total_whatsapp,
          COUNT(*) AS total_atividades
        FROM cadence_logs cl2
-       WHERE cl2.acao = 'tentativa'
+       WHERE cl2.acao = 'tentativa' AND cl2.resultado IS NOT NULL
          ${activityDateFilter}
          ${activitySdrFilter}`,
       paramsSdr
@@ -987,11 +1005,23 @@ exports.getCadencesDashboard = async (req, res, next) => {
          COUNT(*) AS total
        FROM cadence_logs cl3
        LEFT JOIN sdrs s ON cl3.sdr_id = s.id
-       WHERE cl3.acao = 'tentativa'
+       WHERE cl3.acao = 'tentativa' AND cl3.resultado IS NOT NULL
          ${activityDateFilter.replace(/cl2/g, 'cl3')}
          ${activitySdrFilter.replace(/cl2/g, 'cl3')}
        GROUP BY s.id, s.full_name
        ORDER BY total DESC`,
+      paramsSdr
+    );
+
+    // ── AVERAGE COMPLETION: média de progresso e tempo ──────
+    const avgProgressoRes = await db.query(
+      `SELECT AVG(current_percentage) as avg_pct, AVG(step_atual) as avg_step
+       FROM lead_cadence WHERE status = 'ativa' ${sdrFilter}`,
+      paramsSdr
+    );
+    const avgTimeRes = await db.query(
+      `SELECT AVG(EXTRACT(EPOCH FROM (updated_at - created_at))/3600) as avg_hours
+       FROM lead_cadence WHERE status = 'concluida' ${dateFilter} ${sdrFilter}`,
       paramsSdr
     );
 
@@ -1016,9 +1046,15 @@ exports.getCadencesDashboard = async (req, res, next) => {
           taxa_conversao: taxaConversao,
         },
         zona_sdr: sdrRes.rows,
+        average_completion: {
+          percentage: Math.round(parseFloat(avgProgressoRes.rows[0]?.avg_pct || 0)),
+          average_steps: Math.round(parseFloat(avgProgressoRes.rows[0]?.avg_step || 0) * 10) / 10,
+          avg_hours_to_finish: Math.round(parseFloat(avgTimeRes.rows[0]?.avg_hours || 0) * 10) / 10
+        },
         outcome_summary: outcomeTotals,
         outcome_by_sdr: outcomeBySdr,
         scheduled_returns: scheduledReturnsRes.rows,
+        cadence_returns: cadenceReturnsRes.rows,
         activity_stats: {
           total_ligacoes: parseInt(activityStats.total_ligacoes) || 0,
           total_emails: parseInt(activityStats.total_emails) || 0,

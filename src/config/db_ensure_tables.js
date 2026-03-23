@@ -131,6 +131,24 @@ const TABLE_DEFINITIONS = [
       UNIQUE(position)
     )`
   },
+  
+  // 7.5 Lead Batches (Imports)
+  {
+    name: 'lead_batches',
+    sql: `CREATE TABLE IF NOT EXISTS lead_batches (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      name VARCHAR(255) NOT NULL,
+      import_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      total_leads INTEGER DEFAULT 0,
+      processed_leads INTEGER DEFAULT 0,
+      tags JSONB DEFAULT '[]',
+      status VARCHAR(50) DEFAULT 'new',
+      origin VARCHAR(255),
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    )`
+  },
 
   // 8. Leads (depende de pipeline_columns, sdrs)
   {
@@ -146,6 +164,7 @@ const TABLE_DEFINITIONS = [
       linkedin_url TEXT,
       current_column_id UUID REFERENCES pipeline_columns(id) ON DELETE SET NULL,
       assigned_sdr_id UUID REFERENCES sdrs(id) ON DELETE SET NULL,
+      lead_batch_id UUID REFERENCES lead_batches(id) ON DELETE SET NULL,
       metadata JSONB DEFAULT '{}',
       qualification_status VARCHAR(50) DEFAULT 'pending',
       cadence_name VARCHAR(100),
@@ -477,6 +496,8 @@ const COLUMN_MIGRATIONS = [
   { table: 'management_report_config', column: 'sdr_ids', type: "JSONB DEFAULT '[]'" },
   // Ensure cadence_logs.notes exists (handles rename from 'notas' if needed)
   { table: 'cadence_logs', column: 'notes', type: 'TEXT' },
+  { table: 'leads', column: 'lead_batch_id', type: 'UUID REFERENCES lead_batches(id) ON DELETE SET NULL' },
+  { table: 'cadence_logs', column: 'lead_cadence_id', type: 'UUID' },
 ];
 
 // ─── Função principal ────────────────────────────────────────────────────────

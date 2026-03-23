@@ -57,6 +57,11 @@ interface DashboardData {
         whatsapp: number;
         total: number;
     }[];
+    average_completion?: {
+        percentage: number;
+        average_steps: number;
+        avg_hours_to_finish: number;
+    };
 }
 
 interface CadencesDashboardProps {
@@ -228,29 +233,36 @@ export const CadencesDashboard: React.FC<CadencesDashboardProps> = ({
                     </div>
 
                     <div className="mt-8 space-y-4 relative z-10">
-                        {[1, 2, 3, 4, 5].map((step) => {
-                            const count = data?.zona_progresso.por_step[`step_${step}`] || 0;
+                        {(() => {
+                            const steps = Object.keys(data?.zona_progresso.por_step || {})
+                                .map(s => parseInt(s.replace('step_', '')))
+                                .sort((a, b) => a - b);
+                            
+                            // Ensure at least steps 1, 2, 3 are shown if no data
+                            const displaySteps = steps.length > 0 ? steps : [1, 2, 3];
                             const max = Math.max(...Object.values(data?.zona_progresso.por_step || {}), 1);
-                            const pct = (count / max) * 100;
-                            
-                            if (count === 0 && step > 3) return null;
-                            
-                            return (
-                                <div key={step} className="group/step">
-                                    <div className="flex justify-between items-end mb-2 px-1">
-                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Step {step}</span>
-                                        <span className="text-[11px] font-black text-amber-600">{count} leads</span>
+
+                            return displaySteps.map((step) => {
+                                const count = data?.zona_progresso.por_step[`step_${step}`] || 0;
+                                const pct = (count / max) * 100;
+                                
+                                return (
+                                    <div key={step} className="group/step">
+                                        <div className="flex justify-between items-end mb-2 px-1">
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Step {step}</span>
+                                            <span className="text-[11px] font-black text-amber-600">{count} leads</span>
+                                        </div>
+                                        <div className="flex-1 bg-slate-100/50 rounded-full h-3 overflow-hidden p-[1px] shadow-inner group-hover/step:bg-amber-50/50 transition-colors">
+                                            <motion.div 
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${pct}%` }}
+                                                className="bg-gradient-to-r from-amber-400 to-orange-500 h-full rounded-full shadow-[0_1px_3px_rgba(245,158,11,0.3)]"
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="flex-1 bg-slate-100 rounded-full h-3 overflow-hidden p-[2px] shadow-inner group-hover/step:bg-amber-50 transition-colors">
-                                        <motion.div 
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${pct}%` }}
-                                            className="bg-gradient-to-r from-amber-400 to-orange-500 h-full rounded-full shadow-[0_2px_4px_rgba(245,158,11,0.5)]"
-                                        />
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            });
+                        })()}
                     </div>
                 </motion.div>
 
@@ -279,16 +291,45 @@ export const CadencesDashboard: React.FC<CadencesDashboardProps> = ({
 
                     <div className="grid grid-cols-2 gap-3 mt-8 relative z-10">
                         {[
-                            { label: 'Total', value: data?.zona_conversao.total_concluidas, color: 'slate' },
-                            { label: 'Sucesso', value: data?.zona_conversao.atendeu, color: 'emerald' },
-                            { label: 'Esgotado', value: data?.zona_conversao.esgotado, color: 'amber' },
-                            { label: 'Inválido', value: data?.zona_conversao.numero_invalido, color: 'red' },
+                            { label: 'Total Concluído', value: data?.zona_conversao.total_concluidas, color: 'slate' },
+                            { label: 'Conversão (Won)', value: data?.zona_conversao.atendeu, color: 'emerald' },
+                            { label: 'Fluxo Esgotado', value: data?.zona_conversao.esgotado, color: 'amber' },
+                            { label: 'Contatos Inválidos', value: data?.zona_conversao.numero_invalido, color: 'red' },
                         ].map((item) => (
                             <div key={item.label} className={clsx("bg-white/60 backdrop-blur-sm p-4 rounded-2xl border shadow-sm flex flex-col items-center hover:bg-white hover:shadow-md transition-all", `border-${item.color}-100`)}>
                                 <span className={clsx("text-3xl font-black", `text-${item.color}-600`)}>{item.value}</span>
-                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">{item.label}</span>
+                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1 text-center">{item.label}</span>
                             </div>
                         ))}
+                    </div>
+                </motion.div>
+
+                {/* 3.1. MÉTRICAS DE CONCLUSÃO (NOVA) */}
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.35 }}
+                    className="col-span-12 md:col-span-12 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 border border-indigo-100 rounded-[2.5rem] p-8 shadow-inner overflow-hidden"
+                >
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Progresso Médio</p>
+                            <div className="relative inline-flex items-center justify-center">
+                                <svg className="w-24 h-24 transform -rotate-90">
+                                    <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100" />
+                                    <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="251.2" strokeDashoffset={251.2 * (1 - (data?.average_completion?.percentage || 0) / 100)} className="text-indigo-500" />
+                                </svg>
+                                <span className="absolute text-xl font-black text-indigo-700">{data?.average_completion?.percentage}%</span>
+                            </div>
+                        </div>
+                        <div className="flex flex-col justify-center">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Média de Passos</p>
+                            <span className="text-4xl font-black text-slate-800 tracking-tighter">{data?.average_completion?.average_steps}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sessões por Lead</span>
+                        </div>
+                        <div className="flex flex-col justify-center border-l border-indigo-100/50">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Tempo Médio Conclusão</p>
+                            <span className="text-4xl font-black text-purple-600 tracking-tighter">{data?.average_completion?.avg_hours_to_finish}h</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Desde a Atribuição</span>
+                        </div>
                     </div>
                 </motion.div>
 

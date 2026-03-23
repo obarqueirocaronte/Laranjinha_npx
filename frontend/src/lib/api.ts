@@ -180,6 +180,14 @@ export const leadsAPI = {
         api.post(`/leads/${id}/complete-cadence`, data).then(res => res.data),
 };
 
+// Lead Batches API
+export const batchesAPI = {
+    list: () => api.get('/batches').then(res => res.data),
+    getDetails: (id: string) => api.get(`/batches/${id}`).then(res => res.data),
+    updateTags: (id: string, tags: string[]) => api.put(`/batches/${id}`, { tags }).then(res => res.data),
+    delete: (id: string, deleteLeads = false) => api.delete(`/batches/${id}`, { params: { deleteLeads } }).then(res => res.data),
+};
+
 // Notifications API
 export const notificationsAPI = {
     getNotifications: () =>
@@ -237,6 +245,9 @@ export const statsAPI = {
 
     sendManualReport: (sdr_ids?: string[]) =>
         api.post('/stats/report/manual', { sdr_ids }).then(res => res.data),
+        
+    getBIFullStats: (sdr_id?: string, start_date?: string, end_date?: string) =>
+        api.get('/stats/full', { params: { sdr_id, start_date, end_date } }).then(res => res.data),
 };
 
 // Aurora Chat API

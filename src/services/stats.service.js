@@ -147,13 +147,32 @@ class StatsService {
      * Now includes individual breakdown with goals, active leads, and pipeline moves.
      * Supports filtering by period: 'hoje', 'semana', 'mes', 'tudo'.
      */
-    async getGlobalStats(period = 'all', sdrIds = []) {
+    async getGlobalStats(period = 'all', sdrIds = [], customStartDate = null, customEndDate = null) {
         let callWhere = [];
         let intWhere = [];
         let compWhere = [];
         let moveWhere = [];
+        let params = [];
 
-        if (period === 'hoje') {
+        const addCondition = (field, start, end) => {
+            let clauses = [];
+            if (start) {
+                clauses.push(`${field} >= $${params.length + 1}`);
+                params.push(start);
+            }
+            if (end) {
+                clauses.push(`${field} <= $${params.length + 1}`);
+                params.push(end);
+            }
+            return clauses;
+        };
+
+        if (customStartDate || customEndDate) {
+            callWhere.push(...addCondition('created_at', customStartDate, customEndDate));
+            intWhere.push(...addCondition('created_at', customStartDate, customEndDate));
+            compWhere.push(...addCondition('completed_at', customStartDate, customEndDate));
+            moveWhere.push(...addCondition('moved_at', customStartDate, customEndDate));
+        } else if (period === 'hoje') {
             callWhere.push("created_at >= CURRENT_DATE");
             intWhere.push("created_at >= CURRENT_DATE");
             compWhere.push("completed_at >= CURRENT_DATE");
@@ -179,29 +198,24 @@ class StatsService {
         const andFilterComp = compWhere.length > 0 ? `AND ${compWhere.join(' AND ')}` : '';
         const dateFilterMove = moveWhere.length > 0 ? `WHERE ${moveWhere.join(' AND ')}` : '';
 
-        // Add SDR filtering if provided
-        let sdrFilterLog = ''; // For all logs (uses sdrs.id)
-        let sdrFilterLeads = ''; // For leads (uses assigned_sdr_id)
-        
-        const params = sdrIds && sdrIds.length > 0 ? [...sdrIds] : [];
+        // SDR filtering
+        let sdrFilterLog = ''; 
+        let sdrFilterLeads = ''; 
         
         if (sdrIds && sdrIds.length > 0) {
-            const placeholders = sdrIds.map((_, i) => `$${i + 1}`).join(',');
+            const placeholders = sdrIds.map((_, i) => `$${params.length + i + 1}`).join(',');
             sdrFilterLog = `AND sdr_id IN (${placeholders})`;
             sdrFilterLeads = `AND assigned_sdr_id IN (${placeholders})`;
+            params.push(...sdrIds);
         }
 
-        // dateFilterCl (uses 'timestamp' instead of 'created_at')
         const clWhere = callWhere.map(w => w.replace('created_at', 'timestamp'));
         const dateFilterCl = clWhere.length > 0 ? `WHERE ${clWhere.join(' AND ')}` : '';
         const andFilterCl = clWhere.length > 0 ? `AND ${clWhere.join(' AND ')}` : '';
 
-        // 1. Get activity stats from logs (unified)
-        // Build safe WHERE clause combiner
         const combine = (...parts) => {
           const valid = parts.filter(p => p && p.trim());
           if (valid.length === 0) return '';
-          // Remove leading WHERE/AND from each part, then combine
           const clauses = valid.map(p => p.replace(/^\s*(WHERE|AND)\s+/i, '').trim()).filter(Boolean);
           return clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
         };
@@ -220,7 +234,6 @@ class StatsService {
         
         const activityRes = await db.query(activitySql, params);
 
-        // 2. Get lead counts per column from leads table
         const columnSql = `
             SELECT pc.name, COUNT(l.id)::integer as count
             FROM pipeline_columns pc
@@ -228,14 +241,12 @@ class StatsService {
             GROUP BY pc.id, pc.name, pc.position
             ORDER BY pc.position
         `;
-        const columnRes = await db.query(columnSql, sdrIds && sdrIds.length > 0 ? sdrIds : []);
+        const columnRes = await db.query(columnSql, sdrIds && sdrIds.length > 0 ? params.slice(params.length - sdrIds.length) : []);
 
-        // 3. Get total active leads
         const activeLeadsSql = `SELECT COUNT(id)::integer as count FROM leads WHERE status = 'active' ${sdrFilterLeads}`;
-        const activeLeadsRes = await db.query(activeLeadsSql, sdrIds && sdrIds.length > 0 ? sdrIds : []);
+        const activeLeadsRes = await db.query(activeLeadsSql, sdrIds && sdrIds.length > 0 ? params.slice(params.length - sdrIds.length) : []);
         const totalActiveLeads = activeLeadsRes.rows[0].count;
 
-        // 4. Get individual SDR breakdown
         const sdrSql = `
             WITH movement_counts AS (
                 SELECT moved_by_sdr_id, COUNT(id) as movements
@@ -289,18 +300,18 @@ class StatsService {
             LEFT JOIN movement_counts mc ON s.id = mc.moved_by_sdr_id
             LEFT JOIN active_counts ac ON s.id = ac.assigned_sdr_id
             LEFT JOIN cadence_counts cdc ON s.id = cdc.sdr_id
-            WHERE s.is_active = true ${sdrIds && sdrIds.length > 0 ? `AND s.id IN (${sdrIds.map((_, i) => `$${i + 1}`).join(',')})` : ''}
+            WHERE s.is_active = true ${sdrIds && sdrIds.length > 0 ? `AND s.id IN (${sdrIds.map((_, i) => `$${params.length - sdrIds.length + i + 1}`).join(',')})` : ''}
             ORDER BY s.full_name ASC
         `;
         
-        const sdrRes = await db.query(sdrSql, sdrIds && sdrIds.length > 0 ? sdrIds : []);
+        const sdrRes = await db.query(sdrSql, params);
 
         return {
             summary: {
                 ...activityRes.rows[0],
-                total_pending: totalActiveLeads
+                total_active: totalActiveLeads,
+                columns: columnRes.rows
             },
-            columns: columnRes.rows,
             sdrs: sdrRes.rows
         };
     }
@@ -389,6 +400,102 @@ class StatsService {
         }
 
         return res.rows[0];
+    }
+
+    /**
+     * Get detailed BI stats for the premium dashboard.
+     * Supports filtering by SDR and custom date range.
+     */
+    async getBIFullStats(sdrId = 'all', startDate = null, endDate = null) {
+        const w = (sdrField, dateField) => {
+            const clauses = [];
+            const p = [];
+            if (sdrId && sdrId !== 'all') {
+                clauses.push(`${sdrField} = $${p.length + 1}`);
+                p.push(sdrId);
+            }
+            if (startDate) {
+                clauses.push(`${dateField} >= $${p.length + 1}`);
+                p.push(startDate + ' 00:00:00');
+            }
+            if (endDate) {
+                clauses.push(`${dateField} <= $${p.length + 1}`);
+                p.push(endDate + ' 23:59:59');
+            }
+            return { where: clauses.length ? 'WHERE ' + clauses.join(' AND ') : '', params: p };
+        };
+
+        const wCalls   = w('sdr_id', 'created_at');
+        const wInt     = w('sdr_id', 'created_at');
+        const wComp    = w('sdr_id', 'completed_at');
+        const wLeads   = w('assigned_sdr_id', 'created_at');
+        const wCad     = w('sdr_id', 'timestamp');
+        const wLeadsLC = w('sdr_id', 'updated_at');   // for lead_cadence
+
+        const q = (sql, params) => db.query(sql, params);
+
+        const [callsRes, reschedRes, emailsRes, wppRes, meetingsRes, cadFin, cadAct, leadsRes, batchRes] = await Promise.all([
+            q(`SELECT COUNT(*)::integer as c FROM call_logs ${wCalls.where}`, wCalls.params),
+            q(`SELECT COUNT(*)::integer as c FROM cadence_logs ${wCad.where ? wCad.where + ' AND' : 'WHERE'} outcome = 'reschedule'`, wCad.params),
+            q(`SELECT COUNT(*)::integer as c FROM interactions_log ${wInt.where ? wInt.where + ' AND' : 'WHERE'} action_type = 'EMAIL_SENT'`, wInt.params),
+            q(`SELECT COUNT(*)::integer as c FROM interactions_log ${wInt.where ? wInt.where + ' AND' : 'WHERE'} action_type = 'WHATSAPP_SENT'`, wInt.params),
+            q(`SELECT COUNT(*)::integer as c FROM cadence_completions ${wComp.where ? wComp.where + ' AND' : 'WHERE'} final_outcome IN ('opportunity','won')`, wComp.params),
+            q(`SELECT COUNT(*)::integer as c FROM lead_cadence ${wLeadsLC.where ? wLeadsLC.where + ' AND' : 'WHERE'} status = 'concluida'`, wLeadsLC.params),
+            q(`SELECT COUNT(*)::integer as c FROM lead_cadence ${wLeadsLC.where ? wLeadsLC.where + ' AND' : 'WHERE'} status = 'ativo'`, wLeadsLC.params),
+            q(`SELECT COUNT(*)::integer as c FROM leads ${wLeads.where}`, wLeads.params),
+            q(`SELECT COUNT(DISTINCT id)::integer as c FROM lead_batches`, []),
+        ]);
+
+        const basicStats = {
+            total_calls:       (parseInt(callsRes.rows[0].c) || 0) + (parseInt(reschedRes.rows[0].c) || 0),
+            total_emails:      parseInt(emailsRes.rows[0].c) || 0,
+            total_whatsapp:    parseInt(wppRes.rows[0].c) || 0,
+            total_meetings:    parseInt(meetingsRes.rows[0].c) || 0,
+            cadences_finished: parseInt(cadFin.rows[0].c) || 0,
+            cadences_active:   parseInt(cadAct.rows[0].c) || 0,
+            total_leads:       parseInt(leadsRes.rows[0].c) || 0,
+            total_batches:     parseInt(batchRes.rows[0].c) || 0,
+        };
+
+        // Timeline: calls, meetings, emails, whatsapp per day
+        // Use separate queries per type so params don't conflict
+        const tlCalls   = await q(`SELECT DATE(created_at) as date, COUNT(*) as count, 'call' as type FROM call_logs ${wCalls.where} GROUP BY DATE(created_at)`, wCalls.params);
+        const tlMeets   = await q(`SELECT DATE(completed_at) as date, COUNT(*) as count, 'meeting' as type FROM cadence_completions ${wComp.where ? wComp.where + ' AND' : 'WHERE'} final_outcome IN ('opportunity','won') GROUP BY DATE(completed_at)`, wComp.params);
+        const tlEmails  = await q(`SELECT DATE(created_at) as date, COUNT(*) as count, 'email' as type FROM interactions_log ${wInt.where ? wInt.where + ' AND' : 'WHERE'} action_type = 'EMAIL_SENT' GROUP BY DATE(created_at)`, wInt.params);
+        const tlWpp     = await q(`SELECT DATE(created_at) as date, COUNT(*) as count, 'whatsapp' as type FROM interactions_log ${wInt.where ? wInt.where + ' AND' : 'WHERE'} action_type = 'WHATSAPP_SENT' GROUP BY DATE(created_at)`, wInt.params);
+
+        const timeline = [
+            ...tlCalls.rows,
+            ...tlMeets.rows,
+            ...tlEmails.rows,
+            ...tlWpp.rows,
+        ].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // SDR performance with date filter applied
+        const sdrPerfParams = [];
+        const sdrDateClauses = [];
+        if (startDate) { sdrDateClauses.push(`cc.completed_at >= $${sdrPerfParams.length + 1}`); sdrPerfParams.push(startDate + ' 00:00:00'); }
+        if (endDate)   { sdrDateClauses.push(`cc.completed_at <= $${sdrPerfParams.length + 1}`); sdrPerfParams.push(endDate + ' 23:59:59'); }
+        const sdrDateFilter = sdrDateClauses.length ? ' AND ' + sdrDateClauses.join(' AND ') : '';
+
+        const sdrCallParams = [];
+        const sdrCallClauses = [];
+        if (startDate) { sdrCallClauses.push(`cl.created_at >= $2`); sdrCallParams.push(startDate + ' 00:00:00'); }
+        if (endDate)   { sdrCallClauses.push(`cl.created_at <= $3`); sdrCallParams.push(endDate + ' 23:59:59'); }
+
+        const sdrPerfRes = await q(`
+            SELECT 
+                s.full_name, 
+                (SELECT COUNT(*) FROM call_logs cl WHERE cl.sdr_id = s.id ${sdrCallClauses.length ? 'AND ' + sdrCallClauses.join(' AND ') : ''}) as calls,
+                (SELECT COUNT(*) FROM cadence_completions cc WHERE cc.sdr_id = s.id AND cc.final_outcome IN ('opportunity','won') ${sdrDateFilter}) as meetings
+            FROM sdrs s WHERE s.is_active = true ORDER BY meetings DESC
+        `, sdrPerfParams);
+
+        return {
+            ...basicStats,
+            timeline,
+            sdr_performance: sdrPerfRes.rows,
+        };
     }
 }
 

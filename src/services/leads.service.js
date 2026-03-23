@@ -49,11 +49,12 @@ class LeadsService {
                 const updateSql = `
           UPDATE leads 
           SET metadata = metadata || $1::jsonb,
+              lead_batch_id = COALESCE($3, lead_batch_id),
               updated_at = CURRENT_TIMESTAMP
           WHERE id = $2
           RETURNING id, updated_at
         `;
-                const updated = await client.query(updateSql, [JSON.stringify(metadata || {}), existingLead.id]);
+                const updated = await client.query(updateSql, [JSON.stringify(metadata || {}), existingLead.id, leadData.lead_batch_id || null]);
 
                 // Fetch SDR details for response
                 const sdrRes = await client.query('SELECT id, full_name, email FROM sdrs WHERE id = $1', [existingLead.assigned_sdr_id]);
@@ -94,18 +95,20 @@ class LeadsService {
 
                 // C. Insert Lead - set to pending so it flows to Admin Pending pool, NOT Kanban directly
                 const insertSql = `
-          INSERT INTO leads (
+            INSERT INTO leads (
             external_id, full_name, company_name, job_title, 
             email, phone, linkedin_url, current_column_id, 
-            qualification_status, cadence_name, metadata
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            qualification_status, cadence_name, metadata,
+            lead_batch_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
           RETURNING id, created_at
         `;
 
                 const insertParams = [
                     external_id, full_name, company_name, job_title,
                     email, phone, linkedin_url, firstColumnId,
-                    'pending', cadence_name || null, JSON.stringify(metadata || {})
+                    'pending', cadence_name || null, JSON.stringify(metadata || {}),
+                    leadData.lead_batch_id || null
                 ];
 
                 const leadRes = await client.query(insertSql, insertParams);
@@ -257,11 +260,22 @@ class LeadsService {
             errors: []
         };
 
-        // Validação Inteligente do formato de telefones na importação via API Open AI
+        // 1. Create a batch record
+        const batchName = `Importação - ${new Date().toLocaleString('pt-BR')}`;
+        const batchResult = await db.query(
+            'INSERT INTO lead_batches (name, total_leads, origin) VALUES ($1, $2, $3) RETURNING id',
+            [batchName, leadsData.length, 'api_batch_export']
+        );
+        const batchId = batchResult.rows[0].id;
+
+        // 2. Validação Inteligente do formato de telefones
         const normalizedLeadsData = await aiService.normalizePhonesBatch(leadsData);
 
         for (const lead of normalizedLeadsData) {
             try {
+                // Link batchId to lead data
+                lead.lead_batch_id = batchId;
+                
                 const result = await this.ingestLead(lead);
                 if (result.status === 'created') {
                     results.created++;
@@ -277,6 +291,13 @@ class LeadsService {
             }
         }
 
+        // 3. Update batch processed count
+        await db.query(
+            'UPDATE lead_batches SET processed_leads = $1, status = $2 WHERE id = $3',
+            [results.created + results.updated, 'completed', batchId]
+        );
+
+        results.batch_id = batchId;
         return results;
     }
 

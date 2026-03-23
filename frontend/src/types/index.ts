@@ -47,3 +47,16 @@ export interface User {
     status?: string;
     profile_picture_url?: string | null;
 }
+
+export interface LeadBatch {
+    id: string;
+    name: string;
+    import_date: string;
+    total_leads: number;
+    processed_leads: number;
+    tags: string[];
+    status: 'new' | 'in_progress' | 'completed';
+    origin: string;
+    metadata: any;
+    progress?: number;
+}

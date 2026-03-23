@@ -20,6 +20,7 @@ router.get('/config', authenticate, statsController.getReportConfig);
 router.put('/config', authenticate, statsController.updateReportConfig);
 router.get('/global', authenticate, statsController.getGlobalStats);
 router.get('/history', authenticate, statsController.getStatsHistory);
+router.get('/full', authenticate, statsController.getBIFullStats);
 router.post('/report/manual', authenticate, statsController.sendManualReport);
 
 module.exports = router;

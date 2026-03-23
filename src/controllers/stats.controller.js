@@ -148,3 +148,12 @@ exports.sendManualReport = async (req, res, next) => {
         next(err);
     }
 };
+exports.getBIFullStats = async (req, res, next) => {
+    try {
+        const { sdr_id, start_date, end_date } = req.query;
+        const stats = await statsService.getBIFullStats(sdr_id, start_date, end_date);
+        res.json({ success: true, data: stats });
+    } catch (err) {
+        next(err);
+    }
+};

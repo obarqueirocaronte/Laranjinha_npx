@@ -1,20 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Activity, Users, Target, Trophy, Eye,
     Settings, TrendingUp, Building2, Clock, Zap, ChevronRight, LogOut, 
-    Brain, Sparkles, Send, Calendar, CheckCircle2
+    Brain, Sparkles, Send, Calendar, X, Search, Filter, Trash2
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { leadsAPI, statsAPI, aiAPI, cadencesAPI, systemAPI } from '../../lib/api';
+import { leadsAPI, statsAPI, aiAPI, cadencesAPI, systemAPI, batchesAPI } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Lead, PipelineColumn } from '../../types';
+import type { Lead, PipelineColumn, LeadBatch } from '../../types';
 import { DndContext, useDroppable } from '@dnd-kit/core';
 import { LeadCard } from '../kanban/LeadCard';
 import { ProfileZone } from '../profile/ProfileZone';
 import { UserAvatar } from '../common/UserAvatar';
 import { CadencesDashboard } from './CadencesDashboard';
+import { FullBIDashboard } from './FullBIDashboard';
 
 /* ─────────────────────────────────────────────
    Types
@@ -504,13 +505,11 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                 )}
             </main>
 
-            {/* ═══════ Stats Modal ═══════ */}
             <AnimatePresence>
                 {showStats && (
-                    <StatsModal 
+                    <FullBIDashboard 
                         onClose={() => setShowStats(false)} 
                         sdrs={enrichedSdrs} 
-                        allLeads={allLeads}
                         cadenceDashboard={cadenceDashboard}
                     />
                 )}
@@ -660,498 +659,8 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
 };
 
 /* ─────────────────────────────────────────────
-   StatsModal Component
+   Shared UI Primitives
    ───────────────────────────────────────────── */
-interface StatsModalProps {
-    onClose: () => void;
-    sdrs: SDR[];
-    allLeads: Lead[];
-    cadenceDashboard?: any;
-}
-
-const StatsModal: React.FC<StatsModalProps> = ({ onClose, sdrs, allLeads, cadenceDashboard }) => {
-    const [activeModalTab, setActiveModalTab] = useState<'produtividade' | 'campanhas' | 'retornos' | 'imports' | 'visibilidade'>('produtividade');
-
-    const modalTabs = [
-        { id: 'produtividade', label: 'Produtividade', icon: Activity },
-        { id: 'campanhas', label: 'Campanhas', icon: Target },
-        { id: 'retornos', label: 'Calendário', icon: Calendar },
-        { id: 'imports', label: 'Importações & Tags', icon: Zap },
-        { id: 'visibilidade', label: 'Visibilidade Full', icon: Eye },
-    ];
-
-    return createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12">
-            {/* Backdrop */}
-            <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={onClose}
-                className="absolute inset-0 bg-white/40 backdrop-blur-xl"
-            />
-
-            {/* Modal Container */}
-            <motion.div 
-                initial={{ scale: 0.9, opacity: 0, y: 40 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.9, opacity: 0, y: 40 }}
-                className="relative bg-white/80 backdrop-blur-3xl border border-white shadow-[0_32px_128px_rgba(0,0,0,0.1)] rounded-[3rem] w-full max-w-6xl h-full flex flex-col overflow-hidden"
-            >
-                {/* Modal Header */}
-                <div className="px-10 py-8 border-b border-orange-100/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div>
-                        <h2 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                            <div className="p-3 bg-gradient-to-br from-orange-400 to-amber-500 rounded-2xl text-white shadow-lg shadow-orange-200/50">
-                                <TrendingUp size={24} />
-                            </div>
-                            <span>Estatísticas Detalhadas</span>
-                        </h2>
-                        <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-2 ml-14">
-                            Análise profunda de operação e base de dados
-                        </p>
-                    </div>
-
-                    {/* Modal Tab Switcher */}
-                    <div className="flex bg-slate-100 p-1.5 rounded-2xl shadow-inner border border-slate-200">
-                        {modalTabs.map((tab) => {
-                            const isActive = activeModalTab === tab.id;
-                            const Icon = tab.icon;
-                            return (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveModalTab(tab.id as any)}
-                                    className={cn(
-                                        "px-5 py-3 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all",
-                                        isActive 
-                                            ? "bg-white text-orange-600 shadow-md border border-slate-200/50" 
-                                            : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
-                                    )}
-                                    style={{ fontFamily: 'Comfortaa, cursive' }}
-                                >
-                                    <Icon size={14} />
-                                    {tab.label}
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    <button 
-                        onClick={onClose}
-                        className="absolute top-8 right-8 w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all border border-slate-200"
-                    >
-                        <Zap size={20} className="rotate-45" />
-                    </button>
-                </div>
-
-                {/* Modal Content Area */}
-                <div className="flex-1 overflow-y-auto p-10 bg-slate-50/30">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={activeModalTab}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            transition={{ duration: 0.3 }}
-                            className="h-full"
-                        >
-                            {activeModalTab === 'produtividade' && (
-                                <StatsProductivityView sdrs={sdrs} />
-                            )}
-                            {activeModalTab === 'campanhas' && (
-                                <StatsCampaignView leads={allLeads} />
-                            )}
-                            {activeModalTab === 'retornos' && (
-                                <RetornosCalendarView 
-                                    scheduledReturns={cadenceDashboard?.scheduled_returns || []}
-                                    sdrs={sdrs}
-                                />
-                            )}
-                            {activeModalTab === 'imports' && (
-                                <StatsImportsView leads={allLeads} />
-                            )}
-                            {activeModalTab === 'visibilidade' && (
-                                <StatsVisibilityView leads={allLeads} />
-                            )}
-                        </motion.div>
-                    </AnimatePresence>
-                </div>
-            </motion.div>
-        </div>,
-        document.body
-    );
-};
-/* ─────────────────────────────────────────────
-   Retornos Calendar View
-   ───────────────────────────────────────────── */
-const RetornosCalendarView: React.FC<{
-    scheduledReturns: any[];
-    sdrs: SDR[];
-}> = ({ scheduledReturns, sdrs }) => {
-    const [selectedSdrId, setSelectedSdrId] = useState<string>('all');
-
-    // Get the current month grid
-    const today = new Date();
-    const [viewYear, setViewYear] = useState(today.getFullYear());
-    const [viewMonth, setViewMonth] = useState(today.getMonth());
-
-    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
-    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-
-    const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-
-    const filtered = scheduledReturns.filter(r => selectedSdrId === 'all' || r.sdr_id === selectedSdrId);
-
-    // Map by day
-    const byDay: Record<string, any[]> = {};
-    for (const r of filtered) {
-        const d = new Date(r.scheduled_at);
-        if (d.getFullYear() === viewYear && d.getMonth() === viewMonth) {
-            const key = d.getDate().toString();
-            if (!byDay[key]) byDay[key] = [];
-            byDay[key].push(r);
-        }
-    }
-
-    const prevMonth = () => {
-        if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
-        else setViewMonth(m => m - 1);
-    };
-    const nextMonth = () => {
-        if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
-        else setViewMonth(m => m + 1);
-    };
-
-    const [selectedDay, setSelectedDay] = useState<string | null>(null);
-    const dayEvents = selectedDay ? (byDay[selectedDay] || []) : [];
-
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-            {/* Calendar Left */}
-            <div className="lg:col-span-2 flex flex-col gap-4">
-                {/* Header Controls */}
-                <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                        <button onClick={prevMonth} className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center text-slate-500">‹</button>
-                        <h3 className="text-lg font-black text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                            {monthNames[viewMonth]} {viewYear}
-                        </h3>
-                        <button onClick={nextMonth} className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center text-slate-500">›</button>
-                    </div>
-                    {/* SDR Switcher */}
-                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
-                        <Users size={14} className="text-slate-400" />
-                        <select
-                            value={selectedSdrId}
-                            onChange={e => setSelectedSdrId(e.target.value)}
-                            className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none"
-                        >
-                            <option value="all">Todos SDRs</option>
-                            {sdrs.map(s => (
-                                <option key={s.id} value={s.id}>{s.full_name || s.email?.split('@')[0]}</option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-
-                {/* Day Headers */}
-                <div className="grid grid-cols-7 gap-1 mb-1">
-                    {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(d => (
-                        <div key={d} className="text-center text-[9px] font-black text-slate-400 uppercase tracking-wider py-1">{d}</div>
-                    ))}
-                </div>
-
-                {/* Day Grid */}
-                <div className="grid grid-cols-7 gap-1">
-                    {/* Empty cells for offset */}
-                    {Array.from({ length: firstDay }).map((_, i) => (
-                        <div key={`empty-${i}`} />
-                    ))}
-                    {/* Day cells */}
-                    {Array.from({ length: daysInMonth }).map((_, i) => {
-                        const day = (i + 1).toString();
-                        const events = byDay[day] || [];
-                        const isToday = today.getDate() === i + 1 && today.getMonth() === viewMonth && today.getFullYear() === viewYear;
-                        const isSelected = selectedDay === day;
-                        return (
-                            <button
-                                key={day}
-                                onClick={() => setSelectedDay(isSelected ? null : day)}
-                                className={cn(
-                                    'relative rounded-xl p-2 min-h-[52px] text-left transition-all border',
-                                    isSelected ? 'bg-orange-500 border-orange-600 shadow-lg' :
-                                    isToday ? 'bg-orange-50 border-orange-200' :
-                                    events.length > 0 ? 'bg-blue-50 border-blue-200 hover:bg-blue-100' :
-                                    'bg-white border-slate-100 hover:bg-slate-50'
-                                )}
-                            >
-                                <span className={cn(
-                                    'text-xs font-black block',
-                                    isSelected ? 'text-white' : isToday ? 'text-orange-600' : 'text-slate-600'
-                                )}>{i + 1}</span>
-                                {events.length > 0 && (
-                                    <span className={cn(
-                                        'text-[8px] font-black rounded-full px-1.5 py-0.5 mt-1 inline-block',
-                                        isSelected ? 'bg-white/20 text-white' : 'bg-blue-500 text-white'
-                                    )}>{events.length}</span>
-                                )}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {/* Legend */}
-                <div className="flex items-center gap-4 mt-2 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-200 inline-block" />Hoje</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-400 inline-block" />Com retornos</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-white border border-slate-200 inline-block" />Sem retornos</span>
-                </div>
-            </div>
-
-            {/* Detail Panel Right */}
-            <div className="flex flex-col gap-4">
-                <h4 className="text-sm font-black text-slate-700" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                    {selectedDay ? `Retornos — dia ${selectedDay}/${viewMonth + 1}` : 'Selecione um dia'}
-                </h4>
-
-                {selectedDay && dayEvents.length === 0 && (
-                    <p className="text-xs text-slate-400 italic">Nenhum retorno agendado neste dia.</p>
-                )}
-
-                <div className="space-y-3 overflow-y-auto max-h-[420px] pr-1">
-                    {dayEvents.map((ev, idx) => {
-                        const t = new Date(ev.scheduled_at);
-                        return (
-                            <div key={ev.id || idx} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                                        {t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                    <span className="text-[9px] text-slate-400 font-bold uppercase">{ev.sdr_name || 'SDR'}</span>
-                                </div>
-                                <p className="text-sm font-black text-slate-800 tracking-tight">{ev.lead_name}</p>
-                                <p className="text-[10px] text-slate-400">{ev.company_name}</p>
-                                {ev.notes && <p className="text-[10px] text-slate-500 mt-1 italic">{ev.notes}</p>}
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* Quick summary for unfiltered */}
-                {!selectedDay && (
-                    <div className="mt-4 space-y-2">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Retornos este mês</p>
-                        {Object.entries(byDay).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).map(([day, evts]) => (
-                            <button
-                                key={day}
-                                onClick={() => setSelectedDay(day)}
-                                className="w-full flex items-center justify-between bg-white border border-slate-100 rounded-xl px-4 py-2.5 hover:border-orange-200 hover:shadow-sm transition-all"
-                            >
-                                <span className="text-xs font-black text-slate-600">Dia {day}/{viewMonth + 1}</span>
-                                <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{evts.length} retorno{evts.length > 1 ? 's' : ''}</span>
-                            </button>
-                        ))}
-                        {Object.keys(byDay).length === 0 && (
-                            <p className="text-xs text-slate-400 italic">Nenhum retorno agendado neste mês.</p>
-                        )}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
-
-/* ─────────────────────────────────────────────
-   Stats Sub-Views (Skeleton components for now)
-   ───────────────────────────────────────────── */
-const StatsProductivityView: React.FC<{ sdrs: SDR[] }> = ({ sdrs }) => {
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sdrs.map(sdr => (
-                <div key={sdr.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-4 mb-4">
-                        <UserAvatar 
-                            src={sdr.profile_picture_url} 
-                            name={sdr.full_name || sdr.email?.split('@')[0]} 
-                            size="md" 
-                            className="text-orange-600 font-black" 
-                        />
-                        <div>
-                            <h4 className="font-black text-slate-800 text-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>{sdr.email?.split('@')[0]}</h4>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{sdr.role}</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-slate-50 p-3 rounded-2xl">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Ligações</p>
-                            <p className="text-xl font-black text-slate-800">{sdr.calls || 0}</p>
-                        </div>
-                        <div className="bg-slate-50 p-3 rounded-2xl">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">E-mails</p>
-                            <p className="text-xl font-black text-slate-800">{sdr.emails || 0}</p>
-                        </div>
-                        <div className="bg-slate-50 p-3 rounded-2xl">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">WhatsApp</p>
-                            <p className="text-xl font-black text-slate-800">{sdr.whatsapp || 0}</p>
-                        </div>
-                        <div className="bg-slate-50 p-3 rounded-2xl border border-orange-100">
-                            <p className="text-[10px] text-orange-400 font-bold uppercase mb-1">Gols</p>
-                            <p className="text-xl font-black text-orange-600">{sdr.completed || 0}</p>
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-};
-
-const StatsCampaignView: React.FC<{ leads: Lead[] }> = ({ leads }) => {
-    // Basic grouping by campaign (metadata.campaign or source)
-    const campaignMap = leads.reduce((acc: any, lead) => {
-        const campaign = lead.metadata?.campaign || lead.metadata?.source || 'Geral';
-        if (!acc[campaign]) acc[campaign] = { count: 0, qualified: 0 };
-        acc[campaign].count++;
-        if (lead.qualification_status === 'qualified') acc[campaign].qualified++;
-        return acc;
-    }, {});
-
-    const campaigns = Object.entries(campaignMap).map(([name, data]: [string, any]) => ({
-        name,
-        ...data,
-        conversion: data.count > 0 ? (data.qualified / data.count) * 100 : 0
-    }));
-
-    return (
-        <div className="space-y-6">
-            <h4 className="text-lg font-black text-slate-800 mb-4" style={{ fontFamily: 'Comfortaa, cursive' }}>Desempenho por Campanha</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {campaigns.map(camp => (
-                    <div key={camp.name} className="bg-white p-6 rounded-[2rem] border border-slate-200">
-                        <div className="flex justify-between items-center mb-4">
-                            <h5 className="font-black text-slate-700">{camp.name}</h5>
-                            <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">
-                                {camp.conversion.toFixed(1)}% Conv.
-                            </span>
-                        </div>
-                        <div className="w-full bg-slate-100 h-2 rounded-full mb-4 overflow-hidden">
-                            <div 
-                                className="bg-gradient-to-r from-orange-400 to-rose-400 h-full rounded-full" 
-                                style={{ width: `${Math.min(camp.conversion * 2, 100)}%` }} 
-                            />
-                        </div>
-                        <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-tighter">
-                            <span>{camp.count} Leads totais</span>
-                            <span>{camp.qualified} Qualificados</span>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-const StatsImportsView: React.FC<{ leads: Lead[] }> = ({ leads }) => {
-    const allTags = leads.flatMap(l => l.tags || []);
-    const tagCounts = allTags.reduce((acc: any, tag) => {
-        acc[tag] = (acc[tag] || 0) + 1;
-        return acc;
-    }, {});
-
-    const sortedTags = Object.entries(tagCounts)
-        .sort((a: any, b: any) => b[1] - a[1])
-        .slice(0, 15);
-
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div>
-                <h4 className="text-lg font-black text-slate-800 mb-6" style={{ fontFamily: 'Comfortaa, cursive' }}>Top Tags Utilizadas</h4>
-                <div className="flex flex-wrap gap-3">
-                    {sortedTags.map(([tag, count]) => (
-                        <div key={tag as string} className="bg-white px-4 py-2 rounded-2xl border border-slate-200 flex items-center gap-2 group hover:border-orange-200 transition-colors">
-                            <span className="text-xs font-black text-slate-600">{tag as string}</span>
-                            <span className="bg-slate-100 group-hover:bg-orange-100 text-[10px] font-black text-slate-400 group-hover:text-orange-600 w-6 h-6 rounded-lg flex items-center justify-center transition-colors">
-                                {count as number}
-                            </span>
-                        </div>
-                    ))}
-                    {sortedTags.length === 0 && <p className="text-slate-400 text-sm italic">Nenhuma tag encontrada.</p>}
-                </div>
-            </div>
-            
-            <div>
-                <h4 className="text-lg font-black text-slate-800 mb-6" style={{ fontFamily: 'Comfortaa, cursive' }}>Volume de Importações</h4>
-                <div className="space-y-4">
-                    {/* Simulated batch analysis from creation dates */}
-                    {[...new Set(leads.map(l => l.created_at.split('T')[0]))].slice(0, 5).map(date => {
-                        const batchCount = leads.filter(l => l.created_at.startsWith(date)).length;
-                        return (
-                            <div key={date} className="bg-white p-4 rounded-2xl border border-slate-200 flex justify-between items-center">
-                                <div>
-                                    <p className="text-xs font-black text-slate-700">{new Date(date).toLocaleDateString('pt-BR')}</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Batch de importação</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-lg font-black text-slate-800">{batchCount}</p>
-                                    <p className="text-[9px] text-slate-400 font-bold uppercase">Leads</p>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const StatsVisibilityView: React.FC<{ leads: Lead[] }> = ({ leads }) => {
-    return (
-        <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden">
-            <table className="w-full text-left border-collapse">
-                <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200">
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Lead</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Origem</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                    {leads.slice(0, 20).map(lead => (
-                        <tr key={lead.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-6 py-4 text-[11px] font-bold text-slate-500">
-                                {new Date(lead.created_at).toLocaleDateString('pt-BR')}
-                            </td>
-                            <td className="px-6 py-4">
-                                <p className="text-[12px] font-black text-slate-800">{lead.full_name}</p>
-                                <p className="text-[10px] text-slate-400">{lead.company_name}</p>
-                            </td>
-                            <td className="px-6 py-4">
-                                <span className="text-[10px] font-black text-slate-600 uppercase tracking-tighter">
-                                    {lead.metadata?.source || 'Import Externo'}
-                                </span>
-                            </td>
-                            <td className="px-6 py-4">
-                                <span className={cn(
-                                    "px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter",
-                                    lead.qualification_status === 'qualified' ? "bg-emerald-100 text-emerald-600" :
-                                    lead.qualification_status === 'disqualified' ? "bg-red-100 text-red-600" :
-                                    "bg-slate-100 text-slate-600"
-                                )}>
-                                    {lead.qualification_status || 'Pendente'}
-                                </span>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-            {leads.length > 20 && (
-                <div className="p-4 text-center border-t border-slate-100">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">Mostrando os últimos 20 de {leads.length} leads</p>
-                </div>
-            )}
-        </div>
-    );
-};
 
 /* ═══════════════════════════════════════════
    Shared UI Primitives
@@ -1223,6 +732,56 @@ const KpiCard: React.FC<{
     </GlassCard>
 );
 
+const ResumoCard: React.FC<{
+    label: string;
+    value: number | string;
+    icon: React.ElementType;
+    color: 'emerald' | 'rose' | 'blue' | 'purple' | 'orange';
+    sub?: string;
+    onClick?: () => void;
+    iconColor?: string;
+}> = ({ label, value, icon: Icon, color, sub, onClick, iconColor }) => {
+    const colors = {
+        emerald: 'from-emerald-500/10 to-teal-500/5 border-emerald-200/30 text-emerald-600',
+        rose: 'from-rose-500/10 to-orange-500/5 border-rose-200/30 text-rose-600',
+        blue: 'from-blue-500/10 to-indigo-500/5 border-blue-200/30 text-blue-600',
+        purple: 'from-purple-500/10 to-pink-500/5 border-purple-200/30 text-purple-600',
+        orange: 'from-orange-500/10 to-amber-500/5 border-orange-200/30 text-orange-600',
+    };
+
+    const iconColors = {
+        emerald: 'bg-emerald-500',
+        rose: 'bg-rose-500',
+        blue: 'bg-blue-500',
+        purple: 'bg-purple-500',
+        orange: 'bg-orange-500',
+    };
+
+    return (
+        <motion.div 
+            whileHover={{ scale: 1.02, y: -2 }}
+            onClick={onClick}
+            className={cn("cursor-pointer h-full", !onClick && "cursor-default")}
+        >
+            <GlassCard className={cn("p-6 transition-colors group h-full", colors[color])}>
+                <div className="flex items-center justify-between h-full">
+                    <div className="flex items-center gap-4">
+                        <div className={cn("w-14 h-14 rounded-2xl text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform", iconColors[iconColor as keyof typeof iconColors || color])}>
+                            <Icon size={28} />
+                        </div>
+                        <div className="flex flex-col justify-center">
+                            <p className="text-3xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>{value}</p>
+                            <p className={cn("text-[10px] font-black uppercase tracking-widest", colors[color].split(' ').pop())}>{label}</p>
+                            {sub && <p className="text-[9px] text-slate-400 font-bold mt-1 opacity-70 leading-none">{sub}</p>}
+                        </div>
+                    </div>
+                    {onClick && <ChevronRight size={18} className="text-slate-300 group-hover:translate-x-1 transition-transform" />}
+                </div>
+            </GlassCard>
+        </motion.div>
+    );
+};
+
 /* ═══════════════════════════════════════════
    Tab: Resumo
    ═══════════════════════════════════════════ */
@@ -1244,15 +803,17 @@ const ResumoTab: React.FC<{
 
     const cadAtivas = cadenceDashboard?.zona_progresso?.total || 0;
     const cadParadas = cadenceDashboard?.zona_critica?.total || 0;
-    const cadConcluidas = cadenceDashboard?.zona_conversao?.total_concluidas || 0;
     
     // Calcula conversão baseada em leads concluídos vs total que entrou no período (simulado como total acumulado)
     const conversionRate = totalLeads > 0 ? Math.round((stats.completed_leads / totalLeads) * 100) : 0;
 
+    const avgCompletion = cadenceDashboard?.average_completion?.percentage || 0;
+    const avgSteps = cadenceDashboard?.average_completion?.average_steps || 0;
+
     return (
         <div className="space-y-6">
             {/* ── Top KPI Row ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <KpiCard 
                     label="Total de Leads" 
                     value={totalLeads} 
@@ -1268,85 +829,54 @@ const ResumoTab: React.FC<{
                     sub={`${sdrs.length} SDRs ativos`} 
                 />
                 <KpiCard 
-                    label="Conversão" 
+                    label="Conversão Geral" 
                     value={`${conversionRate}%`} 
                     icon={TrendingUp} 
                     gradient={['#F59E0B', '#EF4444']} 
-                    sub={`${stats.completed_leads} finalizados`} 
+                    sub="leads finalizados (ganhos)" 
                 />
                 <KpiCard 
-                    label="Atividades" 
-                    value={(stats.calls || 0) + (stats.emails || 0) + (stats.whatsapp || 0)} 
+                    label="Total Ligações" 
+                    value={stats.calls || 0} 
                     icon={Activity} 
                     gradient={['#8B5CF6', '#EC4899']} 
-                    sub="ligações + emails + wpp" 
+                    sub="confirmadas no período" 
                 />
             </div>
 
             {/* ── Status Operacional Cards ── */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <motion.div 
-                    whileHover={{ scale: 1.02, y: -2 }}
-                    onClick={() => onNavigateToTab && onNavigateToTab('monitoramento', 'operacao')}
-                    className="cursor-pointer"
-                >
-                    <GlassCard className="p-6 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border-emerald-200/30 hover:border-emerald-400/50 transition-colors group">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform">
-                                    <Zap size={24} />
-                                </div>
-                                <div>
-                                    <p className="text-2xl font-black text-slate-800 tracking-tight">{cadAtivas}</p>
-                                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Cadências Ativas</p>
-                                </div>
-                            </div>
-                            <ChevronRight size={20} className="text-emerald-400 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                    </GlassCard>
-                </motion.div>
-
-                <motion.div 
-                    whileHover={{ scale: 1.02, y: -2 }}
-                    onClick={() => onNavigateToTab && onNavigateToTab('monitoramento', 'operacao')}
-                    className="cursor-pointer"
-                >
-                    <GlassCard className="p-6 bg-gradient-to-br from-rose-500/10 to-orange-500/5 border-rose-200/30 hover:border-rose-400/50 transition-colors group">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform">
-                                    <Clock size={24} />
-                                </div>
-                                <div>
-                                    <p className="text-2xl font-black text-slate-800 tracking-tight">{cadParadas}</p>
-                                    <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">Paradas &gt; 24h</p>
-                                </div>
-                            </div>
-                            <ChevronRight size={20} className="text-rose-400 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                    </GlassCard>
-                </motion.div>
-
-                <motion.div 
-                    whileHover={{ scale: 1.02, y: -2 }}
-                    onClick={() => onNavigateToTab && onNavigateToTab('monitoramento', 'operacao')}
-                    className="cursor-pointer"
-                >
-                    <GlassCard className="p-6 bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border-blue-200/30 hover:border-blue-400/50 transition-colors group">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-blue-500 text-white flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform">
-                                    <CheckCircle2 size={24} />
-                                </div>
-                                <div>
-                                    <p className="text-2xl font-black text-slate-800 tracking-tight">{cadConcluidas}</p>
-                                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Concluídas</p>
-                                </div>
-                            </div>
-                            <ChevronRight size={20} className="text-blue-400 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                    </GlassCard>
-                </motion.div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                <ResumoCard 
+                    label="Ativas" 
+                    value={cadAtivas} 
+                    icon={Zap} 
+                    color="emerald" 
+                    onClick={() => onNavigateToTab?.('monitoramento', 'operacao')}
+                />
+                <ResumoCard 
+                    label="Atrasadas" 
+                    value={cadParadas} 
+                    icon={Clock} 
+                    iconColor="rose"
+                    color="rose" 
+                    onClick={() => onNavigateToTab?.('monitoramento', 'operacao')}
+                />
+                <ResumoCard 
+                    label="Conclusão" 
+                    value={`${avgCompletion}%`} 
+                    icon={Target} 
+                    color="blue" 
+                    sub="Média de progresso"
+                    onClick={() => onOpenStats?.()}
+                />
+                <ResumoCard 
+                    label="Média Steps" 
+                    value={avgSteps} 
+                    icon={Activity} 
+                    color="purple" 
+                    sub="ciclos por lead"
+                    onClick={() => onOpenStats?.()}
+                />
             </div>
 
             {/* ── Main Content Area ── */}
@@ -1704,79 +1234,494 @@ const LeadsTab: React.FC<{
     allLeads: Lead[];
     activeLeads: Lead[];
 }> = ({ allLeads, activeLeads }) => {
+    const [leadsSubTab, setLeadsSubTab] = useState<'lista' | 'lotes' | 'segmentos' | 'filtros'>('lista');
     const [filter, setFilter] = useState<'all' | 'pending' | 'active'>('all');
-    const leads = filter === 'pending' ? allLeads : filter === 'active' ? activeLeads : [...allLeads, ...activeLeads];
+    const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    
+    // Batch State
+    const [batches, setBatches] = useState<LeadBatch[]>([]);
+    const [loadingBatches, setLoadingBatches] = useState(false);
+    const [selectedBatch, setSelectedBatch] = useState<LeadBatch | null>(null);
+
+    useEffect(() => {
+        if (leadsSubTab === 'lotes') {
+            fetchBatches();
+        }
+    }, [leadsSubTab]);
+
+    const fetchBatches = async () => {
+        setLoadingBatches(true);
+        try {
+            const res = await batchesAPI.list();
+            if (res.success) setBatches(res.data);
+        } catch (error) {
+            console.error('Error fetching batches:', error);
+        } finally {
+            setLoadingBatches(false);
+        }
+    };
+
+    const leads = useMemo(() => {
+        let base = filter === 'pending' ? allLeads : filter === 'active' ? activeLeads : [...allLeads, ...activeLeads];
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            base = base.filter(l => 
+                l.full_name?.toLowerCase().includes(q) || 
+                l.email?.toLowerCase().includes(q) || 
+                (l as any).company_name?.toLowerCase().includes(q)
+            );
+        }
+        return base;
+    }, [filter, allLeads, activeLeads, searchQuery]);
+
+    const filteredBatchesContent = useMemo(() => {
+        if (!searchQuery) return batches;
+        const q = searchQuery.toLowerCase();
+        return batches.filter(b => 
+            b.name?.toLowerCase().includes(q) || 
+            b.origin?.toLowerCase().includes(q) ||
+            (b.tags || []).some(t => t.toLowerCase().includes(q))
+        );
+    }, [batches, searchQuery]);
+
+    const toggleLeadSelection = (id: string) => {
+        setSelectedLeadIds(prev => 
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedLeadIds.length === leads.length && leads.length > 0) {
+            setSelectedLeadIds([]);
+        } else {
+            setSelectedLeadIds(leads.map(l => l.id));
+        }
+    };
 
     return (
-        <div className="space-y-4">
-            {/* Filter pills */}
-            <div className="flex items-center gap-2">
-                {(['all', 'pending', 'active'] as const).map((f) => (
-                    <button
-                        key={f}
-                        onClick={() => setFilter(f)}
-                        className={cn(
-                            'px-4 py-2 rounded-full text-xs font-black transition-all border shadow-sm',
-                            filter === f
-                                ? 'bg-gradient-to-r from-orange-400 to-orange-500 text-white border-orange-500 shadow-orange-500/20'
-                                : 'bg-gradient-soft text-slate-600 border-orange-200/60 hover:border-orange-300 hover:bg-orange-50/80'
-                        )}
-                        style={{ fontFamily: 'Comfortaa, cursive' }}
-                    >
-                        {f === 'all' ? `Todos (${allLeads.length + activeLeads.length})` : f === 'pending' ? `Pendentes (${allLeads.length})` : `Em Cadência (${activeLeads.length})`}
-                    </button>
-                ))}
-            </div>
-
-            {/* Table */}
-            <GlassCard transparent className="p-0 overflow-hidden border-orange-200/60 bg-white/20 shadow-none">
-                <table className="w-full text-left">
-                    <thead>
-                        <tr className="border-b border-orange-100/60 bg-gradient-to-b from-orange-50/60 to-transparent">
-                            <th className="px-5 py-3 text-[10px] font-black text-slate-600 uppercase tracking-widest" style={{ fontFamily: 'Comfortaa, cursive' }}>Lead</th>
-                            <th className="px-5 py-3 text-[10px] font-black text-slate-600 uppercase tracking-widest">Empresa</th>
-                            <th className="px-5 py-3 text-[10px] font-black text-slate-600 uppercase tracking-widest">Email</th>
-                            <th className="px-5 py-3 text-[10px] font-black text-slate-600 uppercase tracking-widest">Status</th>
-                            <th className="px-5 py-3 text-[10px] font-black text-slate-600 uppercase tracking-widest">Cadência</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-orange-100/40">
-                        {leads.length === 0 ? (
-                            <tr><td colSpan={5} className="px-5 py-12 text-center text-slate-600 font-bold text-sm">Nenhum lead encontrado</td></tr>
-                        ) : leads.slice(0, 50).map((lead) => (
-                            <tr key={lead.id} className="hover:bg-white/40 transition-colors">
-                                <td className="px-5 py-3">
-                                    <p className="font-bold text-slate-800 text-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>{lead.full_name}</p>
-                                    {lead.job_title && <p className="text-[10px] text-slate-600 font-bold mt-0.5">{lead.job_title}</p>}
-                                </td>
-                                <td className="px-5 py-3">
-                                    <div className="flex items-center gap-1.5 text-xs text-slate-600 font-bold">
-                                        <Building2 size={12} className="text-slate-300" />
-                                        {lead.company_name}
-                                    </div>
-                                </td>
-                                <td className="px-5 py-3 text-xs text-slate-600 font-medium">{lead.email}</td>
-                                <td className="px-5 py-3">
-                                    <span className={cn(
-                                        'px-2.5 py-1 rounded-full text-[10px] font-black border',
-                                        lead.cadence_name
-                                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                                            : 'bg-amber-50 text-amber-600 border-amber-100'
-                                    )}>
-                                        {lead.cadence_name ? 'Em Cadência' : 'Pendente'}
-                                    </span>
-                                </td>
-                                <td className="px-5 py-3 text-xs text-slate-600 font-bold">{lead.cadence_name || '—'}</td>
-                            </tr>
+        <div className="space-y-6">
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex bg-slate-100/60 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/50 shadow-inner">
+                        {[
+                            { id: 'lista', label: 'Lista de leads', icon: Activity },
+                            { id: 'lotes', label: 'Lotes (Imports)', icon: LayoutDashboard },
+                            { id: 'segmentos', label: 'Segmentos', icon: Target },
+                            { id: 'filtros', label: 'Filtros Salvos', icon: Clock },
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setLeadsSubTab(tab.id as any)}
+                                className={cn(
+                                    "px-5 py-2 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                                    leadsSubTab === tab.id 
+                                        ? "bg-white text-orange-600 shadow-md border border-slate-200/50" 
+                                        : "text-slate-500 hover:text-slate-700 hover:bg-white/30"
+                                )}
+                                style={{ fontFamily: 'Comfortaa, cursive' }}
+                            >
+                                <tab.icon size={13} strokeWidth={2.5} />
+                                {tab.label}
+                            </button>
                         ))}
-                    </tbody>
-                </table>
-                {leads.length > 50 && (
-                    <div className="px-5 py-3 bg-gradient-to-t from-orange-50/60 to-transparent border-t border-orange-100/60 text-center">
-                        <p className="text-xs text-orange-400 font-bold uppercase tracking-wider">Mostrando 50 de {leads.length} leads</p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="relative group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={16} />
+                            <input 
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Busca global (leads, lotes, tags)..."
+                                className="pl-11 pr-5 py-2.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-bold text-slate-600 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all w-[300px] shadow-sm"
+                                style={{ fontFamily: 'Comfortaa, cursive' }}
+                            />
+                        </div>
+                        
+                        {leadsSubTab === 'lista' && (
+                            <div className="flex items-center gap-2">
+                                {(['all', 'pending', 'active'] as const).map((f) => (
+                                    <button
+                                        key={f}
+                                        onClick={() => setFilter(f)}
+                                        className={cn(
+                                            'px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all border shadow-sm',
+                                            filter === f
+                                                ? 'bg-gradient-to-r from-orange-400 to-orange-500 text-white border-orange-500 shadow-orange-500/20'
+                                                : 'bg-white text-slate-500 border-slate-200 hover:border-orange-300'
+                                        )}
+                                        style={{ fontFamily: 'Comfortaa, cursive' }}
+                                    >
+                                        {f === 'all' ? `Todos (${allLeads.length + activeLeads.length})` : f === 'pending' ? `Pendentes (${allLeads.length})` : `Em Cadência (${activeLeads.length})`}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <AnimatePresence>
+                    {selectedLeadIds.length > 0 && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-2xl flex items-center justify-between"
+                        >
+                            <div className="flex items-center gap-4">
+                                <span className="bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black">{selectedLeadIds.length}</span>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Leads selecionados</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button className="px-4 py-2 bg-slate-800 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-700 transition-all border border-slate-700 flex items-center gap-2">
+                                    <Trash2 size={14} className="text-rose-400" /> Excluir
+                                </button>
+                                <button className="px-4 py-2 bg-slate-800 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-700 transition-all border border-slate-700 flex items-center gap-2">
+                                    <Zap size={14} className="text-orange-400" /> Iniciar Cadência
+                                </button>
+                                <button className="px-4 py-2 bg-slate-800 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-700 transition-all border border-slate-700 flex items-center gap-2">
+                                    <Users size={14} className="text-blue-400" /> Atribuir SDR
+                                </button>
+                                <button onClick={() => setSelectedLeadIds([])} className="p-2 text-slate-500 hover:text-white transition-colors">
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {searchQuery && (
+                    <div className="flex items-center gap-2 px-1">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filtros ativos:</span>
+                        <div className="flex flex-wrap gap-2">
+                            <span className="flex items-center gap-2 px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-[9px] font-black uppercase border border-orange-100 shadow-sm">
+                                Busca: {searchQuery}
+                                <button onClick={() => setSearchQuery('')} className="hover:text-rose-500 transition-colors"><X size={10} /></button>
+                            </span>
+                        </div>
                     </div>
                 )}
-            </GlassCard>
+            </div>
+
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={leadsSubTab}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    {leadsSubTab === 'lista' && (
+                        <GlassCard transparent className="p-0 overflow-hidden border-slate-200/60 bg-white/40 backdrop-blur-xl shadow-xl shadow-slate-200/20">
+                            <table className="w-full text-left">
+                                <thead>
+                                    <tr className="border-b border-slate-100 bg-slate-50/50">
+                                        <th className="px-6 py-4 w-10">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={selectedLeadIds.length === leads.length && leads.length > 0}
+                                                onChange={toggleSelectAll}
+                                                className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500 border-slate-300 transition-all cursor-pointer" 
+                                            />
+                                        </th>
+                                        <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest" style={{ fontFamily: 'Comfortaa, cursive' }}>Lead Info</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Empresa</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tags</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status / Cadência</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {leads.length === 0 ? (
+                                        <tr><td colSpan={6} className="px-6 py-16 text-center text-slate-400 font-bold text-sm">Nenhum lead disponível nesta categoria</td></tr>
+                                    ) : leads.slice(0, 100).map((lead) => (
+                                        <tr key={lead.id} className={cn(
+                                            "hover:bg-white/60 transition-colors group",
+                                            selectedLeadIds.includes(lead.id) && "bg-orange-50/30"
+                                        )}>
+                                            <td className="px-6 py-4">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={selectedLeadIds.includes(lead.id)}
+                                                    onChange={() => toggleLeadSelection(lead.id)}
+                                                    className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500 border-slate-300 transition-all cursor-pointer" 
+                                                />
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-slate-800 text-sm tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>{lead.full_name}</span>
+                                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">{lead.email}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2 text-xs text-slate-600 font-bold">
+                                                    <div className="p-1.5 bg-slate-100 rounded-lg text-slate-400 group-hover:bg-orange-50 group-hover:text-orange-400 transition-colors">
+                                                        <Building2 size={12} />
+                                                    </div>
+                                                    {lead.company_name}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {(lead.metadata?.tags || []).slice(0, 2).map((t: string) => (
+                                                        <span key={t} className="bg-white text-slate-600 text-[9px] font-black px-2 py-1 rounded-md uppercase border border-slate-200/50 shadow-sm">{t}</span>
+                                                    ))}
+                                                    {(lead.metadata?.tags || []).length > 2 && (
+                                                        <span className="text-[9px] font-bold text-slate-400">+{(lead.metadata?.tags || []).length - 2}</span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <span className={cn(
+                                                        'px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border shadow-sm',
+                                                        lead.cadence_name
+                                                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                            : 'bg-amber-50 text-amber-600 border-amber-100'
+                                                    )}>
+                                                        {lead.cadence_name ? 'Ativo' : 'Pendente'}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-slate-500 truncate max-w-[120px]">{lead.cadence_name || 'Aguardando SDR'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-orange-500 hover:shadow-lg transition-all opacity-0 group-hover:opacity-100 border border-transparent hover:border-orange-100 shadow-sm">
+                                                    <ChevronRight size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </GlassCard>
+                    )}
+
+                    {leadsSubTab === 'lotes' && (
+                        <div className="space-y-6">
+                            {loadingBatches ? (
+                                <div className="flex flex-col items-center justify-center py-20 bg-white/40 backdrop-blur-xl rounded-[2.5rem] border border-slate-100">
+                                    <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4" />
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando lotes...</p>
+                                </div>
+                            ) : (
+                                <GlassCard transparent className="p-0 overflow-hidden border-slate-200/60 bg-white/40 backdrop-blur-xl shadow-xl shadow-slate-200/20">
+                                    <table className="w-full text-left">
+                                        <thead>
+                                            <tr className="border-b border-slate-100 bg-slate-50/50">
+                                                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest" style={{ fontFamily: 'Comfortaa, cursive' }}>Nome do Arquivo / Lote</th>
+                                                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Importação</th>
+                                                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Leads</th>
+                                                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">SDRs</th>
+                                                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">% Trabalhado</th>
+                                                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {filteredBatchesContent.length === 0 ? (
+                                                <tr><td colSpan={6} className="px-6 py-20 text-center text-slate-400 font-bold text-sm italic">Nenhum lote encontrado para esta busca</td></tr>
+                                            ) : filteredBatchesContent.map((batch) => (
+                                                <motion.tr 
+                                                    key={batch.id} 
+                                                    onClick={() => setSelectedBatch(batch)}
+                                                    className="hover:bg-white/60 transition-all group cursor-pointer"
+                                                >
+                                                    <td className="px-6 py-5">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 shadow-sm border border-slate-100 group-hover:border-orange-200 group-hover:text-orange-500 transition-all">
+                                                                <Building2 size={20} />
+                                                            </div>
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <span className="font-black text-slate-800 text-sm tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>{batch.name}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md text-[8px] font-black uppercase tracking-wider">{batch.origin || 'Import CSV'}</span>
+                                                                    <div className="flex gap-1">
+                                                                        {(batch.tags || []).slice(0, 2).map((t: string) => (
+                                                                            <span key={t} className="text-[8px] font-black text-orange-400 uppercase">#{t}</span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                                            {new Date(batch.import_date).toLocaleDateString('pt-BR')}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <span className="text-lg font-black text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>{batch.total_leads}</span>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <div className="flex items-center justify-center -space-x-2">
+                                                            {[1, 2, 3].map(i => (
+                                                                <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-200 shadow-sm" />
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="flex flex-col gap-1.5 w-32 mx-auto">
+                                                            <div className="flex justify-between text-[9px] font-black text-slate-500">
+                                                                <span className="text-emerald-600">{batch.progress || 0}%</span>
+                                                                <span className="opacity-50 tracking-tighter">{batch.processed_leads || 0} / {batch.total_leads}</span>
+                                                            </div>
+                                                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-100">
+                                                                <motion.div 
+                                                                    initial={{ width: 0 }}
+                                                                    animate={{ width: `${batch.progress || 0}%` }}
+                                                                    className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full" 
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-right">
+                                                        <button className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-300 hover:text-orange-500 hover:border-orange-200 hover:shadow-lg transition-all shadow-sm">
+                                                            <Eye size={18} />
+                                                        </button>
+                                                    </td>
+                                                </motion.tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </GlassCard>
+                            )}
+                        </div>
+                    )}
+
+
+                    {(leadsSubTab === 'segmentos' || leadsSubTab === 'filtros') && (
+                        <div className="flex flex-col items-center justify-center py-20 bg-white/40 backdrop-blur-xl rounded-[2.5rem] border border-slate-100">
+                            <Sparkles size={48} className="text-slate-200 mb-4" />
+                            <h3 className="text-lg font-black text-slate-400 uppercase tracking-widest">Em Breve</h3>
+                            <p className="text-xs text-slate-400 font-bold mt-2">Estamos construindo o motor de segmentação avançada.</p>
+                        </div>
+                    )}
+                </motion.div>
+            </AnimatePresence>
+
+            {/* Batch Side Modal */}
+            <AnimatePresence>
+                {selectedBatch && (
+                    <div className="fixed inset-0 z-[10000] flex justify-end">
+                        <motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setSelectedBatch(null)}
+                            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                        />
+                        <motion.div 
+                            initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+                            transition={{ type: 'spring', damping: 30, stiffness: 200 }}
+                            className="relative w-full max-w-xl bg-white h-full shadow-2xl flex flex-col"
+                        >
+                            <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-2xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>{selectedBatch.name}</h2>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Detalhes do Lote • {new Date(selectedBatch.import_date).toLocaleDateString()}</p>
+                                </div>
+                                <button onClick={() => setSelectedBatch(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                                    <ChevronRight size={24} className="text-slate-400" />
+                                </button>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                                {/* Batch Summary KPIs */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 group hover:border-orange-200 transition-all">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Leads</span>
+                                        <p className="text-3xl font-black text-slate-800 mt-1">{selectedBatch.total_leads}</p>
+                                    </div>
+                                    <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 group hover:border-indigo-200 transition-all">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Progresso</span>
+                                        <p className="text-3xl font-black text-indigo-600 mt-1">{selectedBatch.progress}%</p>
+                                        <div className="mt-4 h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                                            <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${selectedBatch.progress}%` }} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Tags Section */}
+                                <section>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Tags do Lote</h4>
+                                        <button className="text-[10px] font-black text-orange-500 uppercase tracking-widest hover:underline">Limpar Todas</button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 p-4 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                        {(selectedBatch.tags || []).map((t: string) => (
+                                            <span key={t} className="bg-white text-slate-600 text-[10px] font-black px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm flex items-center gap-2 group">
+                                                {t}
+                                                <button className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><X size={12} /></button>
+                                            </span>
+                                        ))}
+                                        <button className="px-3 py-1.5 rounded-xl border border-dashed border-slate-300 text-slate-400 text-[10px] font-black uppercase hover:bg-white transition-all">+ Adicionar</button>
+                                    </div>
+                                </section>
+
+                                {/* Quick Filters */}
+                                <section>
+                                    <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Filtros Rápidos</h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {[
+                                            { label: 'Somente Pendentes', count: selectedBatch.total_leads - selectedBatch.processed_leads },
+                                            { label: 'Somente em Fluxo', count: 0 }, // Mock
+                                            { label: 'Leads Qualificados', count: 0 }, // Mock
+                                            { label: 'Sem Email', count: 0 } // Mock
+                                        ].map(f => (
+                                            <label key={f.label} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all shadow-sm">
+                                                <div className="flex items-center gap-3">
+                                                    <input type="checkbox" className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500 border-slate-300" />
+                                                    <span className="text-xs font-bold text-slate-600">{f.label}</span>
+                                                </div>
+                                                <span className="text-[10px] font-black text-slate-400">{f.count}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </section>
+
+                                {/* Internal Search */}
+                                <section>
+                                     <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Busca Interna</h4>
+                                     <div className="relative">
+                                         <input 
+                                            type="text" 
+                                            placeholder="Buscar lead por nome ou email..." 
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all shadow-inner"
+                                         />
+                                     </div>
+                                </section>
+
+                                {/* Bulk Actions */}
+                                <section className="pt-8 border-t border-slate-100">
+                                    <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Ações em Lote</h4>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <button className="flex items-center justify-between p-5 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-[1.5rem] hover:shadow-xl hover:shadow-slate-500/20 transition-all font-black group">
+                                            <div className="flex items-center gap-3">
+                                                <Users size={18} className="text-orange-400" /> 
+                                                <span className="text-sm tracking-tight">Atribuir a SDR em Massa</span>
+                                            </div>
+                                            <ChevronRight size={18} className="opacity-40 group-hover:translate-x-1 transition-transform" />
+                                        </button>
+                                        <button className="flex items-center justify-between p-5 bg-gradient-to-r from-orange-500 to-rose-500 text-white rounded-[1.5rem] hover:shadow-xl hover:shadow-orange-500/20 transition-all font-black group">
+                                            <div className="flex items-center gap-3">
+                                                <Zap size={18} /> 
+                                                <span className="text-sm tracking-tight">Iniciar Cadência Inteligente</span>
+                                            </div>
+                                            <ChevronRight size={18} className="opacity-40 group-hover:translate-x-1 transition-transform" />
+                                        </button>
+                                        <button className="flex items-center justify-between p-5 bg-rose-50 text-rose-600 border border-rose-100 rounded-[1.5rem] hover:bg-rose-100 transition-all font-black group mt-4">
+                                            <div className="flex items-center gap-3">
+                                                <LayoutDashboard size={18} /> 
+                                                <span className="text-sm tracking-tight">Excluir Lote Permanentemente</span>
+                                            </div>
+                                            <X size={18} className="opacity-40" />
+                                        </button>
+                                    </div>
+                                </section>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

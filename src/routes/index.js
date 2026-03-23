@@ -10,6 +10,9 @@ router.use('/users', require('./users.routes'));
 // Lead Routes
 router.use('/leads', require('./leads.routes'));
 
+// Lead Batches Routes
+router.use('/batches', require('./batches.routes'));
+
 // Pipeline Routes
 // router.use('/pipeline', require('./pipeline.routes'));
 
