@@ -211,6 +211,27 @@ exports.applyCadence = async (req, res, next) => {
           [leadId, leadCadenceId, sdrId]
         );
 
+        // Atualizar o lead para garantir que ele apareça no Kanban do SDR
+        await db.query(
+          `UPDATE leads
+           SET assigned_sdr_id = $1,
+               qualification_status = 'qualified',
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $2`,
+          [sdrId, leadId]
+        );
+
+        // Atualizar estatísticas do SDR
+        if (sdrId) {
+            await db.query(
+              `UPDATE sdrs
+               SET total_leads_assigned = total_leads_assigned + 1,
+                   last_lead_assigned_at = CURRENT_TIMESTAMP
+               WHERE id = $1`,
+               [sdrId]
+            );
+        }
+
         created++;
       } catch (err) {
         errors.push({ lead_id: leadId, error: err.message });
