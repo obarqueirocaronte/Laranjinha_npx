@@ -120,6 +120,23 @@ notificationScheduler.start();
 const cadenceWorker = require('./workers/cadence.worker');
 cadenceWorker.start();
 
-app.listen(port, () => {
+// Auto-migrate: cria tabelas faltantes no startup
+const { ensureTables } = require('./config/db_ensure_tables');
+
+async function startServer() {
+  // Auto-migração quando DB_AUTO_MIGRATE=true
+  if (process.env.DB_AUTO_MIGRATE === 'true') {
+    try {
+      await ensureTables();
+    } catch (err) {
+      console.error('❌ [DB AUTO-MIGRATE] Falha na auto-migração:', err.message);
+      console.error('   O servidor continuará iniciando, mas algumas tabelas podem estar faltando.');
+    }
+  }
+
+  app.listen(port, () => {
     console.log(`🚀 API Server running on port ${port}`);
-});
+  });
+}
+
+startServer();

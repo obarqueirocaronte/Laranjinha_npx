@@ -26,21 +26,29 @@ class StatsService {
             compWhere.push(`completed_at >= ${startOfMonth}`);
         }
 
+        // Build WHERE/AND filter strings from arrays
+        const dateFilterCall = callWhere.length > 0 ? `WHERE ${callWhere.join(' AND ')}` : '';
+        const andFilterCall = callWhere.length > 0 ? `AND ${callWhere.join(' AND ')}` : '';
+        const dateFilterInt = intWhere.length > 0 ? `WHERE ${intWhere.join(' AND ')}` : '';
+        const andFilterInt = intWhere.length > 0 ? `AND ${intWhere.join(' AND ')}` : '';
+        const dateFilterComp = compWhere.length > 0 ? `WHERE ${compWhere.join(' AND ')}` : '';
+
         // dateFilterCl for cadence_logs (uses 'timestamp' instead of 'created_at')
-        const clWhere = intWhere.map(w => w.replace('created_at', 'timestamp'));
+        const clWhere = callWhere.map(w => w.replace('created_at', 'timestamp'));
         const dateFilterCl = clWhere.length > 0 ? `WHERE ${clWhere.join(' AND ')}` : '';
+        const andFilterCl = clWhere.length > 0 ? `AND ${clWhere.join(' AND ')}` : '';
 
         // Query logs for accurate activity counts for this specific SDR
         const sql = `
             SELECT 
                 ((SELECT COUNT(*)::integer FROM call_logs ${dateFilterCall}) + 
-                 (SELECT COUNT(*)::integer FROM cadence_logs ${dateFilterCl} AND canal = 'call' AND acao = 'tentativa')) as calls,
-                ((SELECT COUNT(*)::integer FROM interactions_log ${dateFilterInt} AND action_type = 'EMAIL_SENT') +
-                 (SELECT COUNT(*)::integer FROM cadence_logs ${dateFilterCl} AND canal = 'email' AND acao = 'tentativa')) as emails,
-                ((SELECT COUNT(*)::integer FROM interactions_log ${dateFilterInt} AND action_type = 'WHATSAPP_SENT') + 
-                 (SELECT COUNT(*)::integer FROM cadence_logs ${dateFilterCl} AND canal = 'whatsapp' AND acao = 'tentativa')) as whatsapp,
+                 (SELECT COUNT(*)::integer FROM cadence_logs ${dateFilterCl ? dateFilterCl + ' AND' : 'WHERE'} canal = 'call' AND acao = 'tentativa' ${andFilterCall.replace(/created_at/g, 'timestamp')})) as calls,
+                ((SELECT COUNT(*)::integer FROM interactions_log ${dateFilterInt ? dateFilterInt + ' AND' : 'WHERE'} action_type = 'EMAIL_SENT') +
+                 (SELECT COUNT(*)::integer FROM cadence_logs ${dateFilterCl ? dateFilterCl + ' AND' : 'WHERE'} canal = 'email' AND acao = 'tentativa')) as emails,
+                ((SELECT COUNT(*)::integer FROM interactions_log ${dateFilterInt ? dateFilterInt + ' AND' : 'WHERE'} action_type = 'WHATSAPP_SENT') + 
+                 (SELECT COUNT(*)::integer FROM cadence_logs ${dateFilterCl ? dateFilterCl + ' AND' : 'WHERE'} canal = 'whatsapp' AND acao = 'tentativa')) as whatsapp,
                 ((SELECT COUNT(*)::integer FROM cadence_completions ${dateFilterComp}) +
-                 (SELECT COUNT(*)::integer FROM lead_cadence ${dateFilterComp.replace('completed_at', 'updated_at')} AND status = 'concluida')) as completed_leads
+                 (SELECT COUNT(*)::integer FROM lead_cadence ${dateFilterComp ? dateFilterComp.replace('completed_at', 'updated_at') + ' AND' : 'WHERE'} status = 'concluida')) as completed_leads
         `;
         const res = await db.query(sql, [sdrId]);
         return res.rows[0];
@@ -189,16 +197,25 @@ class StatsService {
         const andFilterCl = clWhere.length > 0 ? `AND ${clWhere.join(' AND ')}` : '';
 
         // 1. Get activity stats from logs (unified)
+        // Build safe WHERE clause combiner
+        const combine = (...parts) => {
+          const valid = parts.filter(p => p && p.trim());
+          if (valid.length === 0) return '';
+          // Remove leading WHERE/AND from each part, then combine
+          const clauses = valid.map(p => p.replace(/^\s*(WHERE|AND)\s+/i, '').trim()).filter(Boolean);
+          return clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+        };
+
         const activitySql = `
             SELECT 
-                ((SELECT COUNT(*)::integer FROM call_logs ${dateFilterCall} ${dateFilterCall ? sdrFilterLog : (sdrFilterLog ? 'WHERE ' + sdrFilterLog.slice(4) : '')}) + 
-                 (SELECT COUNT(*)::integer FROM cadence_logs ${dateFilterCl} ${andFilterCl} ${sdrFilterLog} AND canal = 'call' AND acao = 'tentativa')) as total_calls,
-                ((SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'EMAIL_SENT' ${andFilterInt} ${sdrFilterLog}) + 
-                 (SELECT COUNT(*)::integer FROM cadence_logs WHERE canal = 'email' AND acao = 'tentativa' ${andFilterCl} ${sdrFilterLog})) as total_emails,
-                ((SELECT COUNT(*)::integer FROM interactions_log WHERE action_type = 'WHATSAPP_SENT' ${andFilterInt} ${sdrFilterLog}) +
-                 (SELECT COUNT(*)::integer FROM cadence_logs WHERE canal = 'whatsapp' AND acao = 'tentativa' ${andFilterCl} ${sdrFilterLog})) as total_whatsapp,
-                ((SELECT COUNT(*)::integer FROM cadence_completions ${dateFilterComp} ${dateFilterComp ? sdrFilterLog : (sdrFilterLog ? 'WHERE ' + sdrFilterLog.slice(4) : '')}) +
-                 (SELECT COUNT(*)::integer FROM lead_cadence ${dateFilterComp.replace('completed_at', 'updated_at')} ${sdrFilterLog} AND status = 'concluida')) as total_completed
+                ((SELECT COUNT(*)::integer FROM call_logs ${combine(dateFilterCall, sdrFilterLog)}) + 
+                 (SELECT COUNT(*)::integer FROM cadence_logs ${combine(dateFilterCl, sdrFilterLog, "canal = 'call' AND acao = 'tentativa'")})) as total_calls,
+                ((SELECT COUNT(*)::integer FROM interactions_log ${combine("action_type = 'EMAIL_SENT'", andFilterInt ? andFilterInt.replace(/^AND\s+/, '') : '', sdrFilterLog)}) + 
+                 (SELECT COUNT(*)::integer FROM cadence_logs ${combine("canal = 'email' AND acao = 'tentativa'", andFilterCl ? andFilterCl.replace(/^AND\s+/, '') : '', sdrFilterLog)})) as total_emails,
+                ((SELECT COUNT(*)::integer FROM interactions_log ${combine("action_type = 'WHATSAPP_SENT'", andFilterInt ? andFilterInt.replace(/^AND\s+/, '') : '', sdrFilterLog)}) +
+                 (SELECT COUNT(*)::integer FROM cadence_logs ${combine("canal = 'whatsapp' AND acao = 'tentativa'", andFilterCl ? andFilterCl.replace(/^AND\s+/, '') : '', sdrFilterLog)})) as total_whatsapp,
+                ((SELECT COUNT(*)::integer FROM cadence_completions ${combine(dateFilterComp, sdrFilterLog)}) +
+                 (SELECT COUNT(*)::integer FROM lead_cadence ${combine(dateFilterComp ? dateFilterComp.replace('completed_at', 'updated_at') : '', sdrFilterLog, "status = 'concluida'")})) as total_completed
         `;
         
         const activityRes = await db.query(activitySql, params);
@@ -345,7 +362,7 @@ class StatsService {
      * Update the management report configuration.
      */
     async updateReportConfig(config) {
-        const { webhook_url, schedule_times, is_active, last_sent_at } = config;
+        const { webhook_url, schedule_times, is_active, last_sent_at, sdr_ids } = config;
         
         // Since there's only one row, we can just update all
         const sql = `
@@ -354,19 +371,20 @@ class StatsService {
                 schedule_times = $2, 
                 is_active = $3, 
                 last_sent_at = $4,
+                sdr_ids = $5,
                 updated_at = CURRENT_TIMESTAMP
             RETURNING *
         `;
-        const res = await db.query(sql, [webhook_url, schedule_times, is_active, last_sent_at]);
+        const res = await db.query(sql, [webhook_url, schedule_times, is_active, last_sent_at, JSON.stringify(sdr_ids || [])]);
         
         if (res.rows.length === 0) {
             // If somehow deleted, re-insert
             const insertSql = `
-                INSERT INTO management_report_config (webhook_url, schedule_times, is_active)
-                VALUES ($1, $2, $3)
+                INSERT INTO management_report_config (webhook_url, schedule_times, is_active, sdr_ids)
+                VALUES ($1, $2, $3, $4)
                 RETURNING *
             `;
-            const insertRes = await db.query(insertSql, [webhook_url, schedule_times, is_active]);
+            const insertRes = await db.query(insertSql, [webhook_url, schedule_times, is_active, JSON.stringify(sdr_ids || [])]);
             return insertRes.rows[0];
         }
 

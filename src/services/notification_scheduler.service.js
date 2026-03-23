@@ -38,7 +38,7 @@ class NotificationSchedulerService {
             // Check if current time matches any scheduled time
             if (config.schedule_times.includes(currentTime)) {
                 console.log(`⏰ Schedule matched: ${currentTime}. Sending report...`);
-                await this.sendManagementReport(config.webhook_url);
+                await this.sendManagementReport(config.webhook_url, config.sdr_ids);
             }
         } catch (error) {
             console.error('❌ Error in NotificationScheduler:', error);

@@ -31,4 +31,7 @@ router.use('/aurora', require('./aurora.routes'));
 // AI Routes
 router.use('/ai', require('./ai.routes'));
 
+// System Routes
+router.use('/system', require('./system.routes'));
+
 module.exports = router;

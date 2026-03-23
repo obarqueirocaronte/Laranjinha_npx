@@ -327,4 +327,13 @@ export const cadencesAPI = {
 
 };
 
+// System API
+export const systemAPI = {
+    testConnections: () => api.get('/system/test-connections').then(res => res.data),
+    validateSchema: () => api.get('/system/validate-schema').then(res => res.data),
+    getReportConfig: () => api.get('/system/report-config').then(res => res.data),
+    updateReportConfig: (data: any) => api.put('/system/report-config', data).then(res => res.data),
+    sendManualReport: (sdr_ids?: string[]) => api.post('/system/report/manual', { sdr_ids }).then(res => res.data),
+};
+
 export default api;

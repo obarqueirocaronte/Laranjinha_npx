@@ -171,6 +171,15 @@ exports.applyCadence = async (req, res, next) => {
     let skipped = 0;
     const errors = [];
 
+    // Resolve total de ciclos para porcentagem
+    // A prioridade é: config da cadência > fallback de 3 (Telefone, WA, Marketing)
+    const cycles = config?.cycles_config || [
+      { type: 'call', rolls: 3, label: 'Telefonemas' },
+      { type: 'whatsapp', rolls: 3, label: 'WhatsApp' },
+      { type: 'marketing', rolls: 3, label: 'Social/Marketing' }
+    ];
+    const totalCyclesFinal = cycles.length;
+
     for (const leadId of targetLeadIds) {
       try {
         const sdrId = sdrMap[leadId] || null;
@@ -179,11 +188,12 @@ exports.applyCadence = async (req, res, next) => {
         const upsertRes = await db.query(
           `INSERT INTO lead_cadence (
             lead_id, cadence_config_id, sdr_id, step_atual, max_steps,
-            status, intervalo_retorno_horas, proxima_acao_em
-          ) VALUES ($1, $2, $3, 1, $4, 'ativa', $5, $6)
+            status, intervalo_retorno_horas, proxima_acao_em,
+            total_cycles, completed_cycles, current_percentage
+          ) VALUES ($1, $2, $3, 1, $4, 'ativa', $5, $6, $7, 0, 0)
           ON CONFLICT (lead_id) DO NOTHING
           RETURNING id`,
-          [leadId, cadence_config_id || null, sdrId, maxStepsFinal, intervaloFinal, proximaAcaoBase]
+          [leadId, cadence_config_id || null, sdrId, maxStepsFinal, intervaloFinal, proximaAcaoBase, totalCyclesFinal]
         );
 
         if (upsertRes.rows.length === 0) {
@@ -348,22 +358,48 @@ exports.registerStep = async (req, res, next) => {
       }
     }
 
+    // ── Lógica de Progressão (Ciclos e Porcentagem) ──────────
+    const totalCycles = cadence.total_cycles || 3;
+    let completedCycles = (cadence.completed_cycles || 0);
+    
+    // Se o resultado for uma tentativa (não agendamento futuro puro), conta como avanço
+    if (outcome !== 'reschedule' || !retorno_manual_em) {
+       completedCycles += 1;
+    }
+    
+    // Calcula porcentagem baseada no total dinâmico de ciclos
+    const nextPercentage = Math.min(100, Math.round((completedCycles / totalCycles) * 100));
+    
+    // Outcomes que encerram ou atingiu limite de ciclos
+    const isFinished = OUTCOMES_THAT_CLOSE.includes(outcome) || completedCycles >= totalCycles;
+    
+    if (isFinished) {
+      novoStatus = 'concluida';
+      novoStep = maxSteps;
+    } else {
+      novoStep = completedCycles + 1;
+    }
+
+    const finalPercentage = isFinished ? 100 : nextPercentage;
+
     // ── Atualizar lead_cadence ───────────────────────────────
     await db.query(
       `UPDATE lead_cadence SET
-        step_atual       = $1,
-        status           = $2,
+        step_atual         = $1,
+        status             = $2,
         resultado_anterior = $3,
-        proxima_acao_em  = $4,
-        updated_at       = NOW()
-       WHERE id = $5`,
-      [novoStep, novoStatus, outcome, novaProximaAcao, id]
+        proxima_acao_em    = $4,
+        completed_cycles   = $5,
+        current_percentage = $6,
+        updated_at         = NOW()
+       WHERE id = $7`,
+      [novoStep, novoStatus, outcome, novaProximaAcao, completedCycles, finalPercentage, id]
     );
 
     // ── Inserir em cadence_logs ──────────────────────────────
     await db.query(
       `INSERT INTO cadence_logs
-        (lead_id, lead_cadence_id, sdr_id, step, canal, acao, resultado, notas, retorno_agendado_em)
+        (lead_id, lead_cadence_id, sdr_id, step, canal, acao, resultado, notes, retorno_agendado_em)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
         cadence.lead_id, id, sdrId,
@@ -391,6 +427,8 @@ exports.registerStep = async (req, res, next) => {
         outcome,
         novo_status: novoStatus,
         novo_step: novoStep,
+        completed_cycles: completedCycles,
+        current_percentage: finalPercentage,
         proxima_acao_em: novaProximaAcao,
         intervalo_retorno_horas: intervalo,
         schedule_id: scheduleId,
@@ -510,7 +548,7 @@ exports.rescheduleCadence = async (req, res, next) => {
     // ── Log imutável em cadence_logs ─────────────────────────
     await db.query(
       `INSERT INTO cadence_logs
-        (lead_id, lead_cadence_id, sdr_id, step, canal, acao, resultado, notas, retorno_agendado_em)
+        (lead_id, lead_cadence_id, sdr_id, step, canal, acao, resultado, notes, retorno_agendado_em)
        VALUES ($1, $2, $3, $4, 'call', 'agendamento', 'reschedule', $5, $6)`,
       [cadence.lead_id, id, sdrId, cadence.step_atual, notes, retorno_em]
     );
@@ -570,6 +608,9 @@ exports.getCadenceStatus = async (req, res, next) => {
          lc.intervalo_retorno_horas,
          lc.proxima_acao_em,
          lc.resultado_anterior,
+         lc.current_percentage,
+         lc.completed_cycles,
+         lc.total_cycles,
          lc.created_at,
          -- Horas parada (sem próxima ação)
          CASE
@@ -658,7 +699,7 @@ exports.getCadenceLogs = async (req, res, next) => {
          cl.canal,
          cl.acao,
          cl.resultado,
-         cl.notas,
+         cl.notes,
          cl.retorno_agendado_em,
          cl.timestamp,
          s.full_name AS sdr_name,
@@ -750,11 +791,14 @@ exports.getCadencesDashboard = async (req, res, next) => {
     const progressoLeadsRes = await db.query(
       `SELECT lc.id, lc.lead_id, l.full_name AS lead_name,
               s.full_name AS sdr_name, lc.step_atual, lc.max_steps,
-              lc.proxima_acao_em, lc.resultado_anterior,
-              lc.intervalo_retorno_horas
-       FROM lead_cadence lc
+               lc.proxima_acao_em, lc.resultado_anterior,
+               lc.intervalo_retorno_horas,
+               lc.current_percentage, lc.completed_cycles, lc.total_cycles,
+               cc.cycles_config
+        FROM lead_cadence lc
        JOIN leads l ON lc.lead_id = l.id
        LEFT JOIN sdrs s ON lc.sdr_id = s.id
+       LEFT JOIN cadence_configs cc ON lc.cadence_config_id = cc.id
        WHERE lc.status = 'ativa'
          AND (lc.proxima_acao_em IS NULL OR lc.proxima_acao_em >= NOW() - INTERVAL '24 hours')
          ${sdrFilter}
@@ -850,10 +894,23 @@ exports.getCadencesDashboard = async (req, res, next) => {
       paramsSdr
     );
 
-    // Montar por_step
+    // Montar por_step e por_percentual
     const porStep = {};
     for (const row of progressoRes.rows) {
       porStep[`step_${row.step_atual}`] = parseInt(row.total);
+    }
+
+    const percentualRes = await db.query(
+      `SELECT current_percentage, COUNT(*) AS total
+       FROM lead_cadence 
+       WHERE status = 'ativa' ${sdrFilter}
+       GROUP BY current_percentage
+       ORDER BY current_percentage`,
+      paramsSdr
+    );
+    const porPercentual = {};
+    for (const row of percentualRes.rows) {
+      porPercentual[`pct_${row.current_percentage}`] = parseInt(row.total);
     }
 
 
@@ -927,6 +984,7 @@ exports.getCadencesDashboard = async (req, res, next) => {
         zona_progresso: {
           total: progressoLeadsRes.rows.length,
           por_step: porStep,
+          por_percentual: porPercentual,
           leads: progressoLeadsRes.rows,
         },
         zona_conversao: {

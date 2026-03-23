@@ -1,10 +1,16 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+// SSL config: ativado com DB_SSL=true (produção com PostgreSQL externo)
+const sslConfig = process.env.DB_SSL === 'true'
+  ? { rejectUnauthorized: false }
+  : false;
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   min: process.env.DATABASE_POOL_MIN ? parseInt(process.env.DATABASE_POOL_MIN) : 2,
   max: process.env.DATABASE_POOL_MAX ? parseInt(process.env.DATABASE_POOL_MAX) : 30,
+  ssl: sslConfig,
 });
 
 pool.on('error', (err, client) => {

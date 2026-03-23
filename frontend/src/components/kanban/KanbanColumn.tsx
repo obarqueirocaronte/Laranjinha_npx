@@ -127,48 +127,48 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, leads, onCar
                 }}
             >
                 <div
-                    className="relative rounded-2xl h-14 flex items-center justify-center shadow-lg transition-all mb-4 mt-1 mx-1 text-white"
+                    className="relative rounded-2xl h-14 flex items-center justify-center shadow-lg transition-all mb-4 mt-1 mx-1 text-white group/header"
                     style={{
                         background: headerGradient,
                         border: '1px solid rgba(255,255,255,0.2)'
                     }}
                 >
-                    {/* Centered Wrapper */}
-                    <div className="relative flex items-center justify-center">
-                        {/* Icon - Pinned to the left of the TEXT container */}
-                        <div className="absolute right-full mr-3 flex items-center justify-center">
-                            <span className="text-2xl leading-none select-none drop-shadow-md transition-transform group-hover:scale-110">
-                                {tok.icon === 'wpp'
-                                    ? <WppIcon size={24} />
-                                    : tok.icon
-                                }
-                            </span>
-                        </div>
+                    {/* Lead count badge — Pinned to the TOP-RIGHT corner with overflow effect */}
+                    <motion.span
+                        key={leads.length}
+                        initial={{ scale: 0.6, opacity: 0, x: 10, y: -10 }}
+                        animate={{ scale: 1, opacity: 1, x: 6, y: -6 }}
+                        transition={{ type: 'spring', stiffness: 550, damping: 25 }}
+                        className="absolute top-0 right-0 z-[60] px-2.5 py-1 min-w-[28px] rounded-xl text-[12px] font-black flex items-center justify-center shadow-2xl"
+                        style={{
+                            background: 'rgba(255, 255, 255, 0.95)',
+                            backdropFilter: 'blur(8px)',
+                            color: tok.gradient[1], // Use the vibrant color from the gradient
+                            border: '1px solid rgba(255, 255, 255, 1)',
+                            transform: 'translate(40%, -40%)',
+                            boxShadow: '0 8px 16px -4px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.05)'
+                        }}
+                    >
+                        {leads.length}
+                    </motion.span>
 
-                        {/* Title - Absolutely perfectly centered within the parent's flex center */}
+                    {/* Centered Wrapper */}
+                    <div className="relative flex items-center justify-center gap-3">
+                        {/* Icon */}
+                        <span className="text-2xl leading-none select-none drop-shadow-md transition-transform group-hover/header:scale-110">
+                            {tok.icon === 'wpp'
+                                ? <WppIcon size={24} />
+                                : tok.icon
+                            }
+                        </span>
+
+                        {/* Title - Perfectly centered */}
                         <h3
                             className="font-black text-xl tracking-tight leading-none text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] truncate"
                             style={{ fontFamily: 'Comfortaa, cursive' }}
                         >
                             {column.position === 5 ? 'Conclusão' : column.name}
                         </h3>
-
-                        {/* Lead count badge inline inside the header */}
-                        <motion.span
-                            key={leads.length}
-                            initial={{ scale: 0.6, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ type: 'spring', stiffness: 550, damping: 25 }}
-                            className="ml-2 px-2 py-0.5 min-w-[24px] rounded-full text-[11px] font-bold flex items-center justify-center shadow-inner"
-                            style={{
-                                background: 'rgba(255,255,255,0.2)',
-                                backdropFilter: 'blur(4px)',
-                                color: 'white',
-                                border: '1px solid rgba(255,255,255,0.3)',
-                            }}
-                        >
-                            {leads.length}
-                        </motion.span>
                     </div>
                 </div>
             </div>

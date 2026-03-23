@@ -221,23 +221,20 @@ class LeadsService {
         try {
             const sql = `
           SELECT 
-                 l.*, 
-                 s.full_name as sdr_name, 
-                 s.email as sdr_email,
+                  l.*, 
+                  lc.id as lead_cadence_id,
+                  s.full_name as sdr_name, 
+                  s.email as sdr_email,
                  pc.name as column_name,
                  pc.color as column_color,
                  u.profile_picture_url as sdr_profile_picture_url,
                  u.role as sdr_role,
                  (l.metadata->'tags') as tags,
-                 LEAST(COALESCE((
-                     SELECT (COUNT(*)::numeric * 100) / NULLIF(COALESCE((l.metadata->>'total_steps')::numeric, 4), 0)
-                     FROM (
-                         SELECT lead_id FROM call_logs WHERE lead_id = l.id
-                         UNION ALL
-                         SELECT lead_id FROM interactions_log WHERE lead_id = l.id
-                     ) interactions
-                 ), 0), 100) as cadence_progress
+                 COALESCE(lc.current_percentage, 0) as cadence_progress,
+                 COALESCE(lc.completed_cycles, 0) as completed_cycles,
+                 COALESCE(lc.total_cycles, 3) as total_cycles
           FROM leads l
+          LEFT JOIN lead_cadence lc ON lc.lead_id = l.id AND lc.status = 'ativa'
           LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
           LEFT JOIN users u ON s.user_id = u.id
           LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
@@ -299,14 +296,9 @@ class LeadsService {
                 lc.id as lead_cadence_id,
                 lc.step_atual as cadence_step,
                 lc.max_steps as cadence_max_steps,
-                LEAST(COALESCE((
-                    SELECT (COUNT(*)::numeric * 100) / NULLIF(COALESCE((l.metadata->>'total_steps')::numeric, 4), 0)
-                    FROM (
-                        SELECT lead_id FROM call_logs WHERE lead_id = l.id
-                        UNION ALL
-                        SELECT lead_id FROM interactions_log WHERE lead_id = l.id
-                    ) interactions
-                ), 0), 100) as cadence_progress
+                COALESCE(lc.current_percentage, 0) as cadence_progress,
+                COALESCE(lc.completed_cycles, 0) as completed_cycles,
+                COALESCE(lc.total_cycles, 3) as total_cycles
             FROM leads l
             LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
             LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
@@ -359,11 +351,12 @@ class LeadsService {
             (l.metadata->>'next_contact_at') IS NULL 
             OR (l.metadata->>'next_contact_at')::timestamp <= CURRENT_TIMESTAMP
         ) AND (
-            lc.proxima_acao_em IS NULL 
+            lc.id IS NULL
+            OR lc.proxima_acao_em IS NULL 
             OR lc.proxima_acao_em <= CURRENT_TIMESTAMP
         )`;
 
-        queryStr += ` ORDER BY l.created_at DESC LIMIT 100`;
+        queryStr += ` ORDER BY l.created_at DESC LIMIT 200`;
 
         try {
             const res = await db.query(queryStr, params);
@@ -719,18 +712,14 @@ class LeadsService {
         let queryStr = `
             SELECT 
                 l.*, 
+                lc.id as lead_cadence_id,
                 pc.name as current_column, 
                 u.profile_picture_url as sdr_profile_picture_url,
                 u.role as sdr_role,
-                (l.metadata->'tags') as tags,
-                LEAST(COALESCE((
-                    SELECT (COUNT(*)::numeric * 100) / NULLIF(COALESCE((l.metadata->>'total_steps')::numeric, 4), 0)
-                    FROM (
-                        SELECT lead_id FROM call_logs WHERE lead_id = l.id
-                        UNION ALL
-                        SELECT lead_id FROM interactions_log WHERE lead_id = l.id
-                    ) interactions
-                ), 0), 100) as cadence_progress
+            (l.metadata->'tags') as tags,
+            COALESCE(lc.current_percentage, 0) as cadence_progress,
+            COALESCE(lc.completed_cycles, 0) as completed_cycles,
+            COALESCE(lc.total_cycles, 3) as total_cycles
             FROM leads l
             LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
             LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
