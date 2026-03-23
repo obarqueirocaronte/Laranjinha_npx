@@ -100,7 +100,6 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
             prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
         );
     };
-    const [isSendingAudit, setIsSendingAudit] = useState(false);
     const [cadenceDashboard, setCadenceDashboard] = useState<any>(null);
 
     // Persist selectedAuditSdrIds
@@ -487,7 +486,6 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                 {activeTab === 'preview' && (
                                     <PreviewTab 
                                         sdrs={sdrs} 
-                                        allLeads={allLeads}
                                         activeLeads={activeLeads}
                                         columns={columns}
                                         selectedAuditSdrIds={selectedAuditSdrIds}
@@ -2191,12 +2189,11 @@ const ConquistasTab: React.FC<{
 
 const PreviewTab: React.FC<{
     sdrs: SDR[];
-    allLeads: Lead[];
     activeLeads: Lead[];
     columns: any[];
     selectedAuditSdrIds: string[];
     onToggleAuditSdr: (id: string) => void;
-}> = ({ sdrs, allLeads, activeLeads, columns, selectedAuditSdrIds, onToggleAuditSdr }) => {
+}> = ({ sdrs, activeLeads, columns, selectedAuditSdrIds, onToggleAuditSdr }) => {
     const [selectedSdr, setSelectedSdr] = useState<SDR | null>(null);
 
     const handleDragEnd = async (event: any) => {
@@ -2205,7 +2202,7 @@ const PreviewTab: React.FC<{
 
         const leadId = active.id;
         const newColId = over.id;
-        const lead = activeLeads.find(l => l.id === leadId);
+        const lead = activeLeads.find((l: any) => l.id === leadId);
 
         if (!lead || lead.current_column_id === newColId) return;
 
@@ -2223,7 +2220,7 @@ const PreviewTab: React.FC<{
     };
 
     const leadsBySdr = new Map<string, Lead[]>();
-    activeLeads.forEach(lead => {
+    activeLeads.forEach((lead: any) => {
         const sdrId = lead.assigned_sdr_id || 'unassigned';
         leadsBySdr.set(sdrId, [...(leadsBySdr.get(sdrId) || []), lead]);
     });
