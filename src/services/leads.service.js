@@ -905,7 +905,7 @@ class LeadsService {
         const sql = `
             SELECT 'call' as type, outcome as result, notes, cl.created_at, s.full_name as author_name
             FROM call_logs cl
-            LEFT JOIN sdrs s ON cl.sdr_id = s.user_id
+            LEFT JOIN sdrs s ON cl.sdr_id = s.id
             WHERE cl.lead_id = $1
             UNION ALL
             SELECT 'interaction' as type, action_type as result, content_snapshot as notes, il.created_at, s.full_name as author_name
@@ -915,7 +915,7 @@ class LeadsService {
             UNION ALL
             SELECT 'cadence_completion' as type, final_outcome as result, notes, completed_at as created_at, s.full_name as author_name
             FROM cadence_completions cc
-            LEFT JOIN sdrs s ON cc.sdr_id = s.user_id
+            LEFT JOIN sdrs s ON cc.sdr_id = s.id
             WHERE cc.lead_id = $1
             UNION ALL
             SELECT 'schedule' as type, status as result, notes, sch.created_at, s.full_name as author_name
@@ -934,17 +934,13 @@ class LeadsService {
         try {
             await client.query('BEGIN');
 
-            // Resolve userId from sdr_id because cadence_completions FK points to users.id
-            const sdrRes = await client.query('SELECT user_id FROM sdrs WHERE id = $1', [sdr_id]);
-            const targetId = sdrRes.rows[0]?.user_id || sdr_id;
-
-            // 1. Log completion
+            // 1. Log completion (sdr_id refers to sdrs.id)
             const completionSql = `
                 INSERT INTO cadence_completions (lead_id, sdr_id, notes, final_outcome)
                 VALUES ($1, $2, $3, $4)
                 RETURNING *
             `;
-            const completionRes = await client.query(completionSql, [leadId, targetId, notes, final_outcome]);
+            const completionRes = await client.query(completionSql, [leadId, sdr_id, notes, final_outcome]);
 
             // 2. Update lead status if it's an opportunity or rejected
             let status = 'active';

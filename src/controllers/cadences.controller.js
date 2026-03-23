@@ -86,12 +86,12 @@ exports.applyCadence = async (req, res, next) => {
       let qs = '';
       const params = [];
       if (filter_type === 'all_pending') {
-          qs = `SELECT id FROM leads WHERE qualification_status = 'pending' AND cadence_status != 'ativa'`;
+          qs = `SELECT id FROM leads WHERE qualification_status = 'pending' AND id NOT IN (SELECT lead_id FROM lead_cadence WHERE status = 'ativa')`;
       } else if (filter_type === 'tag') {
-          qs = `SELECT id FROM leads WHERE $1 = ANY(tags) AND cadence_status != 'ativa'`;
-          params.push(filter_value);
+          qs = `SELECT id FROM leads WHERE metadata::text ILIKE $1 AND id NOT IN (SELECT lead_id FROM lead_cadence WHERE status = 'ativa')`;
+          params.push(`%${filter_value}%`);
       } else if (filter_type === 'lead') {
-          qs = `SELECT id FROM leads WHERE (full_name ILIKE $1 OR company_name ILIKE $1 OR email ILIKE $1) AND cadence_status != 'ativa'`;
+          qs = `SELECT id FROM leads WHERE (full_name ILIKE $1 OR company_name ILIKE $1 OR email ILIKE $1) AND id NOT IN (SELECT lead_id FROM lead_cadence WHERE status = 'ativa')`;
           params.push(`%${filter_value}%`);
       }
       if (qs) {
