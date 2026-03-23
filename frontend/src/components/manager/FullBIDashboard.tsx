@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     TrendingUp, Calendar, Users, Target, Phone, Mail, MessageCircle,
-    ArrowUpRight, ArrowDownRight, RefreshCw, X, Sparkles, LayoutDashboard,
-    CheckCircle2, Handshake, Layers, Activity, Award, Tag, Filter,
-    AlertTriangle, Zap, Clock, ArrowLeft, BarChart3, PieChart as PieIcon
+    ArrowUpRight, RefreshCw, X, Sparkles, LayoutDashboard,
+    CheckCircle2, Handshake, Layers, Activity, Award,
+    AlertTriangle, Zap, ArrowLeft, BarChart3
 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
