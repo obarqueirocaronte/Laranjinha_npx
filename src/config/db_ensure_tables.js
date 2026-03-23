@@ -475,6 +475,8 @@ const COLUMN_MIGRATIONS = [
   { table: 'lead_cadence', column: 'completed_cycles', type: 'INTEGER DEFAULT 0' },
   { table: 'management_report_config', column: 'sdr_id', type: 'UUID REFERENCES sdrs(id)' },
   { table: 'management_report_config', column: 'sdr_ids', type: "JSONB DEFAULT '[]'" },
+  // Ensure cadence_logs.notes exists (handles rename from 'notas' if needed)
+  { table: 'cadence_logs', column: 'notes', type: 'TEXT' },
 ];
 
 // ─── Função principal ────────────────────────────────────────────────────────
