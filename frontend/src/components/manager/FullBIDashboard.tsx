@@ -69,8 +69,7 @@ const PIE_DATA = [
 export const FullBIDashboard: React.FC<{
     onClose: () => void;
     sdrs: any[];
-    cadenceDashboard?: any;
-}> = ({ onClose, sdrs, cadenceDashboard }) => {
+}> = ({ onClose, sdrs }) => {
     const [page, setPage] = useState(0); // 0 = visão geral, 1 = reuniões, 2 = produtividade
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<any>(null);
@@ -297,7 +296,7 @@ export const FullBIDashboard: React.FC<{
 /* ══════════════════════════════════════════
    PAGE 0 — Visão Geral
 ══════════════════════════════════════════ */
-function PageOverview({ kpis, timeline, sdrPerf, pieData, colorMap, bgMap, loading }: any) {
+function PageOverview({ kpis, timeline, sdrPerf, pieData, colorMap, bgMap }: any) {
     return (
         <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -486,7 +485,7 @@ function PageOverview({ kpis, timeline, sdrPerf, pieData, colorMap, bgMap, loadi
 /* ══════════════════════════════════════════
    PAGE 1 — Reuniões & Conversões
 ══════════════════════════════════════════ */
-function PageMeetings({ meetings, campaigns, tags, isDemo }: any) {
+function PageMeetings({ meetings, campaigns, tags }: any) {
     const [outcomeFilter, setOutcomeFilter] = useState('all');
 
     const filteredMeetings = useMemo(() => {

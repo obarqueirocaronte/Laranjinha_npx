@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Activity, Users, Target, Trophy, Eye,
     Settings, TrendingUp, Building2, Clock, Zap, ChevronRight, LogOut, 
-    Brain, Sparkles, Send, Calendar, X, Search, Filter, Trash2
+    Brain, Sparkles, Send, Calendar, X, Search, Trash2
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { leadsAPI, statsAPI, aiAPI, cadencesAPI, systemAPI, batchesAPI } from '../../lib/api';

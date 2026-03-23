@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-    Users, Search, Filter, Trash2, ExternalLink, ArrowLeft, Building2, Mail, Phone,
+    Users, Search, Trash2, ExternalLink, ArrowLeft, Building2, Mail, Phone,
     Pause, Play, UserMinus, CheckSquare, Square, Undo2, Activity,
-    Clock, ChevronDown, RefreshCw, X, Box, PieChart, Layers, AlertCircle, ChevronRight, ListPlus, Tag
+    Clock, RefreshCw, X, Box, PieChart, Layers, AlertCircle, ListPlus, Tag
 } from 'lucide-react';
 import { leadsAPI, batchesAPI } from '../../lib/api';
 import type { Lead, LeadBatch } from '../../types';
