@@ -566,8 +566,11 @@ export const LeadZone: React.FC<LeadZoneProps> = ({ onClose }) => {
           if (!lead.company_name) lead.company_name = "Empresa Desconhecida";
           if (!lead.full_name) lead.full_name = lead.company_name;
 
-          if (!lead.email)
-            lead.email = `sem_email_${Math.random().toString(36).substr(2, 5)}@import.csv`;
+          if (!lead.email) {
+            const cleanName = (lead.full_name || "sem_nome").toLowerCase().replace(/[^a-z0-9]/g, "");
+            const cleanCompany = (lead.company_name || "sem_empresa").toLowerCase().replace(/[^a-z0-9]/g, "");
+            lead.email = `${cleanName}_no_email_${cleanCompany}@import.csv`;
+          }
 
           // Merge global tags + estado/cidade tag values
           const extraTags: string[] = lead._tagValues || [];

@@ -28,19 +28,21 @@ const db = require('../config/db');
  * Gravados em cadence_logs.resultado E em call_logs (legado).
  */
 const VALID_OUTCOMES = [
-  'success',        // Atendeu e converteu
+  'connected',      // Conseguiu contato (Conexão real)
+  'not_interested', // Não possui interesse (descarta)
   'no_answer',      // Não atendeu / sem resposta
   'busy',           // Linha ocupada
   'voicemail',      // Caiu na caixa postal
   'invalid_number', // Número inválido ou inexistente
+  'spam',           // Spam / Robô / Lista fria
   'reschedule',     // SDR agendou retorno com o lead
 ];
 
 /**
  * Outcomes que encerram a cadência imediatamente.
- * Independente do step atual.
+ * Independente do step atual. 'connected' significa sucesso/contato.
  */
-const OUTCOMES_THAT_CLOSE = ['success', 'invalid_number'];
+const OUTCOMES_THAT_CLOSE = ['not_interested', 'invalid_number', 'spam', 'connected'];
 
 /**
  * Único outcome que EXIGE nota obrigatória.
@@ -417,6 +419,34 @@ exports.registerStep = async (req, res, next) => {
       [novoStep, novoStatus, outcome, novaProximaAcao, completedCycles, finalPercentage, id]
     );
 
+    // ── SYNC: Update Lead Metadata for Calendar/Kanban Visibility ──
+    const metadataUpdate = {
+        last_call_outcome: outcome,
+        last_call_notes: notes || null
+    };
+
+    if (novaProximaAcao) {
+        Object.assign(metadataUpdate, {
+            next_contact_at: novaProximaAcao,
+            next_contact_type: 'cadence',
+            last_schedule_notes: notes || null
+        });
+    } else if (novoStatus === 'concluida') {
+        // Clear future schedules if closed
+        Object.assign(metadataUpdate, {
+            next_contact_at: null,
+            next_contact_type: null
+        });
+    }
+
+    await db.query(
+        `UPDATE leads SET 
+            metadata = metadata || $1::jsonb,
+            updated_at = NOW()
+         WHERE id = $2`,
+        [JSON.stringify(metadataUpdate), cadence.lead_id]
+    );
+
     // ── Inserir em cadence_logs ──────────────────────────────
     await db.query(
       `INSERT INTO cadence_logs
@@ -535,6 +565,19 @@ exports.rescheduleCadence = async (req, res, next) => {
        SET proxima_acao_em = $1, updated_at = NOW()
        WHERE id = $2`,
       [retorno_em, id]
+    );
+
+    // ── SYNC: Update Lead Metadata for Calendar Visibility ──
+    await db.query(
+        `UPDATE leads SET 
+            metadata = metadata || $1::jsonb,
+            updated_at = NOW()
+         WHERE id = $2`,
+        [JSON.stringify({ 
+            next_contact_at: retorno_em,
+            next_contact_type: 'cadence',
+            last_schedule_notes: notes
+        }), cadence.lead_id]
     );
 
     // ── Upsert em schedules (criar ou atualizar agendamento pendente desta cadência) ──

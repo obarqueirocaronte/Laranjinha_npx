@@ -10,7 +10,12 @@
  * 3. Disparar automações e modais baseados na movimentação dos cards 
  *    (ex: mandar WhatsApp ao mover para a coluna respectiva).
  */
-import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, defaultDropAnimationSideEffects } from '@dnd-kit/core';
+import { 
+    DndContext, DragOverlay, useSensor, useSensors, 
+    PointerSensor, MouseSensor, KeyboardSensor,
+    defaultDropAnimationSideEffects 
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 
 import type { DragStartEvent, DragEndEvent, DragOverEvent, DropAnimation } from '@dnd-kit/core';
 import { useState, useCallback, useEffect } from 'react';
@@ -145,10 +150,18 @@ export const KanbanBoard = ({
     }, []);
 
     const sensors = useSensors(
+        useSensor(MouseSensor, {
+            activationConstraint: {
+                distance: 10,
+            },
+        }),
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 5,
+                distance: 10,
             },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
         })
     );
 
@@ -157,9 +170,11 @@ export const KanbanBoard = ({
             styles: {
                 active: {
                     opacity: '0.4',
+                    scale: '0.95',
                 },
             },
         }),
+        duration: 250,
     };
 
     const updateLead = useCallback((updatedLead: Lead) => {
@@ -198,25 +213,26 @@ export const KanbanBoard = ({
         }
     };
 
-    const handleCallFeedback = async (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer', notes?: string) => {
+    const handleCallFeedback = async (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer' | 'connected' | 'not_interested' | 'spam', notes?: string) => {
         if (!voip.callRequiresFeedback) return;
         const leadIdToUpdate = voip.callRequiresFeedback.leadId;
         const targetLead = leads.find(l => l.id === leadIdToUpdate);
 
         try {
             // ── New Cadence Logic: Advance step if in active cadence ──
-            if (targetLead?.lead_cadence_id) {
+            if (targetLead?.lead_cadence_id && result !== 'reschedule') {
                 const outcomeMap: any = {
-                    'success': 'success',
+                    'connected': 'connected',
+                    'not_interested': 'not_interested',
                     'busy': 'busy',
                     'voicemail': 'voicemail',
                     'invalid': 'invalid_number',
                     'no-answer': 'no_answer',
-                    'reschedule': 'reschedule'
+                    'spam': 'spam'
                 };
                 
                 const cadRes = await cadencesAPI.registerStep(targetLead.lead_cadence_id, {
-                    outcome: outcomeMap[result] || 'success',
+                    outcome: outcomeMap[result] || 'not_interested',
                     canal: 'call',
                     notes
                 });
@@ -262,13 +278,16 @@ export const KanbanBoard = ({
                 voicemail: 'Caixa Postal',
                 invalid: 'Inválido',
                 reschedule: 'Reagendar',
-                'no-answer': 'Não Atendeu'
+                'no-answer': 'Não Atendeu',
+                connected: 'Contato Realizado',
+                not_interested: 'Não Interessado',
+                spam: 'Spam/Robô'
             }[result];
 
             addNotification(`Registro salvo: ${resultMsg}`, 'success');
 
-            // Auto-schedule logic for negative outcomes (kept for non-cadence leads or specific flows)
-            if (['busy', 'voicemail', 'reschedule'].includes(result) && targetLead && !targetLead.lead_cadence_id) {
+            // Auto-schedule logic for reschedule or negative outcomes
+            if (['busy', 'voicemail', 'reschedule'].includes(result) && targetLead) {
                 // Update targetLead with the latest notes before passing to modal
                 const updatedTarget = {
                     ...targetLead,
@@ -434,7 +453,29 @@ export const KanbanBoard = ({
                             <div key={col.id} className="flex flex-col min-h-0 h-full">
                                 <KanbanColumn
                                     column={col}
-                                    leads={leads.filter((l) => l.current_column_id === col.id)}
+                                    leads={leads
+                                        .filter((l) => l.current_column_id === col.id)
+                                        .sort((a, b) => {
+                                            const now = new Date();
+                                            const dateA = a.metadata?.next_contact_at ? new Date(a.metadata.next_contact_at) : null;
+                                            const dateB = b.metadata?.next_contact_at ? new Date(b.metadata.next_contact_at) : null;
+
+                                            const isPriorityA = dateA && dateA <= now;
+                                            const isPriorityB = dateB && dateB <= now;
+
+                                            if (isPriorityA && !isPriorityB) return -1;
+                                            if (!isPriorityA && isPriorityB) return 1;
+
+                                            // Sub-sorting by date (soonest at top) if both are priority
+                                            if (isPriorityA && isPriorityB && dateA && dateB) {
+                                                return dateA.getTime() - dateB.getTime();
+                                            }
+
+                                            const timeA = new Date(a.created_at || 0).getTime();
+                                            const timeB = new Date(b.created_at || 0).getTime();
+                                            return timeB - timeA;
+                                        })
+                                    }
                                     onCardClick={handleCardClick}
                                     onReturn={(lead) => {
                                         const whatsappCol = columns.find(c => c.position === 4);
@@ -511,22 +552,70 @@ export const KanbanBoard = ({
                     try {
                         if (result === 'opportunity') {
                             await aiAPI.exportOpportunity(completedLead, opportunityNotes as string);
-                            addNotification('Oportunidade exportada para o Mattermost!', 'success');
+                            addNotification('Oportunidade exportada! Redirecionando para Agenda Mattermost...', 'success');
+                            
+                            // Redireciona para a agenda do Mattermost
+                            window.open('https://npx.mattermost.com.br/', '_blank');
+
+                            await leadsAPI.completeCadence(completedLead.id, {
+                                final_outcome: 'opportunity',
+                                notes: opportunityNotes
+                            });
+                            
+                            setLeads(prev => prev.filter(l => l.id !== completedLead.id));
+                            addNotification(`Lead ${completedLead.full_name} qualificado como Oportunidade!`, 'success');
+                        } else if (result === 'finished') {
+                            if (completedLead.lead_cadence_id) {
+                                // Register step to advance cycle/percentage
+                                const cadRes = await cadencesAPI.registerStep(completedLead.lead_cadence_id, {
+                                    outcome: 'no_answer', // Using 'no_answer' as a generic finalization outcome for the cycle
+                                    canal: 'call',
+                                    notes: opportunityNotes
+                                });
+
+                                if (cadRes.success && cadRes.data.novo_status === 'concluida') {
+                                    // 100% completion - finalize lead for good
+                                    await leadsAPI.completeCadence(completedLead.id, {
+                                        final_outcome: 'completed',
+                                        notes: opportunityNotes
+                                    });
+                                    setLeads(prev => prev.filter(l => l.id !== completedLead.id));
+                                    addNotification(`Cadência de ${completedLead.full_name} finalizada 100%!`, 'success');
+                                } else {
+                                    // Not 100% yet - return to first column ("retorna")
+                                    const firstCol = columns.find(c => c.position === 1);
+                                    if (firstCol) {
+                                        await leadsAPI.moveLead(completedLead.id, firstCol.id, 'Ciclo concluído. Retornando ao início para próximo contato.');
+                                        
+                                        // Update local state: move to first column and update progress
+                                        setLeads(prev => prev.map(l => 
+                                            l.id === completedLead.id 
+                                                ? { 
+                                                    ...l, 
+                                                    current_column_id: firstCol.id, 
+                                                    cadence_progress: cadRes.data?.next_percentage || l.cadence_progress 
+                                                  } 
+                                                : l
+                                        ));
+                                        
+                                        addNotification(`Lead ${completedLead.full_name} retornou à fila (${cadRes.data?.next_percentage || 0}%).`, 'info');
+                                    }
+                                }
+                            } else {
+                                // Non-cadence lead (e.g. from seeds)
+                                await leadsAPI.completeCadence(completedLead.id, {
+                                    final_outcome: 'rejected',
+                                    notes: opportunityNotes
+                                });
+                                setLeads(prev => prev.filter(l => l.id !== completedLead.id));
+                                addNotification(`Lead ${completedLead.full_name} finalizado sem cadência ativa.`, 'success');
+                            }
                         }
 
-                        // Use the new completeCadence API
-                        await leadsAPI.completeCadence(completedLead.id, {
-                            final_outcome: result,
-                            notes: opportunityNotes
-                        });
-                        
                         await statsAPI.updateActivity('cycle_complete');
-
-                        setLeads(prev => prev.filter(l => l.id !== completedLead.id));
-                        addNotification(`Lead ${completedLead.full_name} finalizado: ${result === 'opportunity' ? 'Oportunidade' : result}`, 'success');
                     } catch (err) {
                         console.error('Failed to finalize cycle:', err);
-                        addNotification('Erro ao salvar resultado do ciclo.', 'error');
+                        addNotification('Erro ao processar finalização.', 'error');
                     }
                 }}
             />
@@ -541,16 +630,26 @@ export const KanbanBoard = ({
                         const userStr = localStorage.getItem('user');
                         const sdrId = userStr ? JSON.parse(userStr).id : undefined;
 
-                        // Use the new scheduleNextContact API for better audit trail
-                        await leadsAPI.scheduleNextContact(completedLead.id, {
-                            scheduled_at: dateTime,
-                            sdr_id: sdrId,
-                            type: 'manual',
-                            notes,
-                            return_to_queue: returnToQueue
-                        });
+                        // ── If lead is in active cadence, use specialized cadence API ──
+                        if (completedLead.lead_cadence_id) {
+                            await cadencesAPI.registerStep(completedLead.lead_cadence_id, {
+                                outcome: 'reschedule',
+                                canal: 'call',
+                                notes,
+                                retorno_manual_em: dateTime
+                            });
+                        } else {
+                            // Use the standard scheduleNextContact API for non-cadence leads
+                            await leadsAPI.scheduleNextContact(completedLead.id, {
+                                scheduled_at: dateTime,
+                                sdr_id: sdrId,
+                                type: 'manual',
+                                notes,
+                                return_to_queue: returnToQueue
+                            });
+                        }
 
-                        // Update local state
+                        // Update local state for immediate feedback
                         setLeads(prev => prev.map(l => {
                             if (l.id === completedLead.id) {
                                 const baseUpdate = {

@@ -57,6 +57,11 @@ export const LeadCard = React.memo<LeadCardProps>(({
         isDragging 
     } = sortable;
 
+    // ── Schedule Highlights ──
+    const now = new Date();
+    const nextContactDate = lead.metadata?.next_contact_at ? new Date(lead.metadata.next_contact_at) : null;
+    const isPriorityDay = nextContactDate && nextContactDate <= now;
+
     const handlePointerDown = (e: React.PointerEvent) => {
         // We no longer manually call listeners.onPointerDown here because we put listeners on the outer div
         pointerDownPos.current = { x: e.clientX, y: e.clientY };
@@ -451,7 +456,14 @@ export const LeadCard = React.memo<LeadCardProps>(({
                     scale: 1,
                     ...(shakeVariant ? (impatienceVariants as any)[shakeVariant] : {})
                 }}
-                whileHover={!isDragging ? { y: -4, zIndex: 1000, boxShadow: "0 20px 40px -12px rgba(251, 146, 60, 0.2)" } : {}}
+                whileHover={!isDragging ? { 
+                    y: -5, 
+                    zIndex: 1000, 
+                    boxShadow: "0 25px 50px -12px rgba(251, 146, 60, 0.25)",
+                    transition: { type: "spring", stiffness: 400, damping: 25 }
+                } : {}}
+                layout
+                transition={{ type: "spring", stiffness: 500, damping: 30, mass: 1 }}
                 className={clsx(
                     "relative flex flex-col p-4 gap-3 w-full rounded-[32px] border transition-all duration-500",
                     isDragging && "scale-95",
@@ -461,8 +473,9 @@ export const LeadCard = React.memo<LeadCardProps>(({
             >
             {/* 1. Header: Company Info and Quick Actions */}
             <div className="flex items-start justify-between">
-                <ExplorationBalloon title="Explorar Empresa" icon={Building2} position="top">
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1 pointer-events-none overflow-hidden">
+                <div className="min-w-0 flex-1 mr-2" onPointerDown={e => e.stopPropagation()}>
+                    <ExplorationBalloon title="Explorar Empresa" icon={Building2} position="top">
+                        <div className="flex items-center gap-2.5 min-w-0 pointer-events-none overflow-hidden">
                         <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0 border border-emerald-100 shadow-sm">
                             <Building2 size={16} className="text-[#10B981]" {...ICON_BOLD} />
                         </div>
@@ -480,13 +493,15 @@ export const LeadCard = React.memo<LeadCardProps>(({
                         </div>
                     </div>
                 </ExplorationBalloon>
-                <div className="flex items-center gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
+            </div>
+                <div className="flex items-center gap-1.5 shrink-0 h-8" onPointerDown={e => e.stopPropagation()}>
                     <ActionButton icon={Phone} color="text-emerald-500" text="Ligar" previewText={lead.phone} onClick={() => !voip.isCallActive && lead.phone && voip.initiateCall(String(lead.phone), lead.id, lead.full_name)} />
                     {lead.email && <ActionButton icon={Mail} color="text-blue-500" text="Email" previewText={lead.email} />}
                 </div>
             </div>
 
                 <div className="flex-1">
+                <div onPointerDown={e => e.stopPropagation()}>
                     <ExplorationBalloon title="Explorar Contato" icon={User} position="top">
                         <div className="bg-white/80 rounded-[20px] p-2.5 shadow-sm border border-white/90 flex items-center justify-between gap-2 backdrop-blur-sm transition-all hover:bg-white group/contact pointer-events-auto min-w-0 flex-1">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -514,10 +529,10 @@ export const LeadCard = React.memo<LeadCardProps>(({
                         </div>
                     </ExplorationBalloon>
                 </div>
+            </div>
 
-            {/* 3. Footer: Tags and Engagement */}
             <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-1.5 min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0" onPointerDown={e => e.stopPropagation()}>
                     <ExplorationBalloon title="Explorar Tags" icon={Tag} position="bottom">
                         <motion.div 
                             whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.8)' }}
@@ -553,7 +568,20 @@ export const LeadCard = React.memo<LeadCardProps>(({
                             onClick={() => setIsRescheduling(true)} 
                         />
                     )}
-                    <ActionButton icon={Calendar} color="text-orange-500 bg-orange-50 border-orange-100" text="Agenda" onClick={() => onSchedule?.(lead)} />
+                    <div className="flex items-center gap-1 relative">
+                        {isPriorityDay && (
+                            <span className="absolute inset-0 bg-orange-400 rounded-lg blur-md animate-pulse opacity-40 z-0" />
+                        )}
+                        <ActionButton 
+                            icon={Calendar} 
+                            color={clsx(
+                                "relative z-10",
+                                isPriorityDay ? "text-white bg-orange-600 border-orange-400" : "text-orange-500 bg-orange-50 border-orange-100"
+                            )}
+                            text="Agenda" 
+                            onClick={() => onSchedule?.(lead)} 
+                        />
+                    </div>
                     {isCadenceColumn && (
                         <>
                             <div className="w-[1px] h-3.5 bg-orange-200/50 mx-0.5 rounded-full" />

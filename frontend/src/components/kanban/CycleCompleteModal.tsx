@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trophy, MessageSquare, Target, Phone, PhoneOff, Trash2 } from 'lucide-react';
+import { X, Trophy, MessageSquare, Target, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import clsx from 'clsx';
 import type { Lead } from '../../types';
@@ -8,7 +8,7 @@ import type { Lead } from '../../types';
 interface CycleCompleteModalProps {
     isOpen: boolean;
     lead: Lead | null;
-    onComplete: (outcome: 'opportunity' | 'connected' | 'not_connected' | 'rejected', notes?: string) => void;
+    onComplete: (outcome: 'opportunity' | 'finished', notes?: string) => void;
     onClose: () => void;
 }
 
@@ -16,7 +16,7 @@ export const CycleCompleteModal: React.FC<CycleCompleteModalProps> = ({ isOpen, 
     const [step, setStep] = useState<'outcome' | 'opportunity_flow' | 'notes'>('outcome');
     const [notes, setNotes] = useState('');
     const [addNotes, setAddNotes] = useState(false);
-    const [selectedOutcome, setSelectedOutcome] = useState<'opportunity' | 'connected' | 'not_connected' | 'rejected' | null>(null);
+    const [selectedOutcome, setSelectedOutcome] = useState<'opportunity' | 'finished' | null>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -30,7 +30,7 @@ export const CycleCompleteModal: React.FC<CycleCompleteModalProps> = ({ isOpen, 
         }
     }, [isOpen]);
 
-    const handleOutcomeClick = (outcome: 'opportunity' | 'connected' | 'not_connected' | 'rejected') => {
+    const handleOutcomeClick = (outcome: 'opportunity' | 'finished') => {
         if (addNotes || outcome === 'opportunity') {
             setSelectedOutcome(outcome);
             setStep(outcome === 'opportunity' ? 'opportunity_flow' : 'notes');
@@ -121,29 +121,25 @@ export const CycleCompleteModal: React.FC<CycleCompleteModalProps> = ({ isOpen, 
                                         initial={{ opacity: 0, scale: 0.95 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
-                                        className="grid grid-cols-2 gap-4 mt-2"
+                                        className="grid grid-cols-1 gap-4 mt-2"
                                     >
                                         {[
-                                            { id: 'opportunity', label: 'Oportunidade', sub: 'Mover p/ CRM', icon: <Target size={24} strokeWidth={2.5} />, color: 'emerald' },
-                                            { id: 'connected', label: 'Conectado', sub: 'Falou com lead', icon: <Phone size={24} strokeWidth={2.5} />, color: 'blue' },
-                                            { id: 'not_connected', label: 'Sem Contato', sub: 'Não respondeu', icon: <PhoneOff size={24} strokeWidth={2.5} />, color: 'orange' },
-                                            { id: 'rejected', label: 'Spam/Descarte', sub: 'Lead inválido', icon: <Trash2 size={24} strokeWidth={2.5} />, color: 'rose' },
+                                            { id: 'opportunity', label: 'Nova Oportunidade', sub: 'Mover p/ CRM / Agenda', icon: <Target size={24} strokeWidth={2.5} />, color: 'emerald' },
+                                            { id: 'finished', label: 'Lead Finalizado', sub: 'Concluir Ciclo/Cadência', icon: <CheckCircle2 size={24} strokeWidth={2.5} />, color: 'blue' },
                                         ].map((item) => (
                                             <div key={item.id} className="relative group">
                                                 <button
                                                     onClick={() => handleOutcomeClick(item.id as any)}
                                                     className={clsx(
-                                                        "w-full aspect-[4/3] rounded-[28px] border-2 flex flex-col items-center justify-center gap-2 transition-all duration-300 shadow-sm",
+                                                        "w-full py-6 rounded-[28px] border-2 flex flex-col items-center justify-center gap-2 transition-all duration-300 shadow-sm",
                                                         item.color === 'emerald' && "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400/30 hover:bg-emerald-700 hover:shadow-lg",
-                                                        item.color === 'blue' && "bg-blue-50 border-blue-100/50 text-blue-600 hover:bg-blue-500 hover:text-white hover:shadow-blue-200",
-                                                        item.color === 'orange' && "bg-orange-50 border-orange-100/50 text-orange-600 hover:bg-orange-500 hover:text-white hover:shadow-orange-200",
-                                                        item.color === 'rose' && "bg-rose-50 border-rose-100/50 text-rose-600 hover:bg-rose-500 hover:text-white hover:shadow-rose-200"
+                                                        item.color === 'blue' && "bg-blue-50 border-blue-100/50 text-blue-600 hover:bg-blue-500 hover:text-white hover:shadow-blue-200"
                                                     )}
                                                 >
                                                     <div className="transition-transform group-hover:scale-110 duration-500">
                                                         {item.icon}
                                                     </div>
-                                                    <span className="text-[10px] font-black tracking-wider uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>{item.label}</span>
+                                                    <span className="text-xs font-black tracking-wider uppercase" style={{ fontFamily: 'Comfortaa, cursive' }}>{item.label}</span>
                                                 </button>
 
                                                 <div className="absolute -top-12 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:-translate-y-1 z-20">

@@ -525,26 +525,26 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
                                 onClick={() => setShowExpanded(false)}
-                                className="absolute inset-0 bg-slate-900/80 backdrop-blur-3xl"
+                                className="absolute inset-0 bg-slate-900/60 backdrop-blur-3xl"
                             />
                             <motion.div 
-                                initial={{ scale: 0.9, opacity: 0, y: 40 }}
-                                animate={{ scale: 1, opacity: 1, y: 0 }}
-                                exit={{ scale: 0.9, opacity: 0, y: 40 }}
-                                className="relative bg-white border border-white/20 shadow-[0_32px_128px_-16px_rgba(0,0,0,0.5)] rounded-[3.5rem] w-full max-w-[85rem] h-[90vh] flex flex-col overflow-hidden"
+                                initial={{ opacity: 0, y: 100 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="relative bg-[#F8FAFC] shadow-2xl w-full h-full flex flex-col overflow-hidden"
                             >
                                 {/* Header with gradient line */}
                                 <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-400 via-rose-500 to-purple-600" />
                                 
-                                <div className="p-10 border-b border-slate-100 flex items-center justify-between bg-white relative z-10">
+                                <div className="p-10 border-b border-slate-200 flex items-center justify-between bg-white relative z-10 shadow-sm">
                                     <div>
                                         <div className="flex items-center gap-4 mb-2">
-                                            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white">
-                                                <Sparkles size={20} />
+                                            <div className="w-12 h-12 bg-gradient-to-br from-[#FF8225] to-[#EF4444] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+                                                <Sparkles size={24} />
                                             </div>
                                             <h2 className="text-4xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Operational Pulse</h2>
                                         </div>
-                                        <p className="text-[11px] text-slate-500 font-extrabold tracking-[0.2em] uppercase">Monitoramento em Tempo Real • {period.toUpperCase()}</p>
+                                        <p className="text-[11px] text-slate-400 font-extrabold tracking-[0.2em] uppercase">Monitoramento em Tempo Real • {period.toUpperCase()}</p>
                                     </div>
                                     <button 
                                         onClick={() => setShowExpanded(false)}
@@ -708,75 +708,83 @@ const KpiCard: React.FC<{
 }> = ({ label, value, icon: Icon, gradient, sub, onClick, className }) => (
     <GlassCard 
         gradient={gradient} 
-        className={cn("relative overflow-hidden group shadow-md shadow-slate-900/10 transition-all duration-300", onClick && "cursor-pointer hover:scale-[1.02] hover:shadow-xl", className)}
+        className={cn("relative overflow-hidden group shadow-xl shadow-slate-900/10 transition-all duration-500 border-white/20", onClick && "cursor-pointer hover:scale-[1.05] hover:shadow-2xl hover:shadow-slate-900/20", className)}
         onClick={onClick}
     >
+        <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
         <div
-            className="absolute -top-4 -right-4 p-4 opacity-[0.08] group-hover:opacity-20 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500"
+            className="absolute -top-6 -right-6 p-4 opacity-[0.1] group-hover:opacity-25 group-hover:scale-125 group-hover:rotate-12 transition-all duration-700"
             style={{ color: '#ffffff' }}
         >
-            <Icon size={120} strokeWidth={2} />
+            <Icon size={140} strokeWidth={1.5} />
         </div>
         <div className="relative z-10 flex flex-col h-full justify-between">
-            <p className="text-xs font-black uppercase tracking-[0.15em] mb-4 text-white/90 drop-shadow-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-6 text-white/80 drop-shadow-sm" style={{ fontFamily: 'Comfortaa, cursive' }}>
                 {label}
             </p>
             <div>
-                <p className="text-[3.25rem] leading-none font-black drop-shadow-md text-white tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                <p className="text-6xl font-black drop-shadow-2xl text-white tracking-tighter" style={{ fontFamily: 'Comfortaa, cursive' }}>
                     {value}
                 </p>
-                {sub && <p className="text-[10px] mt-3 font-bold text-white/90 bg-black/10 inline-block px-3 py-1.5 rounded-full uppercase tracking-wider backdrop-blur-md border border-white/10">{sub}</p>}
+                {sub && (
+                    <div className="mt-4 flex items-center gap-2">
+                         <p className="text-[9px] font-black text-white/90 bg-white/20 inline-block px-4 py-1.5 rounded-full uppercase tracking-widest backdrop-blur-md border border-white/10 shadow-sm">
+                            {sub}
+                        </p>
+                    </div>
+                )}
             </div>
+            {/* Shimmer effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:animate-[shimmer_2s_infinite]" />
         </div>
     </GlassCard>
 );
 
-const ResumoCard: React.FC<{
+const StatsMiniCard: React.FC<{
     label: string;
     value: number | string;
     icon: React.ElementType;
     color: 'emerald' | 'rose' | 'blue' | 'purple' | 'orange';
     sub?: string;
     onClick?: () => void;
-    iconColor?: string;
-}> = ({ label, value, icon: Icon, color, sub, onClick, iconColor }) => {
-    const colors = {
-        emerald: 'from-emerald-500/10 to-teal-500/5 border-emerald-200/30 text-emerald-600',
-        rose: 'from-rose-500/10 to-orange-500/5 border-rose-200/30 text-rose-600',
-        blue: 'from-blue-500/10 to-indigo-500/5 border-blue-200/30 text-blue-600',
-        purple: 'from-purple-500/10 to-pink-500/5 border-purple-200/30 text-purple-600',
-        orange: 'from-orange-500/10 to-amber-500/5 border-orange-200/30 text-orange-600',
+}> = ({ label, value, icon: Icon, color, sub, onClick }) => {
+    const accents = {
+        emerald: 'bg-emerald-500 shadow-emerald-200/50',
+        rose: 'bg-rose-500 shadow-rose-200/50',
+        blue: 'bg-blue-500 shadow-blue-200/50',
+        purple: 'bg-indigo-500 shadow-indigo-200/50',
+        orange: 'bg-orange-500 shadow-orange-200/50',
     };
 
-    const iconColors = {
-        emerald: 'bg-emerald-500',
-        rose: 'bg-rose-500',
-        blue: 'bg-blue-500',
-        purple: 'bg-purple-500',
-        orange: 'bg-orange-500',
+    const textAccents = {
+        emerald: 'text-emerald-500',
+        rose: 'text-rose-500',
+        blue: 'text-blue-500',
+        purple: 'text-indigo-500',
+        orange: 'text-orange-500',
     };
 
     return (
         <motion.div 
             whileHover={{ scale: 1.02, y: -2 }}
             onClick={onClick}
-            className={cn("cursor-pointer h-full", !onClick && "cursor-default")}
+            className={cn("bg-white h-full rounded-[24px] p-5 shadow-lg shadow-slate-200/10 border border-slate-50 transition-all cursor-pointer flex items-center justify-between group")}
         >
-            <GlassCard className={cn("p-6 transition-colors group h-full", colors[color])}>
-                <div className="flex items-center justify-between h-full">
-                    <div className="flex items-center gap-4">
-                        <div className={cn("w-14 h-14 rounded-2xl text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform", iconColors[iconColor as keyof typeof iconColors || color])}>
-                            <Icon size={28} />
-                        </div>
-                        <div className="flex flex-col justify-center">
-                            <p className="text-3xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>{value}</p>
-                            <p className={cn("text-[10px] font-black uppercase tracking-widest", colors[color].split(' ').pop())}>{label}</p>
-                            {sub && <p className="text-[9px] text-slate-400 font-bold mt-1 opacity-70 leading-none">{sub}</p>}
-                        </div>
-                    </div>
-                    {onClick && <ChevronRight size={18} className="text-slate-300 group-hover:translate-x-1 transition-transform" />}
+            <div className="flex items-center gap-4">
+                <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:rotate-6", accents[color])}>
+                    <Icon size={24} strokeWidth={2.5} />
                 </div>
-            </GlassCard>
+                <div className="flex flex-col">
+                    <span className="text-2xl font-black text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>{value}</span>
+                    <span className={cn("text-[8px] font-black tracking-widest uppercase mt-0.5 opacity-80", textAccents[color])}>{label}</span>
+                    {sub && <span className="text-[7px] font-bold text-slate-400 mt-1 leading-none">{sub}</span>}
+                </div>
+            </div>
+            {onClick && (
+                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:text-slate-500 group-hover:bg-slate-100 transition-colors">
+                    <ChevronRight size={16} />
+                </div>
+            )}
         </motion.div>
     );
 };
@@ -811,65 +819,64 @@ const ResumoTab: React.FC<{
 
     return (
         <div className="space-y-6">
-            {/* ── Top KPI Row ── */}
+            {/* ── Top row (Big KPIs) ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <KpiCard 
-                    label="Total de Leads" 
+                    label="TOTAL DE LEADS" 
                     value={totalLeads} 
                     icon={Users} 
-                    gradient={['#3B82F6', '#6366F1']} 
-                    sub={`${allLeads?.length || 0} pendentes`} 
+                    gradient={['#5356FF', '#49108B']} 
+                    sub={`${allLeads?.length || 0} PENDENTES`} 
                 />
                 <KpiCard 
-                    label="Em Cadência" 
+                    label="EM CADÊNCIA" 
                     value={inCadence} 
                     icon={Zap} 
-                    gradient={['#10B981', '#059669']} 
-                    sub={`${sdrs.length} SDRs ativos`} 
+                    gradient={['#009FBD', '#10964D']} 
+                    sub={`${sdrs.length} SDRS ATIVOS`} 
                 />
                 <KpiCard 
-                    label="Conversão Geral" 
+                    label="CONVERSÃO GERAL" 
                     value={`${conversionRate}%`} 
                     icon={TrendingUp} 
-                    gradient={['#F59E0B', '#EF4444']} 
-                    sub="leads finalizados (ganhos)" 
+                    gradient={['#FF8225', '#EF4444']} 
+                    sub="LEADS FINALIZADOS (GANHOS)" 
                 />
                 <KpiCard 
-                    label="Total Ligações" 
+                    label="TOTAL LIGAÇÕES" 
                     value={stats.calls || 0} 
                     icon={Activity} 
-                    gradient={['#8B5CF6', '#EC4899']} 
-                    sub="confirmadas no período" 
+                    gradient={['#9b22db', '#ec4899']} 
+                    sub="CONFIRMADAS NO PERÍODO" 
                 />
             </div>
 
-            {/* ── Status Operacional Cards ── */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                <ResumoCard 
-                    label="Ativas" 
+            {/* ── Second row (Medium Status KPIs) ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatsMiniCard 
+                    label="ATIVAS" 
                     value={cadAtivas} 
                     icon={Zap} 
                     color="emerald" 
                     onClick={() => onNavigateToTab?.('monitoramento', 'operacao')}
                 />
-                <ResumoCard 
-                    label="Atrasadas" 
+                <StatsMiniCard 
+                    label="ATRASADAS" 
                     value={cadParadas} 
                     icon={Clock} 
-                    iconColor="rose"
                     color="rose" 
                     onClick={() => onNavigateToTab?.('monitoramento', 'operacao')}
                 />
-                <ResumoCard 
-                    label="Conclusão" 
+                <StatsMiniCard 
+                    label="CONCLUSÃO" 
                     value={`${avgCompletion}%`} 
                     icon={Target} 
                     color="blue" 
                     sub="Média de progresso"
                     onClick={() => onOpenStats?.()}
                 />
-                <ResumoCard 
-                    label="Média Steps" 
+                <StatsMiniCard 
+                    label="MÉDIA STEPS" 
                     value={avgSteps} 
                     icon={Activity} 
                     color="purple" 
@@ -878,11 +885,13 @@ const ResumoTab: React.FC<{
                 />
             </div>
 
+
+
             {/* ── Main Content Area ── */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Leads em Fluxo List */}
                 <div className="lg:col-span-8">
-                    <GlassCard className="h-full border-slate-100 bg-white/40">
+                    <GlassCard className="h-full border-white/40 bg-white/80 backdrop-blur-3xl shadow-2xl rounded-[3rem] p-10">
                         <div className="flex items-center justify-between mb-6">
                             <div>
                                 <h3 className="text-sm font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
@@ -959,56 +968,65 @@ const ResumoTab: React.FC<{
                     </GlassCard>
                 </div>
 
-                {/* Right Area: SDRs Ativos + Estatísticas Full */}
+                {/* Right Area: SDRs Ativos + Estatísticas Full (IMAGE REPLICA) */}
                 <div className="lg:col-span-4 flex flex-col gap-6">
-                    {/* SDRs Ativos */}
-                    <GlassCard className="flex-1 border-slate-100 bg-white/40">
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">SDRs Ativos no Período</h3>
-                        <div className="space-y-4">
-                            {sdrs.slice(0, 4).map(sdr => (
-                                <div key={sdr.id} className="flex items-center justify-between group cursor-pointer" onClick={() => onNavigateToTab && onNavigateToTab('monitoramento', 'operacao')}>
-                                    <div className="flex items-center gap-3">
-                                        <UserAvatar 
-                                            src={sdr.profile_picture_url} 
-                                            name={sdr.full_name || sdr.email?.split('@')[0]} 
-                                            size="xs" 
-                                            className="font-black" 
-                                        />
-                                        <div>
-                                            <p className="text-xs font-black text-slate-800 group-hover:text-blue-600 transition-colors truncate w-24">
-                                                {sdr.full_name || sdr.email?.split('@')[0]}
-                                            </p>
-                                            <p className="text-[9px] text-slate-400 font-bold truncate">{(sdr as any).calls || 0} LIG | {(sdr as any).whatsapp || 0} WPP</p>
+                    {/* SDRs Ativos List */}
+                    <GlassCard className="bg-white/80 border-white/40 shadow-2xl backdrop-blur-3xl p-8 rounded-[3rem]">
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                            SDRs ativos no período
+                        </h3>
+                        
+                        <div className="space-y-6">
+                            {sdrs.slice(0, 4).map((sdr, i) => {
+                                const colors = ['bg-orange-500', 'bg-emerald-500', 'bg-blue-500', 'bg-purple-500'];
+                                return (
+                                    <div key={sdr.id} className="flex items-center justify-between group cursor-pointer transition-all hover:translate-x-1">
+                                        <div className="flex items-center gap-4">
+                                            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-lg group-hover:scale-110", colors[i % colors.length])}>
+                                                {sdr.full_name?.[0].toUpperCase() || 'S'}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[14px] font-black text-slate-800 leading-tight">{sdr.full_name || sdr.email?.split('@')[0]}</span>
+                                                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-1">
+                                                    Atividade Recente
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-sm font-black text-slate-800">{sdr.calls || 0}</div>
+                                            <div className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Calls</div>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-xs font-black text-slate-700">{(sdr as any).pending_leads || 0}</p>
-                                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">Leads</p>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </GlassCard>
 
-                    {/* Estatísticas Full Button Card Alternative */}
-                    <motion.button
-                        onClick={onOpenStats}
-                        whileHover={{ scale: 1.02, y: -5 }}
+                    {/* Estatísticas Full (Pill/Card Trigger from Image) */}
+                    <motion.div 
+                        whileHover={{ scale: 1.02, y: -4 }}
                         whileTap={{ scale: 0.98 }}
-                        className="bg-white/80 backdrop-blur-2xl rounded-[2rem] border border-orange-200 shadow-xl shadow-orange-500/10 p-6 flex items-center gap-5 group transition-all text-left"
+                        onClick={onOpenStats}
+                        className="cursor-pointer group mt-auto"
                     >
-                        <div className="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/40 group-hover:scale-110 group-hover:rotate-3 transition-transform">
-                            <TrendingUp size={28} strokeWidth={2.5} />
+                        <div className="p-7 rounded-[2.5rem] bg-gradient-to-br from-[#FF8225] to-[#EF4444] border-transparent shadow-[0_20px_50px_rgba(249,115,22,0.3)] flex items-center gap-6 relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                            <div className="w-16 h-16 rounded-[1.5rem] bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/20 group-hover:rotate-6 transition-transform">
+                                <TrendingUp size={32} strokeWidth={2.5} />
+                            </div>
+                            <div className="flex flex-col">
+                                <h4 className="text-lg font-black text-white tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                    BI ANALYTICS FULL
+                                </h4>
+                                <span className="text-[10px] font-bold text-white/70 uppercase tracking-widest mt-1">
+                                    Explorar Insights de Vendas
+                                </span>
+                            </div>
+                            <div className="ml-auto w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white">
+                                <ChevronRight size={20} />
+                            </div>
                         </div>
-                        <div>
-                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                Estatísticas Full
-                            </h3>
-                            <p className="text-[9px] font-extrabold text-orange-500 uppercase tracking-widest mt-0.5 opacity-80">
-                                Análise de Estratégias
-                            </p>
-                        </div>
-                    </motion.button>
+                    </motion.div>
                 </div>
             </div>
 

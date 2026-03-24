@@ -51,7 +51,8 @@ exports.updateActivity = async (req, res, next) => {
         const columnMap = {
             'call': 'calls',
             'email': 'emails',
-            'whatsapp': 'whatsapp'
+            'whatsapp': 'whatsapp',
+            'cycle_complete': 'completed_leads'
         };
 
         const backendType = columnMap[type];

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, CheckCircle, X, XCircle, Voicemail, MessageSquare, CalendarClock } from 'lucide-react';
+import { Phone, CheckCircle, X, XCircle, Voicemail, MessageSquare, CalendarClock, AlertTriangle, Zap } from 'lucide-react';
 import type { ActiveCall } from '../../contexts/VoipContext';
 import clsx from 'clsx';
 
 interface CallFeedbackModalProps {
     isOpen: boolean;
     callData: ActiveCall | null;
-    onResult: (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer', notes?: string) => void;
+    onResult: (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer' | 'connected' | 'not_interested' | 'spam', notes?: string) => void;
     onClose: () => void;
 }
 
@@ -15,9 +15,9 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
     const [step, setStep] = useState<'feedback' | 'notes'>('feedback');
     const [noteText, setNoteText] = useState('');
     const [addNotes, setAddNotes] = useState(false);
-    const [selectedResult, setSelectedResult] = useState<'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer' | null>(null);
+    const [selectedResult, setSelectedResult] = useState<'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer' | 'connected' | 'not_interested' | 'spam' | null>(null);
 
-    const handleResultClick = (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer') => {
+    const handleResultClick = (result: 'success' | 'busy' | 'voicemail' | 'invalid' | 'reschedule' | 'no-answer' | 'connected' | 'not_interested' | 'spam') => {
         if (addNotes || result === 'reschedule') {
             setSelectedResult(result);
             setStep('notes');
@@ -68,7 +68,8 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="relative w-full max-w-md bg-white/60 border border-white/80 shadow-2xl shadow-orange-500/10 rounded-[40px] overflow-hidden p-8 text-center backdrop-blur-3xl"
+                        className="relative w-full max-w-lg bg-white/70 border border-white/60 shadow-[0_32px_80px_-15px_rgba(249,115,22,0.15)] rounded-[3rem] overflow-hidden p-10 text-center"
+                        style={{ backdropFilter: 'blur(32px) saturate(160%)' }}
                     >
                         {/* Soft Nude/Orange Glass Background */}
                         <div className="absolute inset-0 bg-gradient-to-br from-orange-50/90 via-white/60 to-orange-100/80 pointer-events-none" />
@@ -114,37 +115,37 @@ export const CallFeedbackModal: React.FC<CallFeedbackModalProps> = ({ isOpen, ca
                                         initial={{ opacity: 0, scale: 0.95 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
-                                        className="w-full grid grid-cols-2 gap-3 mt-6"
+                                        className="w-full grid grid-cols-4 gap-4 mt-8"
                                     >
                                         {[
-                                            { id: 'success', label: 'Contato Feito', sub: 'Qualificou o lead', icon: <CheckCircle size={24} strokeWidth={2.5} />, color: 'emerald' },
-                                            { id: 'busy', label: 'Ocupado', sub: 'Tentar novamente', icon: <Phone size={24} strokeWidth={2.5} className="rotate-90" />, color: 'amber' },
-                                            { id: 'voicemail', label: 'Caixa Postal', sub: 'Não atendeu', icon: <Voicemail size={24} strokeWidth={2.5} />, color: 'slate' },
-                                            { id: 'no-answer', label: 'Sem Resposta', sub: 'Ligação perdida', icon: <X size={24} strokeWidth={2.5} />, color: 'orange' },
-                                            { id: 'invalid', label: 'Número Inválido', sub: 'Descartar lead', icon: <XCircle size={24} strokeWidth={2.5} />, color: 'rose' },
-                                            { id: 'reschedule', label: 'Agendar', sub: 'Definir retorno', icon: <CalendarClock size={24} strokeWidth={2.5} className="text-indigo-400 group-hover:text-white transition-colors" />, color: 'indigo' },
+                                            { id: 'connected',      label: 'Conectou',     sub: 'Conexão Real', icon: <CheckCircle size={32} strokeWidth={2.5}  />,     color: 'from-emerald-500 to-teal-500' },
+                                            { id: 'not_interested', label: 'Descarte',     sub: 'Sem Interes.', icon: <XCircle size={32} strokeWidth={2.5}  />,         color: 'from-rose-500 to-orange-600' },
+                                            { id: 'busy',           label: 'Ocupado',      sub: 'Tentar dps',   icon: <Phone size={32} strokeWidth={2.5}  className="rotate-90" />, color: 'from-amber-400 to-orange-500' },
+                                            { id: 'voicemail',      label: 'Postal',       sub: 'Não atende',   icon: <Voicemail size={32} strokeWidth={2.5}  />,       color: 'from-slate-500 to-slate-700' },
+                                            { id: 'no-answer',      label: 'Perdida',      sub: 'Resposta 0',   icon: <X size={32} strokeWidth={3} />,           color: 'from-orange-400 to-rose-400' },
+                                            { id: 'invalid',        label: 'Inválido',     sub: 'Num. Errado',  icon: <AlertTriangle size={32} strokeWidth={2.5}  />,   color: 'from-red-500 to-rose-600' },
+                                            { id: 'spam',           label: 'Spam',         sub: 'Robô/Bot',     icon: <Zap size={32} strokeWidth={2.5}  />,             color: 'from-slate-700 to-slate-900' },
+                                            { id: 'reschedule',     label: 'Reagendar',    sub: 'Novo Horár.',  icon: <CalendarClock size={32} strokeWidth={2.5}  />,   color: 'from-indigo-500 to-blue-600' },
                                         ].map((item) => (
                                             <button
                                                 key={item.id}
                                                 onClick={() => handleResultClick(item.id as any)}
-                                                className={clsx(
-                                                    "relative w-full p-4 rounded-3xl flex flex-col items-center justify-center gap-1 transition-all duration-300 border shadow-sm group overflow-hidden",
-                                                    item.color === 'emerald' && "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400/30 hover:bg-emerald-700 hover:shadow-lg",
-                                                    item.color === 'amber' && "bg-amber-50/80 border-amber-200 text-amber-700 hover:bg-amber-500 hover:text-white hover:shadow-amber-500/30 hover:shadow-lg",
-                                                    item.color === 'slate' && "bg-slate-50/80 border-slate-200 text-slate-700 hover:bg-slate-500 hover:text-white hover:shadow-slate-500/30 hover:shadow-lg",
-                                                    item.color === 'orange' && "bg-orange-50/80 border-orange-200 text-orange-700 hover:bg-orange-500 hover:text-white hover:shadow-orange-500/30 hover:shadow-lg",
-                                                    item.color === 'rose' && "bg-rose-50/80 border-rose-200 text-rose-700 hover:bg-rose-500 hover:text-white hover:shadow-rose-500/30 hover:shadow-lg",
-                                                    item.color === 'indigo' && "bg-indigo-50/80 border-indigo-200 text-indigo-700 hover:bg-indigo-500 hover:text-white hover:shadow-indigo-500/30 hover:shadow-lg"
-                                                )}
+                                                className="group relative aspect-square w-full rounded-[2.5rem] flex flex-col items-center justify-center gap-2 transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_15px_40px_rgba(0,0,0,0.06)] hover:shadow-orange-500/30 overflow-hidden ring-4 ring-white shadow-inner"
                                             >
-                                                <div className="relative z-10 transition-transform group-hover:scale-110 duration-300 mb-1">
-                                                    {item.icon}
-                                                </div>
-                                                <div className="relative z-10 font-black text-[13px] tracking-tight">{item.label}</div>
-                                                <div className="relative z-10 text-[9px] uppercase tracking-widest font-bold opacity-70">{item.sub}</div>
+                                                {/* Gradient Layer */}
+                                                <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
                                                 
-                                                {/* Hover Glow Behind Content */}
-                                                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                {/* Soft Base for non-hover */}
+                                                <div className="absolute inset-0 bg-white/10 group-hover:opacity-0 transition-opacity duration-500" />
+
+                                                {/* Content */}
+                                                <div className="relative z-10 flex flex-col items-center gap-1">
+                                                    <div className="text-slate-400 group-hover:text-white transition-colors duration-300">
+                                                        {item.icon}
+                                                    </div>
+                                                    <div className="font-black text-[11px] tracking-tight text-slate-700 group-hover:text-white transition-colors duration-300 leading-none mt-1">{item.label}</div>
+                                                    <div className="text-[8px] uppercase tracking-widest font-bold text-slate-400 group-hover:text-white/70 transition-colors duration-300">{item.sub}</div>
+                                                </div>
                                             </button>
                                         ))}
                                         

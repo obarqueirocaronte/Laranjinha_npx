@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     TrendingUp, Calendar, Users, Target, Phone, Mail, MessageCircle,
-    ArrowUpRight, RefreshCw, X, Sparkles, LayoutDashboard,
+    RefreshCw, X, Sparkles, LayoutDashboard,
     CheckCircle2, Handshake, Layers, Activity, Award,
-    AlertTriangle, Zap, ArrowLeft, BarChart3
+    AlertTriangle, Zap, BarChart3
 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -34,7 +35,9 @@ export const FullBIDashboard: React.FC<{
         setLoading(true);
         try {
             const res = await (statsAPI as any).getBIFullStats(
-                sdrFilter === 'all' ? undefined : sdrFilter, dateStart, dateEnd
+                sdrFilter === 'all' ? undefined : sdrFilter, 
+                dateStart, 
+                dateEnd
             );
             if (res.success) setData(res.data);
         } catch (_) { /* keep previous data */ }
@@ -85,12 +88,12 @@ export const FullBIDashboard: React.FC<{
         teal: '#14b8a6', blue: '#3b82f6',
     };
     const bgMap: Record<string, string> = {
-        orange: 'bg-orange-50 border-orange-100 text-orange-600',
-        indigo: 'bg-indigo-50 border-indigo-100 text-indigo-600',
-        emerald: 'bg-emerald-50 border-emerald-100 text-emerald-600',
-        violet: 'bg-violet-50 border-violet-100 text-violet-600',
-        teal: 'bg-teal-50 border-teal-100 text-teal-600',
-        blue: 'bg-blue-50 border-blue-100 text-blue-600',
+        orange: 'bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-200/50 text-orange-600',
+        indigo: 'bg-gradient-to-br from-indigo-50 to-indigo-100/50 border-indigo-200/50 text-indigo-600',
+        emerald: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200/50 text-emerald-600',
+        violet: 'bg-gradient-to-br from-violet-50 to-violet-100/50 border-violet-200/50 text-violet-600',
+        teal: 'bg-gradient-to-br from-teal-50 to-teal-100/50 border-teal-200/50 text-teal-600',
+        blue: 'bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200/50 text-blue-600',
     };
 
     const PAGES = [
@@ -99,90 +102,108 @@ export const FullBIDashboard: React.FC<{
         { label: 'Produtividade', icon: BarChart3 },
     ];
 
-    return (
+    return createPortal(
         <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            className="fixed inset-0 z-[10000] overflow-hidden flex flex-col"
-            style={{ background: 'linear-gradient(145deg, #fdf8f3 0%, #fef5ea 40%, #fff9f4 100%)' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-6 md:p-12"
         >
-            {/* ── TOP BAR ── */}
-            <div className="shrink-0 px-8 pt-6 pb-5 border-b border-orange-100/70 bg-white/60 backdrop-blur-md flex items-center justify-between gap-6">
-                {/* Back + Brand */}
-                <div className="flex items-center gap-3 min-w-max">
-                    <button
-                        onClick={onClose}
-                        className="w-10 h-10 rounded-xl flex items-center justify-center bg-white border border-slate-200 text-slate-500 hover:text-orange-500 hover:border-orange-200 shadow-sm transition-all"
-                    >
-                        <ArrowLeft size={18} />
-                    </button>
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-orange-400/25 shrink-0">
-                        <TrendingUp size={22} strokeWidth={2.5} />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="w-full h-full max-w-[1800px] bg-[#F8FAFC] flex flex-col relative rounded-[4rem] shadow-[0_50px_100px_rgba(0,0,0,0.15)] overflow-hidden border border-white"
+            >
+                {/* ── Background Blobs ── */}
+                <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-200/30 blur-[120px] rounded-full -z-10" />
+                <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-rose-200/30 blur-[120px] rounded-full -z-10" />
+
+                {/* ── TOP BAR ── */}
+                <div className="shrink-0 px-12 pt-10 pb-8 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-10 relative z-[100] shadow-sm">
+                    {/* Brand */}
+                    <div className="flex items-center gap-6 group">
+                        <div className="w-16 h-16 rounded-[2rem] bg-gradient-to-br from-[#FF8225] via-[#EF4444] to-[#B22222] flex items-center justify-center text-white shadow-[0_12px_30px_rgba(239,68,68,0.25)] group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                            <TrendingUp size={32} strokeWidth={2.5} />
+                        </div>
+                        <div>
+                            <h1 className="text-4xl font-black text-slate-800 tracking-tighter leading-none" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                Deep <span className="bg-gradient-to-r from-orange-500 via-rose-500 to-rose-600 bg-clip-text text-transparent">Analytics</span>
+                            </h1>
+                            <div className="flex items-center gap-2 mt-3">
+                                <div className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[9px] font-black uppercase tracking-[0.2em] border border-slate-200">Intelligence Console</div>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" /> Live Monitoring
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                            Estatísticas <span className="text-orange-500">Full</span>
-                        </h1>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-0.5 flex items-center gap-1.5">
-                            <Sparkles size={10} className="text-orange-400" /> BI Operacional
-                        </p>
-                    </div>
-                </div>
 
                 {/* Page Tabs */}
-                <div className="flex items-center bg-white border border-slate-200/70 rounded-2xl p-1 gap-1 shadow-sm">
+                <div className="flex items-center bg-slate-50 border border-slate-200/60 rounded-3xl p-1 gap-1 shadow-inner h-14">
                     {PAGES.map((p, i) => (
                         <button
                             key={i}
                             onClick={() => setPage(i)}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wider transition-all ${
+                            className={`flex items-center gap-2 px-8 py-2.5 rounded-2xl text-[12px] font-black uppercase tracking-[0.1em] transition-all h-full ${
                                 page === i
-                                    ? 'bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-md shadow-orange-400/20 scale-[1.02]'
-                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                                    ? 'bg-white text-orange-600 shadow-sm border border-slate-100 scale-[1.05]'
+                                    : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
                             }`}
                         >
-                            <p.icon size={14} />
+                            <p.icon size={16} strokeWidth={2.5} />
                             {p.label}
                         </button>
                     ))}
                 </div>
 
-                {/* Controls */}
-                <div className="flex items-center gap-3 shrink-0">
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl shadow-sm text-sm font-bold text-slate-700">
-                        <Users size={15} className="text-slate-400" />
-                        <select value={sdrFilter} onChange={e => setSdrFilter(e.target.value)} className="bg-transparent text-[13px] font-bold text-slate-700 outline-none cursor-pointer">
-                            <option value="all">Todos SDRs</option>
-                            {sdrs.map(s => (<option key={s.id} value={s.id}>{s.full_name || s.email?.split('@')[0]}</option>))}
-                        </select>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                        <Calendar size={15} className="text-slate-400 shrink-0" />
-                        <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} className="bg-transparent text-[13px] font-bold text-slate-700 outline-none w-[110px]" />
-                        <span className="text-slate-300 font-bold">–</span>
-                        <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} className="bg-transparent text-[13px] font-bold text-slate-700 outline-none w-[110px]" />
-                        <button onClick={() => { const y = new Date(); y.setDate(y.getDate() - 1); const s = y.toISOString().split('T')[0]; setDateStart(s); setDateEnd(s); }}
-                            className="ml-1 px-2.5 py-1 bg-orange-50 border border-orange-200 text-orange-600 rounded-lg text-[11px] font-black uppercase tracking-wider hover:bg-orange-100 transition-colors"
-                        >Ontem</button>
-                    </div>
-                    <button onClick={fetchData} className={`w-10 h-10 rounded-xl flex items-center justify-center bg-white border border-slate-200 text-slate-500 hover:text-orange-500 hover:border-orange-200 shadow-sm transition-all ${loading ? 'animate-spin text-orange-400' : ''}`}>
-                        <RefreshCw size={16} />
-                    </button>
-                    <button onClick={onClose} className="w-10 h-10 rounded-xl flex items-center justify-center bg-red-50 border border-red-100 text-red-400 hover:bg-red-100 hover:text-red-600 shadow-sm transition-all">
-                        <X size={18} />
-                    </button>
-                </div>
-            </div>
+                    <div className="flex items-center gap-6">
+                        {/* SDR Pill */}
+                        <div className="flex items-center gap-3 px-6 h-14 bg-white border border-slate-200 rounded-[1.5rem] shadow-sm group hover:shadow-md transition-all">
+                            <Users size={18} className="text-orange-500" />
+                            <select value={sdrFilter} onChange={e => setSdrFilter(e.target.value)} className="bg-transparent text-[11px] font-black text-slate-700 outline-none cursor-pointer uppercase tracking-widest">
+                                <option value="all">Time Completo</option>
+                                {sdrs.map(s => (<option key={s.id} value={s.id}>{s.full_name || s.email?.split('@')[0]}</option>))}
+                            </select>
+                        </div>
 
-            {/* ── CONTENT ── */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <AnimatePresence mode="wait">
-                    {page === 0 && <PageOverview key="p0" kpis={kpis} timeline={timeline} sdrPerf={sdrPerf} pieData={pieData} colorMap={colorMap} bgMap={bgMap} />}
-                    {page === 1 && <PageOperational key="p1" data={d} />}
-                    {page === 2 && <PageProductivity key="p2" sdrs={sdrPerf} timeline={timeline} />}
-                </AnimatePresence>
-            </div>
+                        {/* Date Range Pill */}
+                        <div className="flex items-center gap-2 pr-6 bg-white border border-slate-200 rounded-[1.5rem] shadow-sm hover:shadow-md h-14 transition-all group overflow-hidden">
+                            <div className="h-full px-5 flex items-center gap-2 bg-slate-50 border-r border-slate-100">
+                                <Calendar size={18} className="text-blue-500 group-hover:scale-110 transition-transform" />
+                            </div>
+                            <div className="flex items-center gap-4 pl-3">
+                                <div className="flex flex-col">
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Período De</span>
+                                    <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} className="bg-transparent text-[10px] font-black text-slate-800 outline-none uppercase" />
+                                </div>
+                                <div className="w-[1px] h-6 bg-slate-200" />
+                                <div className="flex flex-col">
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Até</span>
+                                    <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} className="bg-transparent text-[10px] font-black text-slate-800 outline-none uppercase" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onClick={fetchData} className={`group w-14 h-14 rounded-2xl flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:text-orange-500 hover:shadow-lg transition-all ${loading ? 'animate-spin text-orange-400' : ''}`}>
+                            <RefreshCw size={22} className="group-hover:rotate-180 transition-transform duration-500" />
+                        </button>
+                        
+                        <button onClick={onClose} className="w-14 h-14 rounded-2xl flex items-center justify-center bg-slate-900 text-white shadow-xl shadow-slate-900/40 hover:scale-105 hover:bg-black transition-all border-2 border-white/20">
+                            <X size={26} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* ── CONTENT ── */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar px-10 py-8">
+                    <AnimatePresence mode="wait">
+                        {page === 0 && <PageOverview key="p0" kpis={kpis} timeline={timeline} sdrPerf={sdrPerf} pieData={pieData} colorMap={colorMap} bgMap={bgMap} />}
+                        {page === 1 && <PageOperational key="p1" data={d} />}
+                        {page === 2 && <PageProductivity key="p2" sdrs={sdrPerf} timeline={timeline} />}
+                    </AnimatePresence>
+                </div>
+            </motion.div>
 
             {/* ── Bottom Nav Dots ── */}
             <div className="shrink-0 flex items-center justify-center gap-2 py-4 border-t border-orange-100/50 bg-white/40 backdrop-blur-sm">
@@ -190,21 +211,22 @@ export const FullBIDashboard: React.FC<{
                     <button key={i} onClick={() => setPage(i)} className={`transition-all rounded-full ${page === i ? 'w-8 h-2.5 bg-orange-500' : 'w-2.5 h-2.5 bg-slate-200 hover:bg-slate-300'}`} />
                 ))}
             </div>
-        </motion.div>
+        </motion.div>,
+        document.body
     );
 };
 
 /* ── Mini Icon Block Helper ── */
 function MiniKPI({ icon: Icon, label, value, color, sub }: { icon: any; label: string; value: string | number; color: string; sub?: string }) {
     return (
-        <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${color} transition-all hover:shadow-sm`}>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center border bg-white/60 shadow-xs">
-                <Icon size={16} />
+        <div className={`flex items-center gap-4 px-5 py-4 rounded-3xl border ${color} transition-all hover:shadow-lg hover:scale-[1.02] group cursor-pointer`}>
+            <div className="w-11 h-11 rounded-[1.15rem] flex items-center justify-center border border-white/40 bg-white/40 shadow-sm transition-transform group-hover:scale-110">
+                <Icon size={18} strokeWidth={2.5} />
             </div>
             <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider truncate">{label}</div>
-                <div className="text-[18px] font-black text-slate-800 leading-none mt-0.5" style={{ fontFamily: 'Comfortaa, cursive' }}>{value}</div>
-                {sub && <div className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-wider">{sub}</div>}
+                <div className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] truncate mb-0.5">{label}</div>
+                <div className="text-[22px] font-black text-slate-800 leading-none" style={{ fontFamily: 'Comfortaa, cursive' }}>{value}</div>
+                {sub && <div className="text-[9px] font-bold opacity-60 mt-1 uppercase tracking-wider">{sub}</div>}
             </div>
         </div>
     );
@@ -213,37 +235,57 @@ function MiniKPI({ icon: Icon, label, value, color, sub }: { icon: any; label: s
 /* ══════════════════════════════════════════
    PAGE 0 — Visão Geral (Real Data)
 ══════════════════════════════════════════ */
-function PageOverview({ kpis, timeline, sdrPerf, pieData, colorMap, bgMap }: any) {
+function PageOverview({ kpis, timeline, sdrPerf, pieData }: any) {
     return (
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="p-8 space-y-8">
-            {/* KPI Strip — 6 blocks */}
-            <div className="grid grid-cols-6 gap-4">
-                {kpis.map((kpi: any, i: number) => (
-                    <motion.div key={kpi.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                        whileHover={{ y: -3 }}
-                        className="bg-white border border-slate-100 rounded-[1.75rem] p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
-                    >
-                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                            style={{ background: `radial-gradient(circle at 70% 30%, ${colorMap[kpi.color]}10, transparent 60%)` }} />
-                        <div className="flex items-start justify-between mb-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${bgMap[kpi.color]} shadow-sm`}>
-                                <kpi.icon size={18} />
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="p-12 space-y-12 w-full">
+            {/* KPI Strip — Premium Glass Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                {kpis.map((kpi: any, i: number) => {
+                    const gradients: any = {
+                        orange: ['#FF8225', '#EF4444'],
+                        blue: ['#3B82F6', '#1E40AF'],
+                        emerald: ['#10B981', '#064E3B'],
+                        purple: ['#8B5CF6', '#5B21B6'],
+                        green: ['#22C55E', '#166534'],
+                        indigo: ['#6366F1', '#3730A3'],
+                    };
+                    const grad = gradients[kpi.color] || ['#94A3B8', '#475569'];
+
+                    return (
+                        <motion.div key={kpi.label} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05, type: 'spring', stiffness: 200, damping: 20 }}
+                            whileHover={{ y: -10, scale: 1.05 }}
+                            className="relative p-8 rounded-[3rem] bg-white border border-slate-100 shadow-[0_10px_35px_rgba(0,0,0,0.03)] hover:shadow-[0_40px_80px_rgba(0,0,0,0.12)] transition-all cursor-pointer group overflow-hidden"
+                        >
+                            <div 
+                                className="absolute -top-10 -right-10 w-32 h-32 blur-[40px] opacity-[0.07] rounded-full transition-all group-hover:opacity-[0.15] group-hover:scale-150" 
+                                style={{ background: grad[0] }}
+                            />
+                            
+                            <div className="relative flex flex-col h-full">
+                                <div 
+                                    className="w-16 h-16 rounded-[1.5rem] flex items-center justify-center text-white shadow-xl transition-all group-hover:rotate-12 group-hover:translate-x-1"
+                                    style={{ background: `linear-gradient(135deg, ${grad[0]}, ${grad[1]})` }}
+                                >
+                                    <kpi.icon size={28} strokeWidth={2.5} />
+                                </div>
+                                <div className="mt-8">
+                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-2">{kpi.label}</div>
+                                    <div className="text-5xl font-black text-slate-900 leading-none tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>{kpi.value.toLocaleString()}</div>
+                                </div>
                             </div>
-                            {kpi.delta && <div className="flex items-center gap-0.5 text-emerald-500 text-[10px] font-black"><ArrowUpRight size={10} />ativo</div>}
-                        </div>
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">{kpi.label}</div>
-                        <div className="text-2xl font-black text-slate-800 leading-none" style={{ fontFamily: 'Comfortaa, cursive' }}>{kpi.value.toLocaleString()}</div>
-                    </motion.div>
-                ))}
+                        </motion.div>
+                    );
+                })}
             </div>
 
             {/* Chart Row */}
-            <div className="grid grid-cols-12 gap-6">
-                <div className="col-span-8 bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm">
-                    <div className="flex items-center justify-between mb-6">
+            <div className="grid grid-cols-12 gap-8">
+                <div className="col-span-8 bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                    <div className="relative z-10 flex items-center justify-between mb-10">
                         <div>
-                            <h3 className="text-xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Fluxo de Performance</h3>
-                            <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mt-1">Interações diárias no período</p>
+                            <h3 className="text-2xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Fluxo de Performance</h3>
+                            <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-[0.25em] mt-2">Interações diárias no período</p>
                         </div>
                         <div className="flex gap-5">
                             {[['Ligações', '#f97316'], ['Reuniões', '#6366f1'], ['WhatsApp', '#10b981']].map(([l, c]) => (
@@ -276,10 +318,11 @@ function PageOverview({ kpis, timeline, sdrPerf, pieData, colorMap, bgMap }: any
                     </div>
                 </div>
 
-                <div className="col-span-4 bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm flex flex-col">
-                    <div className="mb-4">
-                        <h3 className="text-xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Canais</h3>
-                        <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mt-1">Mix de interações</p>
+                <div className="col-span-4 bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm flex flex-col relative overflow-hidden group">
+                    <div className="absolute bottom-0 right-0 w-48 h-48 bg-slate-50 rounded-full blur-3xl -mr-24 -mb-24 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                    <div className="relative z-10 mb-10">
+                        <h3 className="text-2xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Canais</h3>
+                        <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-[0.25em] mt-2">Mix de interações</p>
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center">
                         {pieData.some((p: any) => p.value > 0) ? (
@@ -305,11 +348,11 @@ function PageOverview({ kpis, timeline, sdrPerf, pieData, colorMap, bgMap }: any
             </div>
 
             {/* SDR Leaderboard */}
-            <div className="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
+            <div className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm">
+                <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h3 className="text-xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Ranking de SDRs</h3>
-                        <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mt-1">Performance por ligações, reuniões e fechamentos</p>
+                        <h3 className="text-2xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Ranking de SDRs</h3>
+                        <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-[0.25em] mt-2">Performance por ligações, reuniões e fechamentos</p>
                     </div>
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-xl text-amber-600 text-[11px] font-black uppercase tracking-wider">
                         <Award size={13} /> Ranking do Período
@@ -383,26 +426,31 @@ function PageOperational({ data }: { data: any }) {
             {/* 3 Status Cards */}
             <div className="grid grid-cols-3 gap-6">
                 {/* Zona Crítica */}
-                <motion.div whileHover={{ y: -3 }} className="bg-white border border-red-100/50 rounded-[2rem] p-7 shadow-sm relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-red-50/30 to-transparent" />
+                <motion.div whileHover={{ y: -5 }} className="bg-white border border-red-100/60 rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(239,68,68,0.05)] relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-red-100/30 blur-[60px] rounded-full group-hover:scale-125 transition-transform" />
                     <div className="relative">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-red-500"><AlertTriangle size={22} /></div>
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-50 to-red-100 border border-red-200 flex items-center justify-center text-red-500 shadow-sm"><AlertTriangle size={24} strokeWidth={2.5} /></div>
                             <div>
-                                <h3 className="text-lg font-black text-slate-800">Zona Crítica</h3>
-                                <p className="text-[10px] font-black text-red-500 uppercase tracking-wider">Ações atrasadas (&gt;24h)</p>
+                                <h3 className="text-xl font-black text-slate-800 tracking-tight">Zona Crítica</h3>
+                                <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.1em]">Gargalos Operacionais</p>
                             </div>
-                            <div className="ml-auto text-[11px] font-bold text-slate-400 uppercase">Leads Parados</div>
                         </div>
-                        <div className="text-4xl font-black text-red-500 mb-3" style={{ fontFamily: 'Comfortaa, cursive' }}>{criticalLeads.length}</div>
+                        <div className="flex items-end justify-between mb-4">
+                            <div className="text-5xl font-black text-red-500 tracking-tighter" style={{ fontFamily: 'Comfortaa, cursive' }}>{criticalLeads.length}</div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">Leads em atraso</div>
+                        </div>
                         {criticalLeads.length === 0 ? (
-                            <div className="flex items-center gap-2 text-emerald-500 text-[12px] font-bold"><CheckCircle2 size={14} /> Nenhum gargalo</div>
+                            <div className="flex items-center gap-2 text-emerald-500 text-[13px] font-black bg-emerald-50/50 py-3 px-4 rounded-2xl border border-emerald-100"><CheckCircle2 size={16} /> Operação em dia</div>
                         ) : (
-                            <div className="space-y-2 max-h-[120px] overflow-y-auto">
-                                {criticalLeads.slice(0, 4).map((l: any) => (
-                                    <div key={l.id} className="flex items-center justify-between text-[11px] px-3 py-2 bg-red-50/50 rounded-xl">
+                            <div className="space-y-2.5 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
+                                {criticalLeads.slice(0, 5).map((l: any) => (
+                                    <div key={l.id} className="flex items-center justify-between text-[12px] px-4 py-3 bg-red-50/40 border border-red-100/50 rounded-2xl group/item hover:bg-red-50 transition-colors">
                                         <span className="font-bold text-slate-700 truncate">{l.lead_name}</span>
-                                        <span className="font-black text-red-400 shrink-0 ml-2">{l.sdr_name?.split(' ')[0]}</span>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                                            <span className="font-black text-red-600/70 uppercase text-[9px]">{l.sdr_name?.split(' ')[0]}</span>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -411,63 +459,62 @@ function PageOperational({ data }: { data: any }) {
                 </motion.div>
 
                 {/* Em Andamento */}
-                <motion.div whileHover={{ y: -3 }} className="bg-white border border-orange-100/50 rounded-[2rem] p-7 shadow-sm relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-orange-50/30 to-transparent" />
+                <motion.div whileHover={{ y: -5 }} className="bg-white border border-orange-100/60 rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(249,115,22,0.05)] relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-100/30 blur-[60px] rounded-full group-hover:scale-125 transition-transform" />
                     <div className="relative">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-500"><Zap size={22} /></div>
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 flex items-center justify-center text-orange-500 shadow-sm"><Zap size={24} strokeWidth={2.5} /></div>
                             <div>
-                                <h3 className="text-lg font-black text-slate-800">Em Andamento</h3>
-                                <p className="text-[10px] font-black text-orange-500 uppercase tracking-wider">Distribuição ativa</p>
+                                <h3 className="text-xl font-black text-slate-800 tracking-tight">Em Andamento</h3>
+                                <p className="text-[10px] font-black text-orange-500 uppercase tracking-[0.1em]">Cadências Ativas</p>
                             </div>
-                            <div className="ml-auto text-[11px] font-bold text-slate-400 uppercase">Leads em fluxo</div>
                         </div>
-                        <div className="text-4xl font-black text-orange-500 mb-3" style={{ fontFamily: 'Comfortaa, cursive' }}>{totalActiveSteps}</div>
-                        <div className="space-y-2">
+                        <div className="flex items-end justify-between mb-4">
+                            <div className="text-5xl font-black text-orange-500 tracking-tighter" style={{ fontFamily: 'Comfortaa, cursive' }}>{totalActiveSteps}</div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">Fluxo produtivo</div>
+                        </div>
+                        <div className="space-y-3.5">
                             {steps.map((s: any) => (
-                                <div key={s.step} className="flex items-center justify-between px-3 py-2">
-                                    <span className="text-[12px] font-black text-slate-600 uppercase">Step {s.step}</span>
-                                    <div className="flex-1 mx-3 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                        <div className="h-full bg-gradient-to-r from-orange-400 to-rose-500 rounded-full" style={{ width: `${totalActiveSteps > 0 ? (s.lead_count / totalActiveSteps) * 100 : 0}%` }} />
+                                <div key={s.step} className="flex flex-col gap-1.5">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Etapa {s.step}</span>
+                                        <span className="text-[11px] font-black text-orange-600">{s.lead_count}</span>
                                     </div>
-                                    <span className="text-[12px] font-black text-orange-500">{s.lead_count} leads</span>
+                                    <div className="h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden">
+                                        <motion.div initial={{ width: 0 }} animate={{ width: `${totalActiveSteps > 0 ? (s.lead_count / totalActiveSteps) * 100 : 0}%` }}
+                                            className="h-full bg-gradient-to-r from-orange-400 via-orange-500 to-rose-500 rounded-full" />
+                                    </div>
                                 </div>
                             ))}
-                            {steps.length === 0 && <div className="text-[12px] text-slate-400 font-bold text-center py-4">Nenhuma cadência ativa</div>}
+                            {steps.length === 0 && <div className="text-[13px] text-slate-400 font-bold text-center py-6 bg-slate-50 border border-slate-100 rounded-2xl border-dashed">Aguardando novos leads</div>}
                         </div>
                     </div>
                 </motion.div>
 
                 {/* Concluídas */}
-                <motion.div whileHover={{ y: -3 }} className="bg-white border border-emerald-100/50 rounded-[2rem] p-7 shadow-sm relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/30 to-transparent" />
+                <motion.div whileHover={{ y: -5 }} className="bg-white border border-emerald-100/60 rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(16,185,129,0.05)] relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-100/30 blur-[60px] rounded-full group-hover:scale-125 transition-transform" />
                     <div className="relative">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500"><CheckCircle2 size={22} /></div>
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-500 shadow-sm"><CheckCircle2 size={24} strokeWidth={2.5} /></div>
                             <div>
-                                <h3 className="text-lg font-black text-slate-800">Concluídas</h3>
-                                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-wider">Desempenho final</p>
+                                <h3 className="text-xl font-black text-slate-800 tracking-tight">Resultados</h3>
+                                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.1em]">Conversão de Funil</p>
                             </div>
-                            <div className="ml-auto text-[11px] font-bold text-slate-400 uppercase">Taxa de sucesso</div>
                         </div>
-                        <div className="text-4xl font-black text-emerald-500 mb-3" style={{ fontFamily: 'Comfortaa, cursive' }}>{totalOutcomes}</div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="px-3 py-2.5 bg-emerald-50/50 border border-emerald-100/50 rounded-xl text-center">
-                                <div className="text-[10px] font-black text-slate-400 uppercase">Total</div>
-                                <div className="text-[16px] font-black text-slate-800">{totalOutcomes}</div>
-                            </div>
-                            <div className="px-3 py-2.5 bg-emerald-50/50 border border-emerald-100/50 rounded-xl text-center">
-                                <div className="text-[10px] font-black text-slate-400 uppercase">Won</div>
-                                <div className="text-[16px] font-black text-emerald-600">{wonCount}</div>
-                            </div>
-                            <div className="px-3 py-2.5 bg-red-50/50 border border-red-100/50 rounded-xl text-center">
-                                <div className="text-[10px] font-black text-slate-400 uppercase">Fluxo Esgotado</div>
-                                <div className="text-[16px] font-black text-red-500">{totalOutcomes - wonCount - rejCount}</div>
-                            </div>
-                            <div className="px-3 py-2.5 bg-slate-50/50 border border-slate-100/50 rounded-xl text-center">
-                                <div className="text-[10px] font-black text-slate-400 uppercase">Rejeitados</div>
-                                <div className="text-[16px] font-black text-slate-600">{rejCount}</div>
-                            </div>
+                        <div className="text-5xl font-black text-emerald-500 tracking-tighter mb-4" style={{ fontFamily: 'Comfortaa, cursive' }}>{totalOutcomes}</div>
+                        <div className="grid grid-cols-2 gap-3">
+                            {[
+                                { label: 'Total', val: totalOutcomes, color: 'emerald', bg: 'bg-emerald-50/60' },
+                                { label: 'Oportunidade', val: wonCount, color: 'emerald', bg: 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' },
+                                { label: 'Fluxo Esgotado', val: totalOutcomes - wonCount - rejCount, color: 'amber', bg: 'bg-amber-50/60' },
+                                { label: 'Rejeitados', val: rejCount, color: 'slate', bg: 'bg-slate-50/60' }
+                            ].map((pill, idx) => (
+                                <div key={idx} className={`px-4 py-4 rounded-2xl transition-all border border-transparent ${pill.bg} flex flex-col justify-center`}>
+                                    <div className={`text-[9px] font-black uppercase tracking-widest ${pill.bg.includes('emerald-500') ? 'text-emerald-100' : 'text-slate-400'}`}>{pill.label}</div>
+                                    <div className={`text-xl font-black ${pill.bg.includes('emerald-500') ? 'text-white' : 'text-slate-800'}`}>{pill.val}</div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </motion.div>
@@ -504,7 +551,7 @@ function PageOperational({ data }: { data: any }) {
             </div>
 
             {/* Mini KPIs: Channel Distribution */}
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                 <MiniKPI icon={Phone} label="Ligações" value={d.total_calls || 0} color="bg-orange-50 border-orange-100 text-orange-600" />
                 <MiniKPI icon={Mail} label="E-mails" value={d.total_emails || 0} color="bg-blue-50 border-blue-100 text-blue-600" />
                 <MiniKPI icon={MessageCircle} label="WhatsApp" value={d.total_whatsapp || 0} color="bg-emerald-50 border-emerald-100 text-emerald-600" />
@@ -589,39 +636,46 @@ function PageProductivity({ sdrs, timeline }: any) {
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-8 space-y-8">
             {/* SDR Selector */}
             {sdrs.length > 0 && (
-            <div className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm flex items-center gap-4 overflow-x-auto">
-                <div className="text-[12px] font-black text-slate-400 uppercase tracking-widest shrink-0 flex items-center gap-2 mr-2"><Users size={14} /> Selecionar SDR:</div>
-                {sdrs.map((s: any, i: number) => (
-                    <button key={i} onClick={() => setSelectedSdr(i)}
-                        className={`flex items-center gap-3 px-5 py-3 rounded-2xl border text-left transition-all shrink-0 ${selectedSdr === i ? 'bg-gradient-to-r from-orange-500 to-rose-500 text-white border-transparent shadow-lg shadow-orange-400/20' : 'bg-white border-slate-200 text-slate-700 hover:border-orange-200 hover:bg-orange-50'}`}
-                    >
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm ${selectedSdr === i ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-600'}`}>{s.name.charAt(0)}</div>
-                        <div>
-                            <div className="text-[13px] font-black leading-none">{s.name.split(' ')[0]}</div>
-                            <div className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${selectedSdr === i ? 'text-orange-100' : 'text-slate-400'}`}>{s.rate} conv.</div>
-                        </div>
-                    </button>
-                ))}
+            <div className="bg-white/40 backdrop-blur-md border border-white/60 rounded-[2.5rem] p-6 shadow-sm flex items-center gap-5 overflow-x-auto no-scrollbar">
+                <div className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] shrink-0 flex items-center gap-2.5 ml-2">
+                    <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400"><Users size={16} /></div>
+                    Filtrar SDR
+                </div>
+                <div className="flex items-center gap-3">
+                    {sdrs.map((s: any, i: number) => (
+                        <button key={i} onClick={() => setSelectedSdr(i)}
+                            className={`group flex items-center gap-4 px-6 py-3.5 rounded-[1.75rem] border transition-all shrink-0 ${selectedSdr === i ? 'bg-gradient-to-r from-orange-500 to-rose-500 text-white border-transparent shadow-xl shadow-orange-500/25 scale-[1.05]' : 'bg-white border-white/80 text-slate-600 hover:border-orange-200/50 hover:bg-orange-50/30'}`}
+                        >
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm transition-transform group-hover:scale-110 shadow-sm ${selectedSdr === i ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-500'}`}>{s.name.charAt(0)}</div>
+                            <div className="text-left">
+                                <div className="text-[14px] font-black leading-none group-hover:translate-x-0.5 transition-transform">{s.name.split(' ')[0]}</div>
+                                <div className={`text-[9px] font-black uppercase tracking-wider mt-1.5 opacity-60 ${selectedSdr === i ? 'text-white' : 'text-slate-400'}`}>{s.rate} COV.</div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
             </div>
             )}
 
             {/* 4 Big Metric Blocks */}
-            <div className="grid grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
                 {prodItems.map((item: any, i: number) => (
                     <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                        className="bg-white border border-slate-100 rounded-[2rem] p-7 shadow-sm hover:shadow-md transition-all"
+                        whileHover={{ y: -5, scale: 1.02 }}
+                        className="bg-white/60 backdrop-blur-md border border-white/80 rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.06)] transition-all group overflow-hidden"
                     >
-                        <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center mb-5 ${item.color}`}><item.icon size={22} /></div>
-                        <div className="text-[12px] font-black text-slate-400 uppercase tracking-wider mb-2">{item.label}</div>
-                        <div className="text-4xl font-black text-slate-800 leading-none mb-5" style={{ fontFamily: 'Comfortaa, cursive' }}>{item.value}</div>
-                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`absolute -top-10 -right-10 w-32 h-32 blur-[50px] opacity-10 rounded-full ${item.color.split(' ')[0]}`} />
+                        <div className={`w-14 h-14 rounded-[1.25rem] border flex items-center justify-center mb-6 shadow-sm transition-transform group-hover:rotate-6 ${item.color}`}><item.icon size={24} strokeWidth={2.5} /></div>
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-3">{item.label}</div>
+                        <div className="text-5xl font-black text-slate-800 leading-none mb-6 tracking-tighter" style={{ fontFamily: 'Comfortaa, cursive' }}>{item.value}</div>
+                        <div className="h-3 bg-slate-100/50 border border-slate-100/50 rounded-full overflow-hidden p-0.5">
                             <motion.div initial={{ width: 0 }} animate={{ width: `${item.progress}%` }}
-                                transition={{ duration: 0.8, delay: 0.2 + i * 0.07, ease: 'easeOut' }}
-                                className="h-full rounded-full bg-gradient-to-r from-orange-400 to-rose-500" />
+                                transition={{ duration: 1, delay: 0.3 + i * 0.1, ease: 'easeOut' }}
+                                className="h-full rounded-full bg-gradient-to-r from-orange-400 via-orange-500 to-rose-500 shadow-sm" />
                         </div>
-                        <div className="flex justify-between mt-2">
-                            <span className="text-[10px] font-bold text-slate-400">% do total</span>
-                            <span className="text-[11px] font-black text-slate-600">{Math.round(item.progress)}%</span>
+                        <div className="flex justify-between mt-3 px-1">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Taxa de Ocupação</span>
+                            <span className="text-[12px] font-black text-slate-700 tracking-tight">{Math.round(item.progress)}%</span>
                         </div>
                     </motion.div>
                 ))}
@@ -649,18 +703,29 @@ function PageProductivity({ sdrs, timeline }: any) {
                         ) : <div className="h-full flex items-center justify-center text-slate-400 font-bold">Sem dados</div>}
                     </div>
                 </div>
-                <div className="col-span-4 bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm flex flex-col gap-4">
-                    <h3 className="text-[16px] font-black text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>Resumo Executivo</h3>
+                <div className="col-span-4 rounded-[2.5rem] p-8 glass-card border border-white/60 shadow-[0_20px_50px_rgba(0,0,0,0.06)] flex flex-col gap-5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-400/10 blur-[50px] rounded-full -z-10" />
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xl font-black text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>Resumo Executivo</h3>
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white shadow-lg">
+                            <Sparkles size={18} />
+                        </div>
+                    </div>
                     {[
-                        { label: 'Taxa de Conversão', value: sdr.rate, highlight: true },
-                        { label: 'Total Interações', value: totalInteractions, highlight: false },
-                        { label: 'Reunião por Ligação', value: sdr.calls > 0 ? `1 : ${Math.round(sdr.calls / Math.max(sdr.meetings, 1))}` : '—', highlight: false },
-                        { label: 'E-mails por Lead', value: sdr.emails, highlight: false },
-                        { label: 'WhatsApp por Lead', value: sdr.whatsapp, highlight: false },
+                        { label: '% Interação', value: sdr.total_leads_assigned > 0 ? `${Math.round(((sdr.calls + sdr.emails + sdr.whatsapp) / sdr.total_leads_assigned) * 100)}%` : '0%', highlight: false, icon: Activity, gradient: 'from-orange-500 to-amber-500' },
+                        { label: '% Conversão', value: sdr.rate, highlight: true, icon: Target, gradient: 'from-orange-500 to-rose-500' },
+                        { label: 'Reuniões Agendadas', value: sdr.meetings, highlight: false, icon: Handshake, gradient: 'from-indigo-500 to-blue-500' },
+                        { label: 'Cadências Concluídas', value: sdr.cadences, highlight: false, icon: CheckCircle2, gradient: 'from-emerald-500 to-teal-500' },
+                        { label: 'Total Interações', value: totalInteractions, highlight: false, icon: Zap, gradient: 'from-slate-700 to-slate-900' },
                     ].map((row: any, i: number) => (
-                        <div key={i} className={`flex items-center justify-between px-5 py-3.5 rounded-2xl border ${row.highlight ? 'bg-gradient-to-r from-orange-50 to-rose-50 border-orange-100' : 'bg-slate-50 border-slate-100'}`}>
-                            <span className="text-[12px] font-bold text-slate-600">{row.label}</span>
-                            <span className={`text-[15px] font-black ${row.highlight ? 'text-orange-600' : 'text-slate-800'}`}>{row.value}</span>
+                        <div key={i} className={`flex items-center justify-between px-6 py-5 rounded-[1.75rem] border transition-all hover:scale-[1.02] active:scale-[0.98] ${row.highlight ? `bg-gradient-to-r ${row.gradient} border-transparent text-white shadow-xl shadow-orange-500/20` : 'bg-white border-white/60 shadow-sm hover:shadow-lg hover:border-orange-200'}`}>
+                            <div className="flex items-center gap-4">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${row.highlight ? 'bg-white/20' : 'bg-slate-50 text-slate-400 group-hover:text-orange-500'}`}>
+                                    <row.icon size={18} strokeWidth={2.5} />
+                                </div>
+                                <span className={`text-[13px] font-bold tracking-tight ${row.highlight ? 'text-white' : 'text-slate-600'}`}>{row.label}</span>
+                            </div>
+                            <span className={`text-xl font-black ${row.highlight ? 'text-white' : 'text-slate-800'}`}>{row.value}</span>
                         </div>
                     ))}
                 </div>

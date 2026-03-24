@@ -35,11 +35,13 @@ class LeadsService {
 
             // 1. Deduplication Check
             const checkSql = `
-        SELECT id, full_name, email, current_column_id, assigned_sdr_id
-        FROM leads 
-        WHERE email = $1 OR (external_id = $2 AND external_id IS NOT NULL)
-      `;
-            const checkResult = await client.query(checkSql, [email, external_id]);
+                SELECT id, full_name, email, current_column_id, assigned_sdr_id
+                FROM leads 
+                WHERE email = $1 
+                   OR (external_id = $2 AND external_id IS NOT NULL)
+                   OR (phone = $3 AND phone IS NOT NULL AND phone != '')
+            `;
+            const checkResult = await client.query(checkSql, [email, external_id, phone]);
 
             if (checkResult.rows.length > 0) {
                 // --- DUPLICATE FOUND: UPDATE ---
@@ -54,7 +56,7 @@ class LeadsService {
           WHERE id = $2
           RETURNING id, updated_at
         `;
-                const updated = await client.query(updateSql, [JSON.stringify(metadata || {}), existingLead.id, leadData.lead_batch_id || null]);
+                const updated = await client.query(updateSql, [JSON.stringify(metadata || {}), existingLead.id, data.lead_batch_id || null]);
 
                 // Fetch SDR details for response
                 const sdrRes = await client.query('SELECT id, full_name, email FROM sdrs WHERE id = $1', [existingLead.assigned_sdr_id]);
@@ -108,7 +110,7 @@ class LeadsService {
                     external_id, full_name, company_name, job_title,
                     email, phone, linkedin_url, firstColumnId,
                     'pending', cadence_name || null, JSON.stringify(metadata || {}),
-                    leadData.lead_batch_id || null
+                    data.lead_batch_id || null
                 ];
 
                 const leadRes = await client.query(insertSql, insertParams);
@@ -261,10 +263,19 @@ class LeadsService {
         };
 
         // 1. Create a batch record
-        const batchName = `Importação - ${new Date().toLocaleString('pt-BR')}`;
+        const firstLead = leadsData[0] || {};
+        const cadencePreview = firstLead.cadence_name ? ` (${firstLead.cadence_name})` : '';
+        const batchName = `Lote ${leadsData.length} leads${cadencePreview} - ${new Date().toLocaleString('pt-BR')}`;
+        
+        const batchMetadata = {
+            cadence_name: firstLead.cadence_name || 'Nenhuma',
+            tags: firstLead.tags || [],
+            source: 'import'
+        };
+
         const batchResult = await db.query(
-            'INSERT INTO lead_batches (name, total_leads, origin) VALUES ($1, $2, $3) RETURNING id',
-            [batchName, leadsData.length, 'api_batch_export']
+            'INSERT INTO lead_batches (name, total_leads, origin, metadata, tags) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+            [batchName, leadsData.length, 'api_batch_export', JSON.stringify(batchMetadata), JSON.stringify(batchMetadata.tags)]
         );
         const batchId = batchResult.rows[0].id;
 
@@ -690,12 +701,35 @@ class LeadsService {
             UPDATE leads 
             SET assigned_sdr_id = NULL,
                 current_column_id = $1,
-                status = 'active',
+                status = 'Novo',
                 qualification_status = 'pending'
             WHERE assigned_sdr_id IS NOT NULL 
                OR current_column_id != $1
         `;
         return db.query(sql, [firstColumnId]);
+    }
+
+    async getLeadsByBatch(batchId) {
+        const sql = `
+            SELECT 
+                l.*, 
+                pc.name as current_column,
+                u.profile_picture_url as sdr_profile_picture_url,
+                u.role as sdr_role,
+                (l.metadata->'tags') as tags,
+                lc.id as lead_cadence_id,
+                lc.step_atual as cadence_step,
+                lc.max_steps as cadence_max_steps
+            FROM leads l
+            LEFT JOIN pipeline_columns pc ON l.current_column_id = pc.id
+            LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
+            LEFT JOIN users u ON s.user_id = u.id
+            LEFT JOIN lead_cadence lc ON lc.lead_id = l.id AND lc.status = 'ativa'
+            WHERE l.lead_batch_id = $1
+            ORDER BY l.created_at DESC
+        `;
+        const res = await db.query(sql, [batchId]);
+        return res.rows;
     }
 
 
@@ -899,16 +933,12 @@ class LeadsService {
     async logCallInteraction(leadId, data) {
         const { sdr_id, outcome, notes = '' } = data;
         
-        // Resolve userId from sdr_id because call_logs FK points to users.id
-        const sdrRes = await db.query('SELECT user_id FROM sdrs WHERE id = $1', [sdr_id]);
-        const targetId = sdrRes.rows[0]?.user_id || sdr_id;
-
         const sql = `
             INSERT INTO call_logs (lead_id, sdr_id, outcome, notes)
             VALUES ($1, $2, $3, $4)
             RETURNING *
         `;
-        return db.query(sql, [leadId, targetId, outcome, notes]);
+        return db.query(sql, [leadId, sdr_id, outcome, notes]);
     }
 
     async getLeadInteractions(id) {
@@ -932,6 +962,11 @@ class LeadsService {
             FROM schedules sch
             LEFT JOIN sdrs s ON sch.sdr_id = s.id
             WHERE sch.lead_id = $1
+            UNION ALL
+            SELECT 'cadence_attempt' as type, resultado as result, notes, cl.timestamp as created_at, s.full_name as author_name
+            FROM cadence_logs cl
+            LEFT JOIN sdrs s ON cl.sdr_id = s.id
+            WHERE cl.lead_id = $1
             ORDER BY created_at DESC
         `;
         const res = await db.query(sql, [id]);
@@ -952,10 +987,14 @@ class LeadsService {
             `;
             const completionRes = await client.query(completionSql, [leadId, sdr_id, notes, final_outcome]);
 
-            // 2. Update lead status if it's an opportunity or rejected
+            // 2. Update lead status based on outcome
             let status = 'active';
-            if (final_outcome === 'opportunity') status = 'qualified';
-            if (final_outcome === 'rejected') status = 'lost';
+            if (final_outcome === 'opportunity') {
+                status = 'qualified';
+            } else {
+                // Any other finalization (rejected or 100% completed) marks as lost to remove from active queue
+                status = 'lost';
+            }
 
             await client.query(`
                 UPDATE leads 
@@ -964,6 +1003,14 @@ class LeadsService {
                     metadata = metadata || jsonb_build_object('cadence_completed_at', CURRENT_TIMESTAMP)
                 WHERE id = $2
             `, [status, leadId]);
+
+            // 3. Mark the active cadence as completed if it exists
+            await client.query(`
+                UPDATE lead_cadence
+                SET status = 'concluida',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE lead_id = $1 AND status = 'ativa'
+            `, [leadId]);
 
             await client.query('COMMIT');
             return completionRes.rows[0];

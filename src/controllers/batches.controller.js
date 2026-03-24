@@ -42,10 +42,17 @@ exports.getBatchDetails = async (req, res, next) => {
     }
 
     const leadsRes = await db.query(
-      `SELECT l.*, lc.status as cadence_status, lc.step_atual, lc.max_steps
+      `SELECT l.*, 
+              lc.status as cadence_status, lc.step_atual, lc.max_steps,
+              u.profile_picture_url as sdr_profile_picture_url,
+              u.role as sdr_role,
+              s.full_name as assigned_sdr_name
        FROM leads l
        LEFT JOIN lead_cadence lc ON l.id = lc.lead_id
+       LEFT JOIN sdrs s ON l.assigned_sdr_id = s.id
+       LEFT JOIN users u ON s.user_id = u.id
        WHERE l.lead_batch_id = $1
+       ORDER BY l.created_at DESC
        LIMIT 500`,
       [id]
     );

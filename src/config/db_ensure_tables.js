@@ -253,6 +253,7 @@ const TABLE_DEFINITIONS = [
       lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
       sdr_id UUID NOT NULL REFERENCES sdrs(id) ON DELETE CASCADE,
       duration_seconds INTEGER,
+      outcome VARCHAR(50),
       status VARCHAR(50),
       notes TEXT,
       recording_url TEXT,
@@ -498,6 +499,7 @@ const COLUMN_MIGRATIONS = [
   { table: 'cadence_logs', column: 'notes', type: 'TEXT' },
   { table: 'leads', column: 'lead_batch_id', type: 'UUID REFERENCES lead_batches(id) ON DELETE SET NULL' },
   { table: 'cadence_logs', column: 'lead_cadence_id', type: 'UUID' },
+  { table: 'call_logs', column: 'outcome', type: 'VARCHAR(50)' },
 ];
 
 // ─── Função principal ────────────────────────────────────────────────────────

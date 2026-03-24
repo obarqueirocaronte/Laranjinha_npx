@@ -25,6 +25,7 @@ export interface Lead {
         [key: string]: any;
     };
     sdr_profile_picture_url?: string | null;
+    assigned_sdr_name?: string | null;
     lead_cadence_id?: string;
     cadence_step?: number;
     cadence_max_steps?: number;

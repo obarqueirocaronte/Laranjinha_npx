@@ -622,17 +622,15 @@ function BatchDetailsPanel({ batch, onClose }: { batch: LeadBatch, onClose: () =
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
-        // Mock fetch leads by batch 
         const fetchBatchLeads = async () => {
             setLoading(true);
             try {
-                // Future Implementation: use a dedicated route like `/batches/${batch.id}/leads`
-                // Defaulting to getActiveLeads to populate mock UI
-                const res = await leadsAPI.getActiveLeads();
-                if (res.success) {
-                    setLeads(res.data.slice(0, batch.total_leads < 30 ? batch.total_leads : 30));
+                const res = await batchesAPI.getDetails(batch.id);
+                if (res.success && res.data) {
+                    setLeads(res.data.leads || []);
                 }
             } catch (err) {
+                console.error('Error fetching batch leads:', err);
             } finally {
                 setLoading(false);
             }
@@ -767,17 +765,18 @@ function BatchDetailsPanel({ batch, onClose }: { batch: LeadBatch, onClose: () =
                                     </th>
                                     <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Lead</th>
                                     <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Empresa</th>
+                                    <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">SDR Atribuído</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {loading ? (
                                     Array.from({ length: 4 }).map((_, i) => (
                                         <tr key={i} className="animate-pulse">
-                                            <td className="p-4" colSpan={3}><div className="h-4 bg-slate-100 rounded w-1/2"></div></td>
+                                            <td className="p-4" colSpan={4}><div className="h-4 bg-slate-100 rounded w-1/2"></div></td>
                                         </tr>
                                     ))
                                 ) : filtered.length === 0 ? (
-                                    <tr><td colSpan={3} className="px-5 py-12 text-center text-slate-400 text-xs font-bold">Nenhum lead encontrado neste lote.</td></tr>
+                                    <tr><td colSpan={4} className="px-5 py-12 text-center text-slate-400 text-xs font-bold">Nenhum lead encontrado neste lote.</td></tr>
                                 ) : (
                                     filtered.map(lead => {
                                         const isSel = selectedIds.has(lead.id);
@@ -806,6 +805,22 @@ function BatchDetailsPanel({ batch, onClose }: { batch: LeadBatch, onClose: () =
                                                     </div>
                                                 </td>
                                                 <td className="px-5 py-3.5 text-[12px] text-slate-600 font-bold">{lead.company_name}</td>
+                                                <td className="px-5 py-3.5">
+                                                    {lead.assigned_sdr_id ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400">
+                                                                {lead.sdr_profile_picture_url ? (
+                                                                    <img src={lead.sdr_profile_picture_url} alt="" className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    lead.assigned_sdr_name?.charAt(0)
+                                                                )}
+                                                            </div>
+                                                            <span className="text-[11px] font-bold text-slate-500">{lead.assigned_sdr_name}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[10px] font-bold text-slate-300 uppercase italic">Não Atribuído</span>
+                                                    )}
+                                                </td>
                                             </tr>
                                         );
                                     })

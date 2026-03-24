@@ -65,10 +65,16 @@ class StatsService {
             'email': 'emails',
             'whatsapp': 'whatsapp',
             'calls': 'calls',
-            'emails': 'emails'
+            'emails': 'emails',
+            'connected': 'calls', // Maps to successful call interaction
+            'completed_leads': 'completed_leads',
+            'cycle_complete': 'completed_leads'
         };
 
-        if (!['contato', 'agendamento', 'reuniao', 'conexao', 'no-show', 'venda', 'perda'].includes(type)) {
+        const dbType = typeMap[type] || type;
+
+        if (!['calls', 'emails', 'whatsapp', 'completed_leads', 'contato', 'agendamento', 'reuniao', 'conexao'].includes(dbType)) {
+            console.warn(`[StatsService] Skip invalid activity type: ${type} -> ${dbType}`);
             return;
         }
 
@@ -223,7 +229,8 @@ class StatsService {
         const activitySql = `
             SELECT 
                 ((SELECT COUNT(*)::integer FROM call_logs ${combine(dateFilterCall, sdrFilterLog)}) + 
-                 (SELECT COUNT(*)::integer FROM cadence_logs ${combine(dateFilterCl, sdrFilterLog, "canal = 'call' AND acao = 'tentativa'")})) as total_calls,
+                 (SELECT COUNT(*)::integer FROM cadence_logs ${combine(dateFilterCl, sdrFilterLog, "resultado IN ('connected','not_interested','no_answer','busy','voicemail','invalid_number','spam','reschedule')")})) as total_calls,
+                ((SELECT COUNT(*)::integer FROM cadence_logs ${combine(dateFilterCl, sdrFilterLog, "resultado = 'connected'")})) as total_contacts,
                 ((SELECT COUNT(*)::integer FROM interactions_log ${combine("action_type = 'EMAIL_SENT'", andFilterInt ? andFilterInt.replace(/^AND\s+/, '') : '', sdrFilterLog)}) + 
                  (SELECT COUNT(*)::integer FROM cadence_logs ${combine("canal = 'email' AND acao = 'tentativa'", andFilterCl ? andFilterCl.replace(/^AND\s+/, '') : '', sdrFilterLog)})) as total_emails,
                 ((SELECT COUNT(*)::integer FROM interactions_log ${combine("action_type = 'WHATSAPP_SENT'", andFilterInt ? andFilterInt.replace(/^AND\s+/, '') : '', sdrFilterLog)}) +
@@ -276,7 +283,8 @@ class StatsService {
                 s.total_leads_assigned,
                 COALESCE(ac.pending_leads, 0)::integer as pending_leads,
                 COALESCE(mc.movements, 0)::integer as pipeline_movements,
-                (SELECT COUNT(*)::integer FROM call_logs cl WHERE cl.sdr_id = s.id ${andFilterCall}) as calls,
+                (SELECT COUNT(*)::integer FROM call_logs cl WHERE cl.sdr_id = s.id ${andFilterCall}) +
+                (SELECT COUNT(*)::integer FROM cadence_logs cl WHERE cl.sdr_id = s.id AND cl.resultado IN ('connected','not_interested','no_answer','busy','voicemail','invalid_number','spam','reschedule') ${andFilterCl}) as calls,
                 (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'EMAIL_SENT' ${andFilterInt}) as emails,
                 (SELECT COUNT(*)::integer FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'WHATSAPP_SENT' ${andFilterInt}) as whatsapp,
                 (SELECT COUNT(*)::integer FROM cadence_completions cc WHERE cc.sdr_id = s.id ${andFilterComp}) as completed,
@@ -406,7 +414,7 @@ class StatsService {
      * Get detailed BI stats for the premium dashboard.
      * Supports filtering by SDR and custom date range.
      */
-    async getBIFullStats(sdrId = 'all', startDate = null, endDate = null) {
+    async getBIFullStats(sdrId = 'all', startDate = null, endDate = null, searchTerm = null) {
         const w = (sdrField, dateField) => {
             const clauses = [];
             const p = [];
@@ -422,6 +430,10 @@ class StatsService {
                 clauses.push(`${dateField} <= $${p.length + 1}`);
                 p.push(endDate + ' 23:59:59');
             }
+            if (searchTerm) {
+                clauses.push(`(l.full_name ILIKE $${p.length + 1} OR l.company_name ILIKE $${p.length + 1} OR lb.original_filename ILIKE $${p.length + 1})`);
+                p.push(`%${searchTerm}%`);
+            }
             return { where: clauses.length ? 'WHERE ' + clauses.join(' AND ') : '', params: p };
         };
 
@@ -434,20 +446,32 @@ class StatsService {
 
         const q = (sql, params) => db.query(sql, params);
 
-        const [callsRes, reschedRes, emailsRes, wppRes, meetingsRes, cadFin, cadAct, leadsRes, batchRes] = await Promise.all([
-            q(`SELECT COUNT(*)::integer as c FROM call_logs ${wCalls.where}`, wCalls.params),
-            q(`SELECT COUNT(*)::integer as c FROM cadence_logs ${wCad.where ? wCad.where + ' AND' : 'WHERE'} outcome = 'reschedule'`, wCad.params),
-            q(`SELECT COUNT(*)::integer as c FROM interactions_log ${wInt.where ? wInt.where + ' AND' : 'WHERE'} action_type = 'EMAIL_SENT'`, wInt.params),
-            q(`SELECT COUNT(*)::integer as c FROM interactions_log ${wInt.where ? wInt.where + ' AND' : 'WHERE'} action_type = 'WHATSAPP_SENT'`, wInt.params),
-            q(`SELECT COUNT(*)::integer as c FROM cadence_completions ${wComp.where ? wComp.where + ' AND' : 'WHERE'} final_outcome IN ('opportunity','won')`, wComp.params),
-            q(`SELECT COUNT(*)::integer as c FROM lead_cadence ${wLeadsLC.where ? wLeadsLC.where + ' AND' : 'WHERE'} status = 'concluida'`, wLeadsLC.params),
-            q(`SELECT COUNT(*)::integer as c FROM lead_cadence ${wLeadsLC.where ? wLeadsLC.where + ' AND' : 'WHERE'} status = 'ativo'`, wLeadsLC.params),
-            q(`SELECT COUNT(*)::integer as c FROM leads ${wLeads.where}`, wLeads.params),
+        // Enhance queries with lead/batch join if searchTerm exists
+        const buildJointQuery = (baseTable, baseWhere, extraJoin = '') => {
+            if (!searchTerm) {
+                return `SELECT COUNT(*)::integer as c FROM ${baseTable} ${baseWhere.where}`;
+            }
+            // If searching, we need to join with leads and batches
+            let join = extraJoin || `LEFT JOIN leads l ON l.id = ${baseTable}.lead_id LEFT JOIN lead_batches lb ON lb.id = l.lead_batch_id`;
+            return `SELECT COUNT(DISTINCT ${baseTable}.id)::integer as c FROM ${baseTable} ${join} ${baseWhere.where}`;
+        };
+
+        const [callsRes, connectedRes, reschedRes, emailsRes, wppRes, meetingsRes, cadFin, cadAct, leadsRes, batchRes] = await Promise.all([
+            q(buildJointQuery('call_logs', wCalls), wCalls.params),
+            q(buildJointQuery('cadence_logs', wCad, "LEFT JOIN leads l ON l.id = cadence_logs.lead_id LEFT JOIN lead_batches lb ON lb.id = l.lead_batch_id") + (wCad.where ? ' AND' : ' WHERE') + " resultado = 'connected'", wCad.params),
+            q(buildJointQuery('cadence_logs', wCad, "LEFT JOIN leads l ON l.id = cadence_logs.lead_id LEFT JOIN lead_batches lb ON lb.id = l.lead_batch_id") + (wCad.where ? ' AND' : ' WHERE') + " resultado = 'reschedule'", wCad.params),
+            q(buildJointQuery('interactions_log', wInt) + (wInt.where ? ' AND' : ' WHERE') + " action_type = 'EMAIL_SENT'", wInt.params),
+            q(buildJointQuery('interactions_log', wInt) + (wInt.where ? ' AND' : ' WHERE') + " action_type = 'WHATSAPP_SENT'", wInt.params),
+            q(buildJointQuery('cadence_completions', wComp) + (wComp.where ? ' AND' : ' WHERE') + " final_outcome IN ('opportunity','won')", wComp.params),
+            q(buildJointQuery('lead_cadence', wLeadsLC, "LEFT JOIN leads l ON l.id = lead_cadence.lead_id LEFT JOIN lead_batches lb ON lb.id = l.lead_batch_id") + (wLeadsLC.where ? ' AND' : ' WHERE') + " status = 'concluida'", wLeadsLC.params),
+            q(buildJointQuery('lead_cadence', wLeadsLC, "LEFT JOIN leads l ON l.id = lead_cadence.lead_id LEFT JOIN lead_batches lb ON lb.id = l.lead_batch_id") + (wLeadsLC.where ? ' AND' : ' WHERE') + " status = 'ativa'", wLeadsLC.params),
+            q(buildJointQuery('leads', wLeads, "LEFT JOIN lead_batches lb ON lb.id = leads.lead_batch_id"), wLeads.params),
             q(`SELECT COUNT(DISTINCT id)::integer as c FROM lead_batches`, []),
         ]);
 
         const basicStats = {
-            total_calls:       (parseInt(callsRes.rows[0].c) || 0) + (parseInt(reschedRes.rows[0].c) || 0),
+            total_calls:       (parseInt(callsRes.rows[0].c) || 0) + (parseInt(reschedRes.rows[0].c) || 0) + (parseInt(connectedRes.rows[0].c) || 0),
+            total_contacts:    parseInt(connectedRes.rows[0].c) || 0,
             total_emails:      parseInt(emailsRes.rows[0].c) || 0,
             total_whatsapp:    parseInt(wppRes.rows[0].c) || 0,
             total_meetings:    parseInt(meetingsRes.rows[0].c) || 0,
@@ -485,7 +509,7 @@ class StatsService {
 
         const sdrPerfRes = await q(`
             SELECT 
-                s.full_name, s.id as sdr_id,
+                s.full_name, s.id as sdr_id, s.total_leads_assigned,
                 (SELECT COUNT(*) FROM call_logs cl WHERE cl.sdr_id = s.id ${sdrCallClauses.length ? 'AND ' + sdrCallClauses.join(' AND ') : ''}) as calls,
                 (SELECT COUNT(*) FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'EMAIL_SENT') as emails,
                 (SELECT COUNT(*) FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'WHATSAPP_SENT') as whatsapp,

@@ -90,13 +90,13 @@ class NotificationSchedulerService {
             fields: [
                 {
                     short: true,
-                    title: 'Cadências Finalizadas',
-                    value: `**${summary.total_completed || 0}** leads`
+                    title: 'Contatos Realizados',
+                    value: `**${summary.total_contacts || 0}** conexões`
                 },
                 {
                     short: true,
-                    title: 'Cadências Pendentes',
-                    value: `**${summary.total_pending || 0}** leads`
+                    title: 'Cadências Finalizadas',
+                    value: `**${summary.total_completed || 0}** leads`
                 }
             ],
             actions: [
