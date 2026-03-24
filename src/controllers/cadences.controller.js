@@ -901,20 +901,23 @@ exports.getCadencesDashboard = async (req, res, next) => {
          COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida' AND lc.resultado_anterior = 'success') AS conversoes,
          (SELECT COUNT(*)::integer FROM cadence_logs cl_acc WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'call' AND cl_acc.acao = 'tentativa' AND cl_acc.resultado IS NOT NULL ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}) AS ligacoes,
          (SELECT COUNT(*)::integer FROM cadence_logs cl_acc WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'email' AND cl_acc.acao = 'tentativa' AND cl_acc.resultado IS NOT NULL ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}) AS emails,
-         (SELECT COUNT(*)::integer FROM cadence_logs cl_acc WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'whatsapp' AND cl_acc.acao = 'tentativa' AND cl_acc.resultado IS NOT NULL ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}) AS whatsapp,
-         CASE
-           WHEN COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida') > 0
-           THEN ROUND((COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida' AND lc.resultado_anterior = 'success')::numeric /
-                  COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida')) * 100, 1)
-           ELSE 0
-         END AS taxa_conversao
-       FROM sdrs s
-       LEFT JOIN lead_cadence lc ON lc.sdr_id = s.id ${dateFilter ? dateFilter.replace('lc.', 'lc.') : ''}
-       ${sdr_id ? `WHERE s.id = $1` : ''}
-       GROUP BY s.id, s.full_name
-       ORDER BY leads_ativos DESC`,
-      paramsSdr
-    );
+        FROM cadence_logs cl_acc
+        WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'whatsapp' AND cl_acc.acao = 'tentativa' AND cl_acc.resultado IS NOT NULL
+          ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}
+      ) AS whatsapp,
+      CASE
+        WHEN COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida') > 0
+        THEN ROUND((COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida' AND lc.resultado_anterior = 'success')::numeric /
+               COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida')) * 100, 1)
+        ELSE 0
+      END AS taxa_conversao
+    FROM sdrs s
+    LEFT JOIN lead_cadence lc ON lc.sdr_id = s.id ${dateFilter ? dateFilter : ''}
+    ${sdr_id ? `WHERE s.id = $1` : ''}
+    GROUP BY s.id, s.full_name
+    ORDER BY leads_ativos DESC`,
+   paramsSdr
+ );
 
     // ── OUTCOME SUMMARY: contagem por resultado ──────────────
     const outcomeSummaryRes = await db.query(
