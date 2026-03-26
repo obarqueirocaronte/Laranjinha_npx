@@ -108,7 +108,7 @@ export const CycleCompleteModal: React.FC<CycleCompleteModalProps> = ({ isOpen, 
                                 {step === 'outcome' ? (
                                     <>A cadência de <strong className="text-orange-600 font-black">{lead.full_name}</strong> chegou ao fim. Qual o resultado final?</>
                                 ) : step === 'opportunity_flow' ? (
-                                    <>Confirmar <strong className="text-emerald-600 font-black">Nova Oportunidade</strong>? Isso moverá o lead para o CRM.</>
+                                    <>Confirmar <strong className="text-emerald-600 font-black">Negócio Ganho</strong>? Isso enviará a notificação para Novos Negócios.</>
                                 ) : (
                                     <>Alguma observação final sobre <strong className="text-slate-700 font-black">{lead.full_name}</strong>?</>
                                 )}
@@ -124,8 +124,8 @@ export const CycleCompleteModal: React.FC<CycleCompleteModalProps> = ({ isOpen, 
                                         className="grid grid-cols-1 gap-4 mt-2"
                                     >
                                         {[
-                                            { id: 'opportunity', label: 'Nova Oportunidade', sub: 'Mover p/ CRM / Agenda', icon: <Target size={24} strokeWidth={2.5} />, color: 'emerald' },
-                                            { id: 'finished', label: 'Lead Finalizado', sub: 'Concluir Ciclo/Cadência', icon: <CheckCircle2 size={24} strokeWidth={2.5} />, color: 'blue' },
+                                            { id: 'opportunity', label: 'Negócio Ganho', sub: 'Enviar Oportunidade / CRM', icon: <Target size={24} strokeWidth={2.5} />, color: 'emerald' },
+                                            { id: 'finished', label: 'Encerrar Ciclo', sub: 'Sem Negócio / Perdido', icon: <CheckCircle2 size={24} strokeWidth={2.5} />, color: 'blue' },
                                         ].map((item) => (
                                             <div key={item.id} className="relative group">
                                                 <button
@@ -133,7 +133,7 @@ export const CycleCompleteModal: React.FC<CycleCompleteModalProps> = ({ isOpen, 
                                                     className={clsx(
                                                         "w-full py-6 rounded-[28px] border-2 flex flex-col items-center justify-center gap-2 transition-all duration-300 shadow-sm",
                                                         item.color === 'emerald' && "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400/30 hover:bg-emerald-700 hover:shadow-lg",
-                                                        item.color === 'blue' && "bg-blue-50 border-blue-100/50 text-blue-600 hover:bg-blue-500 hover:text-white hover:shadow-blue-200"
+                                                        item.color === 'blue' && "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-500/20 ring-1 ring-blue-400/30 hover:bg-blue-700 hover:shadow-lg"
                                                     )}
                                                 >
                                                     <div className="transition-transform group-hover:scale-110 duration-500">

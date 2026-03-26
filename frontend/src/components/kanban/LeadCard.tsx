@@ -638,7 +638,7 @@ export const LeadCard = React.memo<LeadCardProps>(({
                             <ActionButton 
                                 icon={Check} 
                                 color="text-white bg-emerald-600 border-emerald-500 hover:bg-emerald-700 shadow-emerald-600/30" 
-                                text="Concluir"
+                                text="Finalizar"
                                 isConclusion
                                 onClick={(e: any) => { e.stopPropagation(); onFinish?.(lead); }} 
                             />

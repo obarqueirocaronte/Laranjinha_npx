@@ -105,7 +105,7 @@ export const KanbanBoard = ({
                     leadsAPI.getColumns(),
                     // SDRs only see their own leads; managers see all or selected SDR
                     leadsAPI.getSegments('qualification_status', 'qualified', 
-                        selectedSdrId || (user?.role === 'sdr' ? user?.id : undefined)
+                        selectedSdrId || (user?.role === 'sdr' ? (user?.sdr_id || user?.id) : undefined)
                     )
                 ]);
 

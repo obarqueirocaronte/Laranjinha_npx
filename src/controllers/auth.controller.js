@@ -452,6 +452,7 @@ async function getCurrentUser(req, res) {
                     isVerified: user.is_verified,
                     createdAt: user.created_at,
                     profile_picture_url: user.profile_picture_url || null,
+                    sdr_id: user.sdr_id || null,
                 },
             },
         });

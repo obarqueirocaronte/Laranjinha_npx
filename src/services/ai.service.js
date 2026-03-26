@@ -166,8 +166,8 @@ Número pré-processado localmente: "${localNormalized}"
         if (!this.mattermostWebhook) throw new Error('Mattermost Webhook not configured');
 
         const message = `
-### 🎯 **Nova Oportunidade Detectada!** 🚀
-Um SDR acaba de qualificar um lead para o canal de **NOVOS NEGÓCIOS**.
+### 🎯 **Negócio Ganho!** 🚀
+Um SDR acaba de finalizar um ciclo com sucesso no canal de **NOVOS NEGÓCIOS**.
 
 **Dados do Cliente:**
 - **Nome:** ${lead.full_name}

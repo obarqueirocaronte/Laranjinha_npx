@@ -201,7 +201,10 @@ async function login(email, password) {
 
     // Find user
     const result = await pool.query(
-        'SELECT id, email, password_hash, is_verified, is_admin, profile_picture_url FROM users WHERE email = $1',
+        `SELECT u.id, u.email, u.password_hash, u.is_verified, u.is_admin, u.profile_picture_url, s.id as sdr_id 
+         FROM users u 
+         LEFT JOIN sdrs s ON u.id = s.user_id 
+         WHERE u.email = $1`,
         [email]
     );
 
@@ -249,6 +252,7 @@ async function login(email, password) {
             email: user.email,
             isAdmin: user.is_admin,
             profile_picture_url: user.profile_picture_url,
+            sdr_id: user.sdr_id || null
         },
     };
 }
@@ -355,7 +359,10 @@ async function getUserById(userId) {
     }
 
     const result = await pool.query(
-        'SELECT id, email, is_verified, is_admin, profile_picture_url, created_at FROM users WHERE id = $1',
+        `SELECT u.id, u.email, u.is_verified, u.is_admin, u.profile_picture_url, u.created_at, s.id as sdr_id 
+         FROM users u 
+         LEFT JOIN sdrs s ON u.id = s.user_id 
+         WHERE u.id = $1`,
         [userId]
     );
 

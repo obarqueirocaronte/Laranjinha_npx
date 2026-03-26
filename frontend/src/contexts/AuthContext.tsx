@@ -15,6 +15,7 @@ interface User {
     role?: 'manager' | 'sdr' | 'salesops';
     isAdmin?: boolean;
     profile_picture_url?: string | null;
+    sdr_id?: string | null;
 }
 
 interface AuthContextType {
@@ -77,12 +78,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         const roleMap: Record<string, 'manager' | 'sdr' | 'salesops'> = {
                             manager: 'manager', salesops: 'salesops', sdr: 'sdr'
                         };
-                        const updatedUser = {
+                        const updatedUser: User = {
                             id: u.id,
                             email: u.email,
                             role: roleMap[u.role] || (u.is_admin ? 'manager' : 'sdr'),
                             isAdmin: u.is_admin || u.role === 'salesops',
-                            profile_picture_url: u.profile_picture_url || null
+                            profile_picture_url: u.profile_picture_url || null,
+                            sdr_id: u.sdr_id || null
                         };
                         setUser(updatedUser);
                         // Sync localStorage with fresh data from server
@@ -119,7 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 email: apiUser.email,
                 role: (apiUser.role as 'manager' | 'sdr' | 'salesops') || (apiUser.isAdmin ? 'manager' : 'sdr'),
                 isAdmin: apiUser.isAdmin || apiUser.role === 'salesops',
-                profile_picture_url: apiUser.profile_picture_url
+                profile_picture_url: apiUser.profile_picture_url,
+                sdr_id: apiUser.sdr_id || null
             };
 
             localStorage.setItem('auth_token', token);
