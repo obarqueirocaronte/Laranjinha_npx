@@ -394,7 +394,7 @@ class StatsService {
                 updated_at = CURRENT_TIMESTAMP
             RETURNING *
         `;
-        const res = await db.query(sql, [webhook_url, schedule_times, is_active, last_sent_at, JSON.stringify(sdr_ids || [])]);
+        const res = await db.query(sql, [webhook_url, JSON.stringify(schedule_times || []), is_active, last_sent_at, JSON.stringify(sdr_ids || [])]);
         
         if (res.rows.length === 0) {
             // If somehow deleted, re-insert
