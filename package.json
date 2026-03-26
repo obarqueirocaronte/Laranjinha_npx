@@ -13,7 +13,7 @@
     "test:mattermost": "node scripts/test_mattermost.js",
     "db:init": "node scripts/init-db.js",
     "db:migrate": "node run_migrations.js",
-    "db:setup": "node -e \"require('./src/config/db_ensure_tables').ensureTables()\" && npm run db:migrate"
+    "db:setup": "node -e \"const {ensureTables}=require('./src/config/db_ensure_tables');ensureTables().then(()=>process.exit(0)).catch(e=>{console.error(e);process.exit(1)})\" && npm run db:migrate"
   },
   "keywords": [],
   "author": "",
