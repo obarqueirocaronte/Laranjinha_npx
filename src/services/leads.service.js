@@ -480,8 +480,8 @@ class LeadsService {
         if (filterType === 'all_pending') {
             whereClause = `WHERE qualification_status = 'pending'`;
         } else if (filterType === 'tag') {
-            params.push(`%${filterValue}%`);
-            whereClause = `WHERE metadata::text ILIKE $${params.length}`;
+            params.push(JSON.stringify([filterValue]));
+            whereClause = `WHERE metadata->'tags' @> $${params.length}`;
         } else if (filterType === 'campaign') {
             params.push(filterValue);
             whereClause = `WHERE cadence_name = $${params.length} OR metadata->>'campaign' = $${params.length}`;
@@ -506,30 +506,47 @@ class LeadsService {
      */
     async getTags() {
         const sql = `
-            SELECT 
-                t.name,
-                COUNT(lt.lead_id) as count
-            FROM tags t
-            LEFT JOIN lead_tags lt ON lt.tag_id = t.id
-            GROUP BY t.name
+            WITH all_tags AS (
+                -- Tags do sistema (tabela tags)
+                SELECT t.name, COUNT(lt.lead_id) as count
+                FROM tags t
+                LEFT JOIN lead_tags lt ON lt.tag_id = t.id
+                GROUP BY t.name
+                
+                UNION ALL
+                
+                -- Tags da importação (metadata->'tags')
+                SELECT name, COUNT(*) as count
+                FROM (
+                    SELECT jsonb_array_elements_text(metadata->'tags') as name
+                    FROM leads
+                    WHERE metadata->'tags' IS NOT NULL
+                ) sub
+                GROUP BY name
+            )
+            SELECT name, SUM(count)::int as count
+            FROM all_tags
+            GROUP BY name
+            HAVING SUM(count) > 0
             ORDER BY count DESC
+            LIMIT 50
         `;
-        let res;
         try {
-            res = await db.query(sql);
+            const res = await db.query(sql);
+            return res.rows;
         } catch (e) {
-            // Fallback: try to extract tags from metadata JSONB
+            console.error('[LeadsService] Error in getTags:', e);
+            // Fallback ultra-simples se a query complexa falhar
             const fallbackSql = `
                 SELECT DISTINCT jsonb_array_elements_text(metadata->'tags') as name,
-                       COUNT(*) OVER (PARTITION BY jsonb_array_elements_text(metadata->'tags')) as count
+                       1 as count
                 FROM leads
                 WHERE metadata->'tags' IS NOT NULL
-                ORDER BY count DESC
                 LIMIT 30
             `;
-            res = await db.query(fallbackSql);
+            const res = await db.query(fallbackSql);
+            return res.rows;
         }
-        return res.rows;
     }
 
     /**
@@ -550,8 +567,8 @@ class LeadsService {
         if (filterType === 'all_pending') {
             sql += ` WHERE l.qualification_status = 'pending'`;
         } else if (filterType === 'tag') {
-            params.push(`%${filterValue}%`);
-            sql += ` WHERE l.metadata::text ILIKE $1`;
+            params.push(JSON.stringify([filterValue]));
+            sql += ` WHERE l.metadata->'tags' @> $1`;
         } else if (filterType === 'lead') {
             params.push(`%${filterValue}%`);
             sql += ` WHERE (l.full_name ILIKE $1 OR l.email ILIKE $1 OR l.company_name ILIKE $1)`;
@@ -599,8 +616,8 @@ class LeadsService {
             if (filterType === 'all_pending') {
                 selectSql += ` AND qualification_status = 'pending'`;
             } else if (filterType === 'tag') {
-                params.push(`%${filterValue}%`);
-                selectSql += ` AND metadata::text ILIKE $${params.length}`;
+                params.push(JSON.stringify([filterValue]));
+                selectSql += ` AND metadata->'tags' @> $${params.length}`;
             } else if (filterType === 'lead') {
                 params.push(`%${filterValue}%`);
                 selectSql += ` AND (full_name ILIKE $${params.length} OR email ILIKE $${params.length})`;

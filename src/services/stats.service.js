@@ -510,13 +510,16 @@ class StatsService {
         const sdrPerfRes = await q(`
             SELECT 
                 s.full_name, s.id as sdr_id, s.total_leads_assigned,
+                u.profile_picture_url,
                 (SELECT COUNT(*) FROM call_logs cl WHERE cl.sdr_id = s.id ${sdrCallClauses.length ? 'AND ' + sdrCallClauses.join(' AND ') : ''}) as calls,
                 (SELECT COUNT(*) FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'EMAIL_SENT') as emails,
                 (SELECT COUNT(*) FROM interactions_log il WHERE il.sdr_id = s.id AND il.action_type = 'WHATSAPP_SENT') as whatsapp,
                 (SELECT COUNT(*) FROM cadence_completions cc WHERE cc.sdr_id = s.id AND cc.final_outcome IN ('opportunity','won') ${sdrDateFilter}) as meetings,
                 (SELECT COUNT(*) FROM lead_cadence lc2 WHERE lc2.sdr_id = s.id AND lc2.status = 'concluida') as cadences_done,
                 (SELECT COUNT(*) FROM lead_cadence lc3 WHERE lc3.sdr_id = s.id AND lc3.status = 'ativa') as cadences_active
-            FROM sdrs s WHERE s.is_active = true ORDER BY meetings DESC
+            FROM sdrs s 
+            LEFT JOIN users u ON s.user_id = u.id
+            WHERE s.is_active = true ORDER BY meetings DESC
         `, sdrPerfParams);
 
         // ── Operational Data ──
@@ -579,6 +582,60 @@ class StatsService {
             LEFT JOIN leads l ON l.current_column_id = pc.id
             GROUP BY pc.name, pc.position ORDER BY pc.position
         `, []);
+ 
+        // ── Zona 3: Deep Analytics calculations ──
+        const totalLeads = parseInt(leadsRes.rows[0]?.c) || 0;
+        const totalMeetings = parseInt(meetingsRes.rows[0]?.c) || 0;
+        const totalCadences = (parseInt(cadFin.rows[0]?.c) || 0) + (parseInt(cadAct.rows[0]?.c) || 0);
+        
+        // Conversão (Lead -> Reunião): (Reuniões agendadas / Total de leads recebidos) * 100
+        const conversionRate = totalLeads > 0 ? ((totalMeetings / totalLeads) * 100) : 0;
+
+        // Conclusão: (Leads Step 3 ou Concluídos / Total entrou na Cadência) * 100
+        // Usamos steps_breakdown para contar quem está no step 3
+        const step3Leads = stepsRes.rows.find(r => r.step >= 3)?.lead_count || 0;
+        const totalConcludedOrStep3 = (parseInt(cadFin.rows[0]?.c) || 0) + parseInt(step3Leads);
+        const completionRate = totalCadences > 0 ? ((totalConcludedOrStep3 / totalCadences) * 100) : 0;
+
+        // Won (Qualidade): (Reunião agendada / Qualificado) * 100
+        // 'meetings' represents scheduled meetings (opportunity/won)
+        // We'll count 'qualified' leads from the qualification_status field
+        const qualifiedRes = await q(buildJointQuery('leads', wLeads, "LEFT JOIN lead_batches lb ON lb.id = leads.lead_batch_id") + (wLeads.where ? ' AND' : ' WHERE') + " qualification_status = 'qualified'", wLeads.params);
+        const totalQualified = parseInt(qualifiedRes.rows[0]?.c) || 0;
+        const wonRate = totalQualified > 0 ? ((totalMeetings / totalQualified) * 100) : 0;
+
+        // ── Tag Analytics ──
+        const wLeadsTags = w('l.assigned_sdr_id', 'l.created_at');
+        const tagPerformance = await q(`
+            SELECT 
+                t.tag,
+                COUNT(l.id)::integer as total_leads,
+                COUNT(cc.id)::integer as meetings,
+                ROUND((COUNT(cc.id)::numeric / NULLIF(COUNT(l.id), 0)::numeric) * 100, 1)::float as conversion_rate,
+                AVG(EXTRACT(EPOCH FROM (cc.completed_at - l.created_at))/3600)::numeric(10,1)::float as avg_hours_to_meeting
+            FROM leads l
+            CROSS JOIN LATERAL jsonb_array_elements_text(l.metadata->'tags') t(tag)
+            LEFT JOIN cadence_completions cc ON cc.lead_id = l.id AND cc.final_outcome IN ('opportunity', 'won')
+            ${wLeadsTags.where}
+            GROUP BY t.tag
+            ORDER BY total_leads DESC
+            LIMIT 15
+        `, wLeadsTags.params);
+
+        // Loss Autopsy
+        const lossAutopsy = await q(`
+            SELECT 
+                t.tag,
+                COUNT(l.id)::integer as count
+            FROM leads l
+            CROSS JOIN LATERAL jsonb_array_elements_text(l.metadata->'tags') t(tag)
+            ${wLeadsTags.where} ${wLeadsTags.where ? 'AND' : 'WHERE'} l.status = 'lost'
+            GROUP BY t.tag
+            ORDER BY count DESC
+        `, wLeadsTags.params);
+
+        const totalIntercationsValue = (basicStats.total_calls || 0) + (basicStats.total_emails || 0) + (basicStats.total_whatsapp || 0);
+        const engagementRate = basicStats.total_leads > 0 ? ( (basicStats.total_contacts || 0) / basicStats.total_leads * 100 ) : 0;
 
         return {
             ...basicStats,
@@ -591,7 +648,20 @@ class StatsService {
             avg_completion_hours: Math.round(Number(avgTimeRes.rows[0]?.avg_hours) || 0),
             conversion_by_batch: batchConvRes.rows,
             pipeline_distribution: pipelineRes.rows,
+            deep_analytics: {
+                conversion_rate: Number(conversionRate.toFixed(1)),
+                completion_rate: Number(completionRate.toFixed(1)),
+                won_rate: Number(wonRate.toFixed(1)),
+                total_qualified: totalQualified,
+                tag_performance: tagPerformance.rows,
+                loss_autopsy: lossAutopsy.rows,
+                engagement_rate: Number(engagementRate.toFixed(1)),
+                total_interactions: totalIntercationsValue,
+                total_meetings: totalMeetings,
+                total_concluded: basicStats.cadences_finished
+            }
         };
+
     }
 }
 

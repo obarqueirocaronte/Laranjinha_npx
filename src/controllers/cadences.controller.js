@@ -90,8 +90,8 @@ exports.applyCadence = async (req, res, next) => {
       if (filter_type === 'all_pending') {
           qs = `SELECT id FROM leads WHERE qualification_status = 'pending' AND id NOT IN (SELECT lead_id FROM lead_cadence WHERE status = 'ativa')`;
       } else if (filter_type === 'tag') {
-          qs = `SELECT id FROM leads WHERE metadata::text ILIKE $1 AND id NOT IN (SELECT lead_id FROM lead_cadence WHERE status = 'ativa')`;
-          params.push(`%${filter_value}%`);
+          qs = `SELECT id FROM leads WHERE metadata->'tags' @> $1 AND id NOT IN (SELECT lead_id FROM lead_cadence WHERE status = 'ativa')`;
+          params.push(JSON.stringify([filter_value]));
       } else if (filter_type === 'lead') {
           qs = `SELECT id FROM leads WHERE (full_name ILIKE $1 OR company_name ILIKE $1 OR email ILIKE $1) AND id NOT IN (SELECT lead_id FROM lead_cadence WHERE status = 'ativa')`;
           params.push(`%${filter_value}%`);
@@ -826,31 +826,63 @@ exports.getCadencesDashboard = async (req, res, next) => {
     }
 
     // ── ZONA CRÍTICA: cadências paradas > 24h ──────────────────
+    // Regra: (Current Time - Last Interaction Time) > 24h OU (Current Time - Agendamento) > 0
     const criticaRes = await db.query(
       `SELECT lc.id, lc.lead_id, l.full_name AS lead_name, l.company_name,
               s.full_name AS sdr_name, lc.step_atual, lc.max_steps,
-              lc.proxima_acao_em,
-              ROUND(EXTRACT(EPOCH FROM (NOW() - lc.proxima_acao_em))/3600) AS horas_parada
+              lc.proxima_acao_em, l.last_interaction_at,
+              COALESCE(
+                ROUND(EXTRACT(EPOCH FROM (NOW() - lc.proxima_acao_em))/3600),
+                0
+              ) AS horas_parada
        FROM lead_cadence lc
        JOIN leads l ON lc.lead_id = l.id
        LEFT JOIN sdrs s ON lc.sdr_id = s.id
        WHERE lc.status = 'ativa'
-         AND lc.proxima_acao_em < NOW() - INTERVAL '24 hours'
+         AND (
+           (lc.proxima_acao_em < NOW() - INTERVAL '24 hours')
+           OR 
+           (EXISTS (SELECT 1 FROM schedules sc WHERE sc.lead_id = l.id AND sc.status = 'pending' AND sc.scheduled_at < NOW()))
+         )
          ${sdrFilter}
        ORDER BY lc.proxima_acao_em ASC
        LIMIT 50`,
       paramsSdr
     );
 
-    // ── ZONA PROGRESSO: cadências ativas em andamento ──────────
-    const progressoRes = await db.query(
-      `SELECT lc.step_atual, COUNT(*) AS total
+    // ── ZONA PROGRESSO: Distribuição por Step (Linearidade) ──────
+    // Step 1: 0 interações
+    // Step 2: 1 interação + > 24h espera
+    // Step 3: 2+ interações + > 24h espera
+    const rawStepsRes = await db.query(
+      `WITH lead_attempts AS (
+         SELECT lead_id, COUNT(*) as attempts
+         FROM cadence_logs
+         WHERE acao = 'tentativa' AND resultado IS NOT NULL
+         GROUP BY lead_id
+       )
+       SELECT 
+         COUNT(*) FILTER (WHERE COALESCE(la.attempts, 0) = 0) as step_1,
+         COUNT(*) FILTER (WHERE la.attempts = 1 AND lc.proxima_acao_em < NOW() - INTERVAL '24 hours') as step_2,
+         COUNT(*) FILTER (WHERE la.attempts >= 2 AND lc.proxima_acao_em < NOW() - INTERVAL '24 hours') as step_3,
+         COUNT(*) as total_ativos
        FROM lead_cadence lc
-       WHERE lc.status = 'ativa' ${sdrFilter}
-       GROUP BY lc.step_atual
-       ORDER BY lc.step_atual`,
+       LEFT JOIN lead_attempts la ON lc.lead_id = la.lead_id
+       WHERE lc.status = 'ativa' ${sdrFilter}`,
       paramsSdr
     );
+    const stepsData = rawStepsRes.rows[0];
+
+    // Leads Ativos = (Step 1 OR Step 2 OR Step 3) - Leads Finalizados
+    // (Note: No nosso sistema 'ativa' já exclui 'concluida')
+    const leadsAtivosFormula = parseInt(stepsData.step_1) + parseInt(stepsData.step_2) + parseInt(stepsData.step_3);
+
+    const progressoRes = [
+      { step_atual: 1, total: parseInt(stepsData.step_1) },
+      { step_atual: 2, total: parseInt(stepsData.step_2) },
+      { step_atual: 3, total: parseInt(stepsData.step_3) }
+    ];
+
 
     const progressoLeadsRes = await db.query(
       `SELECT lc.id, lc.lead_id, l.full_name AS lead_name,
@@ -901,10 +933,7 @@ exports.getCadencesDashboard = async (req, res, next) => {
          COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida' AND lc.resultado_anterior = 'success') AS conversoes,
          (SELECT COUNT(*)::integer FROM cadence_logs cl_acc WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'call' AND cl_acc.acao = 'tentativa' AND cl_acc.resultado IS NOT NULL ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}) AS ligacoes,
          (SELECT COUNT(*)::integer FROM cadence_logs cl_acc WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'email' AND cl_acc.acao = 'tentativa' AND cl_acc.resultado IS NOT NULL ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}) AS emails,
-        FROM cadence_logs cl_acc
-        WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'whatsapp' AND cl_acc.acao = 'tentativa' AND cl_acc.resultado IS NOT NULL
-          ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}
-      ) AS whatsapp,
+         (SELECT COUNT(*)::integer FROM cadence_logs cl_acc WHERE cl_acc.sdr_id = s.id AND cl_acc.canal = 'whatsapp' AND cl_acc.acao = 'tentativa' AND cl_acc.resultado IS NOT NULL ${dateFilter ? dateFilter.replace('lc.created_at', 'cl_acc.timestamp') : ''}) AS whatsapp,
       CASE
         WHEN COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida') > 0
         THEN ROUND((COUNT(DISTINCT lc.id) FILTER (WHERE lc.status = 'concluida' AND lc.resultado_anterior = 'success')::numeric /
@@ -1023,9 +1052,28 @@ exports.getCadencesDashboard = async (req, res, next) => {
       paramsSdr
     );
 
-    const activityStats = activityRes.rows[0] || {
-      total_ligacoes: 0, total_emails: 0, total_whatsapp: 0, total_atividades: 0
+    const activityStats = {
+      total_ligacoes: parseInt(activityRes.rows[0]?.total_ligacoes) || 0,
+      total_emails: parseInt(activityRes.rows[0]?.total_emails) || 0,
+      total_whatsapp: parseInt(activityRes.rows[0]?.total_whatsapp) || 0,
+      total_atividades: parseInt(activityRes.rows[0]?.total_atividades) || 0
     };
+
+    // ── CARGA DE TRABALHO: Total Interações / Total Leads Únicos Tratados ──
+    const workloadRes = await db.query(
+      `SELECT 
+         COUNT(*)::integer as total_interactions,
+         COUNT(DISTINCT lead_id)::integer as unique_leads
+       FROM cadence_logs 
+       WHERE acao = 'tentativa' AND resultado IS NOT NULL
+       ${activityDateFilter}
+       ${activitySdrFilter}`,
+      paramsSdr
+    );
+    const workload = workloadRes.rows[0];
+    const avgInteractionsPerLead = workload.unique_leads > 0 
+      ? (workload.total_interactions / workload.unique_leads).toFixed(1)
+      : 0;
 
     // ── CADÊNCIAS PENDENTES: leads sem cadência ativa ────────
     const pendentesRes = await db.query(
@@ -1079,9 +1127,12 @@ exports.getCadencesDashboard = async (req, res, next) => {
           leads: criticaRes.rows,
         },
         zona_progresso: {
-          total: progressoLeadsRes.rows.length,
-          por_step: porStep,
-          por_percentual: porPercentual,
+          total: leadsAtivosFormula,
+          por_step: {
+            step_1: parseInt(stepsData.step_1),
+            step_2: parseInt(stepsData.step_2),
+            step_3: parseInt(stepsData.step_3)
+          },
           leads: progressoLeadsRes.rows,
         },
         zona_conversao: {
@@ -1101,16 +1152,20 @@ exports.getCadencesDashboard = async (req, res, next) => {
         outcome_by_sdr: outcomeBySdr,
         scheduled_returns: scheduledReturnsRes.rows,
         cadence_returns: cadenceReturnsRes.rows,
-        activity_stats: {
-          total_ligacoes: parseInt(activityStats.total_ligacoes) || 0,
-          total_emails: parseInt(activityStats.total_emails) || 0,
-          total_whatsapp: parseInt(activityStats.total_whatsapp) || 0,
-          total_atividades: parseInt(activityStats.total_atividades) || 0,
-        },
+        activity_stats: activityStats,
         cadencias_pendentes: cadenciasPendentes,
+        taxa_pendentes: leadsAtivosFormula > 0 
+          ? ((criticaRes.rows.length / leadsAtivosFormula) * 100).toFixed(1)
+          : 0,
+        workload: {
+          total_interactions: workload.total_interactions,
+          unique_leads: workload.unique_leads,
+          avg_per_lead: avgInteractionsPerLead
+        },
         activity_by_sdr: activityBySdrRes.rows,
       },
     });
+
   } catch (err) {
     next(err);
   }

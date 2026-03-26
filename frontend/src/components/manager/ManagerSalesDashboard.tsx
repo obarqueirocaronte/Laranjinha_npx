@@ -466,6 +466,8 @@ export const ManagerSalesDashboard: React.FC<ManagerSalesDashboardProps> = ({ on
                                             if (sub) setMonitorSubTab(sub);
                                         }}
                                         cadenceDashboard={cadenceDashboard}
+                                        sdrFilter={sdrFilter}
+                                        setSdrFilter={setSdrFilter}
                                     />
                                 )}
                                 {activeTab === 'monitoramento' && (
@@ -800,22 +802,26 @@ const ResumoTab: React.FC<{
     onOpenStats?: () => void;
     onNavigateToTab?: (tab: TabId, subTab?: MonitorSubTab) => void;
     cadenceDashboard: any;
+    sdrFilter: string;
+    setSdrFilter: (val: string) => void;
 }> = ({ 
     stats, activeLeads, allLeads, sdrs, onNavigateToTab, 
-    cadenceDashboard, onOpenStats
+    cadenceDashboard, onOpenStats, sdrFilter, setSdrFilter
 }) => {
 
-    const inCadence = activeLeads.length;
     const totalLeads = (allLeads?.length || 0) + (activeLeads?.length || 0);
 
     const cadAtivas = cadenceDashboard?.zona_progresso?.total || 0;
     const cadParadas = cadenceDashboard?.zona_critica?.total || 0;
     
-    // Calcula conversão baseada em leads concluídos vs total que entrou no período (simulado como total acumulado)
+    // Distribuição por Step (Mapeando do backend)
+    const steps = cadenceDashboard?.zona_progresso?.por_step || {};
+    const stepDistribution = `S1: ${steps.step_1 || 0} | S2: ${steps.step_2 || 0} | S3: ${steps.step_3 || 0}`;
+
+    // Calcula conversão baseada em leads concluídos vs total que entrou no período
     const conversionRate = totalLeads > 0 ? Math.round((stats.completed_leads / totalLeads) * 100) : 0;
 
     const avgCompletion = cadenceDashboard?.average_completion?.percentage || 0;
-    const avgSteps = cadenceDashboard?.average_completion?.average_steps || 0;
 
     return (
         <div className="space-y-6">
@@ -826,61 +832,62 @@ const ResumoTab: React.FC<{
                     value={totalLeads} 
                     icon={Users} 
                     gradient={['#5356FF', '#49108B']} 
-                    sub={`${allLeads?.length || 0} PENDENTES`} 
+                    sub={`${allLeads?.length || 0} LEADS DISPONÍVEIS`} 
                 />
                 <KpiCard 
-                    label="EM CADÊNCIA" 
-                    value={inCadence} 
+                    label="LEADS EM ANDAMENTO" 
+                    value={cadAtivas} 
                     icon={Zap} 
                     gradient={['#009FBD', '#10964D']} 
-                    sub={`${sdrs.length} SDRS ATIVOS`} 
+                    sub={stepDistribution} 
                 />
                 <KpiCard 
                     label="CONVERSÃO GERAL" 
                     value={`${conversionRate}%`} 
                     icon={TrendingUp} 
                     gradient={['#FF8225', '#EF4444']} 
-                    sub="LEADS FINALIZADOS (GANHOS)" 
+                    sub="TAXA DE SUCESSO DO FUNIL" 
                 />
                 <KpiCard 
-                    label="TOTAL LIGAÇÕES" 
-                    value={stats.calls || 0} 
+                    label="TOTAL INTERAÇÕES" 
+                    value={cadenceDashboard?.workload?.total_interactions || stats.calls || 0} 
                     icon={Activity} 
                     gradient={['#9b22db', '#ec4899']} 
-                    sub="CONFIRMADAS NO PERÍODO" 
+                    sub="CHAMADAS / WHATS / EMAILS" 
                 />
             </div>
 
             {/* ── Second row (Medium Status KPIs) ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatsMiniCard 
-                    label="ATIVAS" 
-                    value={cadAtivas} 
-                    icon={Zap} 
-                    color="emerald" 
+                    label="SDRS ATIVOS" 
+                    value={sdrs.length} 
+                    icon={Users} 
+                    color="blue" 
                     onClick={() => onNavigateToTab?.('monitoramento', 'operacao')}
                 />
                 <StatsMiniCard 
-                    label="ATRASADAS" 
+                    label="ZONA CRÍTICA (>24H)" 
                     value={cadParadas} 
                     icon={Clock} 
                     color="rose" 
+                    sub="Leads com tempo esgotado"
                     onClick={() => onNavigateToTab?.('monitoramento', 'operacao')}
                 />
                 <StatsMiniCard 
-                    label="CONCLUSÃO" 
+                    label="CONCLUSÃO MÉDIA" 
                     value={`${avgCompletion}%`} 
                     icon={Target} 
-                    color="blue" 
-                    sub="Média de progresso"
+                    color="emerald" 
+                    sub="Taxa de sucesso operacional"
                     onClick={() => onOpenStats?.()}
                 />
                 <StatsMiniCard 
-                    label="MÉDIA STEPS" 
-                    value={avgSteps} 
+                    label="CARGA DE TRABALHO" 
+                    value={`${cadenceDashboard?.workload?.avg_per_lead || 0}`} 
                     icon={Activity} 
                     color="purple" 
-                    sub="ciclos por lead"
+                    sub="Interações por Lead"
                     onClick={() => onOpenStats?.()}
                 />
             </div>
@@ -900,8 +907,15 @@ const ResumoTab: React.FC<{
                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Acompanhamento de retornos agendados</p>
                             </div>
                             <div className="flex items-center gap-2">
-                                <select className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[9px] font-black text-slate-500 focus:outline-none">
-                                    <option>SDR: Todos</option>
+                                <select 
+                                    className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[9px] font-black text-slate-500 focus:outline-none cursor-pointer"
+                                    value={sdrFilter}
+                                    onChange={(e) => setSdrFilter(e.target.value)}
+                                >
+                                    <option value="all">SDR: Todos</option>
+                                    {sdrs.map(s => (
+                                        <option key={s.id} value={s.id}>{s.full_name || s.email}</option>
+                                    ))}
                                 </select>
                                 <button className="text-[9px] font-black text-blue-500 hover:text-blue-600 uppercase tracking-widest" onClick={() => onNavigateToTab && onNavigateToTab('monitoramento', 'operacao')}>Ver Detalhes</button>
                             </div>
@@ -912,7 +926,8 @@ const ResumoTab: React.FC<{
                                 const allLeads = [
                                     ...(cadenceDashboard?.zona_progresso?.leads || []),
                                     ...(cadenceDashboard?.zona_critica?.leads || [])
-                                ].sort((a: any, b: any) => {
+                                ].filter((l: any) => sdrFilter === 'all' || l.assigned_sdr_id === sdrFilter || l.sdr_id === sdrFilter)
+                                .sort((a: any, b: any) => {
                                     if (!a.proxima_acao_em) return 1;
                                     if (!b.proxima_acao_em) return -1;
                                     return new Date(a.proxima_acao_em).getTime() - new Date(b.proxima_acao_em).getTime();
@@ -982,9 +997,18 @@ const ResumoTab: React.FC<{
                                 return (
                                     <div key={sdr.id} className="flex items-center justify-between group cursor-pointer transition-all hover:translate-x-1">
                                         <div className="flex items-center gap-4">
-                                            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-lg group-hover:scale-110", colors[i % colors.length])}>
-                                                {sdr.full_name?.[0].toUpperCase() || 'S'}
-                                            </div>
+                                            {sdr.profile_picture_url ? (
+                                                <img 
+                                                    src={sdr.profile_picture_url} 
+                                                    alt={sdr.full_name} 
+                                                    className="w-12 h-12 rounded-2xl object-cover shadow-lg group-hover:scale-110 transition-transform"
+                                                    onError={(e) => { (e.target as any).src = ''; (e.target as any).parentElement.innerHTML = sdr.full_name?.[0].toUpperCase() || 'S'; }}
+                                                />
+                                            ) : (
+                                                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-lg group-hover:scale-110", colors[i % colors.length])}>
+                                                    {sdr.full_name?.[0].toUpperCase() || 'S'}
+                                                </div>
+                                            )}
                                             <div className="flex flex-col">
                                                 <span className="text-[14px] font-black text-slate-800 leading-tight">{sdr.full_name || sdr.email?.split('@')[0]}</span>
                                                 <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-1">

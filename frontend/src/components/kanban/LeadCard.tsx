@@ -370,20 +370,63 @@ export const LeadCard = React.memo<LeadCardProps>(({
                                         </div>
                                     )}
                                     {title === 'Explorar Tags' && (
-                                        <div className="flex flex-col gap-2">
-                                            <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70 mb-1">Tags</span>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {(lead.tags || []).map((t, i) => (
-                                                    <motion.div
-                                                        key={i}
-                                                        initial={{ opacity: 0, scale: 0.6 }}
-                                                        animate={{ opacity: 1, scale: 1 }}
-                                                        transition={{ ...POPOVER_SPRING, delay: 0.03 + i * 0.04 }}
-                                                        className="px-3 py-1 rounded-full bg-orange-100/50 border border-orange-200/50"
-                                                    >
-                                                        <span className="text-orange-700 text-[10px] font-black uppercase tracking-tight">{t}</span>
-                                                    </motion.div>
-                                                ))}
+                                        <div className="flex flex-col gap-3">
+                                            {/* Cadence Counter Section */}
+                                            {lead.cadence_name && (
+                                                <div className="flex flex-col gap-2 p-2.5 bg-white/60 rounded-xl border border-white/80 shadow-sm">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Cadência</span>
+                                                        <span className="text-[11px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 uppercase tracking-tighter">
+                                                            {lead.cadence_name}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center justify-between mt-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-7 h-7 rounded-lg bg-orange-100/50 flex items-center justify-center border border-orange-200/30">
+                                                                <span className="text-[12px] font-black text-orange-700">{(lead as any).step_atual || (lead as any).cadence_step || 1}</span>
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Etapa Atual</span>
+                                                                <span className="text-[11px] font-bold text-slate-700">De {(lead as any).total_cycles || (lead as any).max_steps || (lead as any).cadence_max_steps || 3}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Progresso</span>
+                                                            <span className="text-[12px] font-black text-emerald-600">{cadenceProgress}%</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Progress Bar Mini */}
+                                                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1 shadow-inner">
+                                                        <motion.div 
+                                                            initial={{ width: 0 }}
+                                                            animate={{ width: `${cadenceProgress}%` }}
+                                                            transition={{ ...POPOVER_SPRING, delay: 0.1 }}
+                                                            className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="flex flex-col gap-2">
+                                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest opacity-70 mb-1">Tags do Lead</span>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {(lead.tags || []).map((t, i) => (
+                                                        <motion.div
+                                                            key={i}
+                                                            initial={{ opacity: 0, scale: 0.6 }}
+                                                            animate={{ opacity: 1, scale: 1 }}
+                                                            transition={{ ...POPOVER_SPRING, delay: 0.03 + i * 0.04 }}
+                                                            className="px-3 py-1 rounded-full bg-orange-100/30 border border-orange-200/30 hover:bg-orange-100/60 transition-colors"
+                                                        >
+                                                            <span className="text-orange-700 text-[10px] font-black uppercase tracking-tight">{t}</span>
+                                                        </motion.div>
+                                                    ))}
+                                                    {(lead.tags || []).length === 0 && (
+                                                        <span className="text-[11px] text-slate-400 font-medium italic">Nenhuma tag atribuída</span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     )}

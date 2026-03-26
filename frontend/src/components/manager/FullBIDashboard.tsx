@@ -71,7 +71,7 @@ export const FullBIDashboard: React.FC<{
     }, [d.timeline]);
 
     const sdrPerf = useMemo(() => (d.sdr_performance || []).map((s: any) => ({
-        name: s.full_name, calls: +s.calls || 0, emails: +s.emails || 0,
+        name: s.full_name, avatar: s.profile_picture_url, calls: +s.calls || 0, emails: +s.emails || 0,
         whatsapp: +s.whatsapp || 0, meetings: +s.meetings || 0,
         cadences: +s.cadences_done || 0, cadences_active: +s.cadences_active || 0,
         rate: s.calls > 0 && s.meetings > 0 ? `${Math.round((s.meetings / s.calls) * 100)}%` : '—',
@@ -107,91 +107,84 @@ export const FullBIDashboard: React.FC<{
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-6 md:p-12"
+            className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-xl p-4 md:p-8"
         >
             <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                initial={{ opacity: 0, scale: 0.95, y: 40 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                className="w-full h-full max-w-[1800px] bg-[#F8FAFC] flex flex-col relative rounded-[4rem] shadow-[0_50px_100px_rgba(0,0,0,0.15)] overflow-hidden border border-white"
+                className="w-full h-full max-w-[1600px] bg-[#F8FAFC]/90 backdrop-blur-md flex flex-col relative rounded-[2.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.3)] overflow-hidden border border-white/60"
             >
                 {/* ── Background Blobs ── */}
                 <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-200/30 blur-[120px] rounded-full -z-10" />
                 <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-rose-200/30 blur-[120px] rounded-full -z-10" />
 
-                {/* ── TOP BAR ── */}
-                <div className="shrink-0 px-12 pt-10 pb-8 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-10 relative z-[100] shadow-sm">
+                {/* ── TOP BAR (UX Optimized) ── */}
+                <div className="shrink-0 px-10 pt-8 pb-6 border-b border-slate-200/60 bg-white/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-6 relative z-[100]">
                     {/* Brand */}
-                    <div className="flex items-center gap-6 group">
-                        <div className="w-16 h-16 rounded-[2rem] bg-gradient-to-br from-[#FF8225] via-[#EF4444] to-[#B22222] flex items-center justify-center text-white shadow-[0_12px_30px_rgba(239,68,68,0.25)] group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-                            <TrendingUp size={32} strokeWidth={2.5} />
+                    <div className="flex items-center gap-4 group">
+                        <div className="w-12 h-12 rounded-[1.2rem] bg-gradient-to-br from-[#FF8225] via-[#EF4444] to-[#B22222] flex items-center justify-center text-white shadow-lg group-hover:rotate-6 transition-all duration-500">
+                            <TrendingUp size={24} strokeWidth={2.5} />
                         </div>
                         <div>
-                            <h1 className="text-4xl font-black text-slate-800 tracking-tighter leading-none" style={{ fontFamily: 'Comfortaa, cursive' }}>
-                                Deep <span className="bg-gradient-to-r from-orange-500 via-rose-500 to-rose-600 bg-clip-text text-transparent">Analytics</span>
+                            <h1 className="text-2xl font-black text-slate-800 tracking-tighter leading-none" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                Deep <span className="text-orange-600">Analytics</span>
                             </h1>
-                            <div className="flex items-center gap-2 mt-3">
-                                <div className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[9px] font-black uppercase tracking-[0.2em] border border-slate-200">Intelligence Console</div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" /> Live Monitoring
-                                </p>
+                            <div className="flex items-center gap-2 mt-1.5">
+                                <span className="bg-orange-500 w-1.5 h-1.5 rounded-full animate-pulse" />
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Intelligence Console</span>
                             </div>
                         </div>
                     </div>
 
-                {/* Page Tabs */}
-                <div className="flex items-center bg-slate-50 border border-slate-200/60 rounded-3xl p-1 gap-1 shadow-inner h-14">
-                    {PAGES.map((p, i) => (
-                        <button
-                            key={i}
-                            onClick={() => setPage(i)}
-                            className={`flex items-center gap-2 px-8 py-2.5 rounded-2xl text-[12px] font-black uppercase tracking-[0.1em] transition-all h-full ${
-                                page === i
-                                    ? 'bg-white text-orange-600 shadow-sm border border-slate-100 scale-[1.05]'
-                                    : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
-                            }`}
-                        >
-                            <p.icon size={16} strokeWidth={2.5} />
-                            {p.label}
-                        </button>
-                    ))}
-                </div>
+                    {/* Page Tabs (Pill Style) */}
+                    <div className="flex items-center bg-slate-100/50 border border-slate-200/50 rounded-2xl p-1 gap-1">
+                        {PAGES.map((p, i) => (
+                            <button
+                                key={i}
+                                onClick={() => setPage(i)}
+                                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${
+                                    page === i
+                                        ? 'bg-white text-orange-600 shadow-md scale-[1.02]'
+                                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/40'
+                                }`}
+                            >
+                                <p.icon size={14} strokeWidth={2.5} />
+                                {p.label}
+                            </button>
+                        ))}
+                    </div>
 
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-4">
                         {/* SDR Pill */}
-                        <div className="flex items-center gap-3 px-6 h-14 bg-white border border-slate-200 rounded-[1.5rem] shadow-sm group hover:shadow-md transition-all">
-                            <Users size={18} className="text-orange-500" />
-                            <select value={sdrFilter} onChange={e => setSdrFilter(e.target.value)} className="bg-transparent text-[11px] font-black text-slate-700 outline-none cursor-pointer uppercase tracking-widest">
-                                <option value="all">Time Completo</option>
+                        <div className="flex items-center gap-2 px-4 h-11 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-orange-200 transition-all">
+                            <Users size={16} className="text-orange-500" />
+                            <select value={sdrFilter} onChange={e => setSdrFilter(e.target.value)} className="bg-transparent text-[10px] font-black text-slate-700 outline-none cursor-pointer uppercase tracking-wider">
+                                <option value="all">Filtro Time</option>
                                 {sdrs.map(s => (<option key={s.id} value={s.id}>{s.full_name || s.email?.split('@')[0]}</option>))}
                             </select>
                         </div>
 
                         {/* Date Range Pill */}
-                        <div className="flex items-center gap-2 pr-6 bg-white border border-slate-200 rounded-[1.5rem] shadow-sm hover:shadow-md h-14 transition-all group overflow-hidden">
-                            <div className="h-full px-5 flex items-center gap-2 bg-slate-50 border-r border-slate-100">
-                                <Calendar size={18} className="text-blue-500 group-hover:scale-110 transition-transform" />
-                            </div>
-                            <div className="flex items-center gap-4 pl-3">
-                                <div className="flex flex-col">
-                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Período De</span>
-                                    <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} className="bg-transparent text-[10px] font-black text-slate-800 outline-none uppercase" />
-                                </div>
-                                <div className="w-[1px] h-6 bg-slate-200" />
-                                <div className="flex flex-col">
-                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Até</span>
-                                    <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} className="bg-transparent text-[10px] font-black text-slate-800 outline-none uppercase" />
-                                </div>
+                        <div className="flex items-center h-11 bg-white border border-slate-200 rounded-xl shadow-sm px-4 gap-4">
+                            <Calendar size={16} className="text-blue-500" />
+                            <div className="flex items-center gap-2">
+                                <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} className="bg-transparent text-[10px] font-black text-slate-800 outline-none uppercase" />
+                                <span className="text-slate-300 text-[10px]">/</span>
+                                <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} className="bg-transparent text-[10px] font-black text-slate-800 outline-none uppercase" />
                             </div>
                         </div>
 
-                        <button onClick={fetchData} className={`group w-14 h-14 rounded-2xl flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:text-orange-500 hover:shadow-lg transition-all ${loading ? 'animate-spin text-orange-400' : ''}`}>
-                            <RefreshCw size={22} className="group-hover:rotate-180 transition-transform duration-500" />
-                        </button>
-                        
-                        <button onClick={onClose} className="w-14 h-14 rounded-2xl flex items-center justify-center bg-slate-900 text-white shadow-xl shadow-slate-900/40 hover:scale-105 hover:bg-black transition-all border-2 border-white/20">
-                            <X size={26} />
-                        </button>
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2">
+                            <button onClick={fetchData} className={`w-11 h-11 rounded-xl flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-all ${loading ? 'animate-spin' : ''}`}>
+                                <RefreshCw size={18} />
+                            </button>
+                            
+                            <button onClick={onClose} className="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-950 text-white shadow-lg hover:scale-105 transition-all">
+                                <X size={20} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -219,14 +212,14 @@ export const FullBIDashboard: React.FC<{
 /* ── Mini Icon Block Helper ── */
 function MiniKPI({ icon: Icon, label, value, color, sub }: { icon: any; label: string; value: string | number; color: string; sub?: string }) {
     return (
-        <div className={`flex items-center gap-4 px-5 py-4 rounded-3xl border ${color} transition-all hover:shadow-lg hover:scale-[1.02] group cursor-pointer`}>
-            <div className="w-11 h-11 rounded-[1.15rem] flex items-center justify-center border border-white/40 bg-white/40 shadow-sm transition-transform group-hover:scale-110">
-                <Icon size={18} strokeWidth={2.5} />
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${color} transition-all hover:shadow-md hover:scale-[1.01] group cursor-pointer`}>
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center border border-white/40 bg-white/40 shadow-sm transition-transform group-hover:rotate-3">
+                <Icon size={16} strokeWidth={2.5} />
             </div>
             <div className="flex-1 min-w-0">
-                <div className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] truncate mb-0.5">{label}</div>
-                <div className="text-[22px] font-black text-slate-800 leading-none" style={{ fontFamily: 'Comfortaa, cursive' }}>{value}</div>
-                {sub && <div className="text-[9px] font-bold opacity-60 mt-1 uppercase tracking-wider">{sub}</div>}
+                <div className="text-[8px] font-black text-slate-400 uppercase tracking-[0.12em] truncate mb-0.5">{label}</div>
+                <div className="text-[18px] font-black text-slate-800 leading-none" style={{ fontFamily: 'Comfortaa, cursive' }}>{value}</div>
+                {sub && <div className="text-[8.5px] font-bold opacity-60 mt-1 uppercase tracking-wider">{sub}</div>}
             </div>
         </div>
     );
@@ -235,68 +228,138 @@ function MiniKPI({ icon: Icon, label, value, color, sub }: { icon: any; label: s
 /* ══════════════════════════════════════════
    PAGE 0 — Visão Geral (Real Data)
 ══════════════════════════════════════════ */
-function PageOverview({ kpis, timeline, sdrPerf, pieData }: any) {
-    return (
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="p-12 space-y-12 w-full">
-            {/* KPI Strip — Premium Glass Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                {kpis.map((kpi: any, i: number) => {
-                    const gradients: any = {
-                        orange: ['#FF8225', '#EF4444'],
-                        blue: ['#3B82F6', '#1E40AF'],
-                        emerald: ['#10B981', '#064E3B'],
-                        purple: ['#8B5CF6', '#5B21B6'],
-                        green: ['#22C55E', '#166534'],
-                        indigo: ['#6366F1', '#3730A3'],
-                    };
-                    const grad = gradients[kpi.color] || ['#94A3B8', '#475569'];
+function PageOverview({ data, timeline, sdrPerf, pieData }: any) {
+    const d = data || {};
+    const deep = d.deep_analytics || {};
+    
+    // Executive Summary Rows (Formulas from user)
+    const executiveKPIs = [
+        { label: '% ENGAJAMENTO', value: `${deep.engagement_rate || 0}%`, icon: Zap, grad: ['#009FBD', '#10964D'], sub: 'RESPOSTAS / TOTAL LEADS' },
+        { label: 'REUNIÕES MARCADAS', value: deep.total_meetings || 0, icon: Handshake, grad: ['#FF8225', '#EF4444'], sub: 'VALOR ABSOLUTO' },
+        { label: 'CADÊNCIAS CONCLUÍDAS', value: deep.total_concluded || 0, icon: CheckCircle2, grad: ['#5356FF', '#49108B'], sub: 'FLUXOS FINALIZADOS' },
+        { label: 'VOLUME DE INTERAÇÕES', value: deep.total_interactions || 0, icon: Activity, grad: ['#9b22db', '#ec4899'], sub: 'CALL + WPP + EMAIL' },
+    ];
 
-                    return (
-                        <motion.div key={kpi.label} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05, type: 'spring', stiffness: 200, damping: 20 }}
-                            whileHover={{ y: -10, scale: 1.05 }}
-                            className="relative p-8 rounded-[3rem] bg-white border border-slate-100 shadow-[0_10px_35px_rgba(0,0,0,0.03)] hover:shadow-[0_40px_80px_rgba(0,0,0,0.12)] transition-all cursor-pointer group overflow-hidden"
-                        >
-                            <div 
-                                className="absolute -top-10 -right-10 w-32 h-32 blur-[40px] opacity-[0.07] rounded-full transition-all group-hover:opacity-[0.15] group-hover:scale-150" 
-                                style={{ background: grad[0] }}
-                            />
-                            
-                            <div className="relative flex flex-col h-full">
-                                <div 
-                                    className="w-16 h-16 rounded-[1.5rem] flex items-center justify-center text-white shadow-xl transition-all group-hover:rotate-12 group-hover:translate-x-1"
-                                    style={{ background: `linear-gradient(135deg, ${grad[0]}, ${grad[1]})` }}
-                                >
-                                    <kpi.icon size={28} strokeWidth={2.5} />
+    const tagPerf = deep.tag_performance || [];
+    const lossTags = deep.loss_autopsy || [];
+
+    return (
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="p-4 md:p-8 lg:p-12 space-y-12 w-full overflow-x-hidden">
+            
+            {/* ── Resumo Executivo (Big Blocks) ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                {executiveKPIs.map((kpi, i) => (
+                    <motion.div key={kpi.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
+                        className="relative p-6 rounded-[2rem] bg-white border border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] group overflow-hidden h-[160px] flex flex-col justify-between hover:shadow-lg transition-all"
+                    >
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-slate-100/50 transition-colors" />
+                        <div className="flex items-center justify-between relative z-10">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md"
+                                style={{ background: `linear-gradient(135deg, ${kpi.grad[0]}, ${kpi.grad[1]})` }}>
+                                <kpi.icon size={18} strokeWidth={2.5} />
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</p>
+                            </div>
+                        </div>
+                        <div className="mt-auto relative z-10">
+                            <h2 className="text-4xl font-black text-slate-900 tracking-tighter leading-none" style={{ fontFamily: 'Comfortaa, cursive' }}>
+                                {kpi.value}
+                            </h2>
+                            <p className="text-[8.5px] font-bold text-slate-300 uppercase tracking-tighter mt-1">{kpi.sub}</p>
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
+
+            {/* ── Deep Intelligence: Tag Analysis ── */}
+            <div className="grid grid-cols-12 gap-8">
+                {/* ICP Conversion */}
+                <div className="col-span-12 lg:col-span-8 bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm relative overflow-hidden group">
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 className="text-xl font-black text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>Conversão por ICP (Tag)</h3>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Lead Velocity Index & Taxa de Sucesso</p>
+                        </div>
+                        <div className="px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-2xl text-indigo-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                           <LayoutDashboard size={14} /> Inteligência de Perfil
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {tagPerf.length > 0 ? tagPerf.map((t: any, i: number) => (
+                            <div key={i} className="p-5 rounded-3xl bg-slate-50/50 border border-slate-100 hover:border-orange-200 hover:bg-white transition-all group">
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">{t.tag}</span>
+                                    <span className="text-[14px] font-black text-slate-800">{t.conversion_rate}%</span>
                                 </div>
-                                <div className="mt-8">
-                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-2">{kpi.label}</div>
-                                    <div className="text-5xl font-black text-slate-900 leading-none tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>{kpi.value.toLocaleString()}</div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase">
+                                        <span>LVI (Média Tempo)</span>
+                                        <span className="text-slate-600">{t.avg_hours_to_meeting ? `${t.avg_hours_to_meeting}h` : '—'}</span>
+                                    </div>
+                                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                        <div className="h-full bg-gradient-to-r from-orange-400 to-rose-500" style={{ width: `${t.conversion_rate}%` }} />
+                                    </div>
+                                    <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase">
+                                        <span>{t.meetings} Reuniões</span>
+                                        <span>{t.total_leads} Leads</span>
+                                    </div>
                                 </div>
                             </div>
-                        </motion.div>
-                    );
-                })}
+                        )) : <div className="col-span-full py-12 text-center text-slate-400 font-bold italic">Nenhuma tag de conversão detectada</div>}
+                    </div>
+                </div>
+
+                {/* Autópsia de Perda */}
+                <div className="col-span-12 lg:col-span-4 bg-slate-900 rounded-[2.5rem] p-8 shadow-xl text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-orange-500/10 blur-[80px] rounded-full" />
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-3 mb-6 font-bold uppercase tracking-widest text-orange-400 text-[10px]">
+                            <AlertTriangle size={16} /> Autópsia de Perda
+                        </div>
+                        <h3 className="text-xl font-black mb-8" style={{ fontFamily: 'Comfortaa, cursive' }}>Por que perdemos?</h3>
+                        
+                        <div className="space-y-6">
+                            {lossTags.length > 0 ? lossTags.map((lt: any, i: number) => {
+                                const totalLost = lossTags.reduce((s: number, a: any) => s + a.count, 0);
+                                const pct = totalLost > 0 ? Math.round((lt.count / totalLost) * 100) : 0;
+                                return (
+                                    <div key={i} className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[12px] font-bold text-slate-300">{lt.tag}</span>
+                                            <span className="text-[12px] font-black text-orange-400">{pct}%</span>
+                                        </div>
+                                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                            <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} className="h-full bg-gradient-to-r from-orange-500 to-rose-600" />
+                                        </div>
+                                    </div>
+                                );
+                            }) : <div className="py-10 text-center text-slate-500 font-bold italic">Sem tags de descarte no período</div>}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Chart Row */}
             <div className="grid grid-cols-12 gap-8">
                 <div className="col-span-8 bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                    <div className="relative z-10 flex items-center justify-between mb-10">
+                    <div className="relative z-10 flex items-center justify-between mb-6">
                         <div>
-                            <h3 className="text-2xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Fluxo de Performance</h3>
-                            <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-[0.25em] mt-2">Interações diárias no período</p>
+                            <h3 className="text-xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Fluxo de Performance</h3>
+                            <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-[0.2em] mt-1.5">Interações diárias</p>
                         </div>
-                        <div className="flex gap-5">
+                        <div className="flex gap-4">
                             {[['Ligações', '#f97316'], ['Reuniões', '#6366f1'], ['WhatsApp', '#10b981']].map(([l, c]) => (
                                 <div key={l} className="flex items-center gap-1.5">
-                                    <div className="w-3 h-3 rounded-full" style={{ background: c as string }} />
-                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{l}</span>
+                                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: c as string }} />
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{l}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
-                    <div className="h-[280px]">
+                    <div className="h-[220px]">
                         {timeline.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={timeline} margin={{ top: 5, right: 5, bottom: 5, left: -10 }}>
@@ -320,9 +383,9 @@ function PageOverview({ kpis, timeline, sdrPerf, pieData }: any) {
 
                 <div className="col-span-4 bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm flex flex-col relative overflow-hidden group">
                     <div className="absolute bottom-0 right-0 w-48 h-48 bg-slate-50 rounded-full blur-3xl -mr-24 -mb-24 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                    <div className="relative z-10 mb-10">
-                        <h3 className="text-2xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Canais</h3>
-                        <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-[0.25em] mt-2">Mix de interações</p>
+                    <div className="relative z-10 mb-6">
+                        <h3 className="text-xl font-black text-slate-800 tracking-tight" style={{ fontFamily: 'Comfortaa, cursive' }}>Canais</h3>
+                        <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-[0.2em] mt-1.5">Mix interações</p>
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center">
                         {pieData.some((p: any) => p.value > 0) ? (
@@ -332,14 +395,14 @@ function PageOverview({ kpis, timeline, sdrPerf, pieData }: any) {
                                 </Pie>
                             </PieChart>
                         ) : <div className="text-slate-400 font-bold text-sm">Sem dados</div>}
-                        <div className="flex flex-col gap-2.5 w-full mt-4">
+                        <div className="flex flex-col gap-2 w-full mt-3">
                             {pieData.map((dd: any) => (
                                 <div key={dd.name} className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-2.5 h-2.5 rounded-full" style={{ background: dd.color }} />
-                                        <span className="text-[13px] font-bold text-slate-600">{dd.name}</span>
+                                        <div className="w-2 h-2 rounded-full" style={{ background: dd.color }} />
+                                        <span className="text-[12px] font-bold text-slate-600">{dd.name}</span>
                                     </div>
-                                    <span className="text-[13px] font-black text-slate-800">{dd.value}</span>
+                                    <span className="text-[12px] font-black text-slate-800">{dd.value}</span>
                                 </div>
                             ))}
                         </div>
@@ -379,7 +442,13 @@ function PageOverview({ kpis, timeline, sdrPerf, pieData }: any) {
                                 </td>
                                 <td className="py-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white font-black text-sm shadow-sm">{sdr.name.charAt(0)}</div>
+                                        {sdr.avatar ? (
+                                            <img src={sdr.avatar} alt={sdr.name} className="w-9 h-9 rounded-xl object-cover shadow-sm"
+                                                onError={(e) => { (e.target as any).src = ''; (e.target as any).parentElement.innerHTML = sdr.name.charAt(0); }}
+                                            />
+                                        ) : (
+                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white font-black text-sm shadow-sm">{sdr.name.charAt(0)}</div>
+                                        )}
                                         <span className="text-[14px] font-black text-slate-800">{sdr.name}</span>
                                     </div>
                                 </td>
@@ -416,7 +485,7 @@ function PageOperational({ data }: { data: any }) {
     const totalActiveSteps = steps.reduce((s: number, st: any) => s + st.lead_count, 0);
 
     return (
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-8 space-y-8">
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-4 md:p-8 lg:p-12 space-y-10 w-full overflow-x-hidden">
             {/* Header */}
             <div>
                 <h2 className="text-2xl font-black text-slate-800" style={{ fontFamily: 'Comfortaa, cursive' }}>Painel Operacional</h2>
@@ -424,21 +493,21 @@ function PageOperational({ data }: { data: any }) {
             </div>
 
             {/* 3 Status Cards */}
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {/* Zona Crítica */}
                 <motion.div whileHover={{ y: -5 }} className="bg-white border border-red-100/60 rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(239,68,68,0.05)] relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-red-100/30 blur-[60px] rounded-full group-hover:scale-125 transition-transform" />
                     <div className="relative">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-50 to-red-100 border border-red-200 flex items-center justify-center text-red-500 shadow-sm"><AlertTriangle size={24} strokeWidth={2.5} /></div>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-50 to-red-100 border border-red-200 flex items-center justify-center text-red-500 shadow-sm"><AlertTriangle size={18} strokeWidth={2.5} /></div>
                             <div>
-                                <h3 className="text-xl font-black text-slate-800 tracking-tight">Zona Crítica</h3>
-                                <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.1em]">Gargalos Operacionais</p>
+                                <h3 className="text-lg font-black text-slate-800 tracking-tight">Zona Crítica</h3>
+                                <p className="text-[9px] font-black text-red-500 uppercase tracking-[0.1em]">Gargalos</p>
                             </div>
                         </div>
-                        <div className="flex items-end justify-between mb-4">
-                            <div className="text-5xl font-black text-red-500 tracking-tighter" style={{ fontFamily: 'Comfortaa, cursive' }}>{criticalLeads.length}</div>
-                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">Leads em atraso</div>
+                        <div className="flex items-end justify-between mb-3">
+                            <div className="text-4xl font-black text-red-500 tracking-tighter" style={{ fontFamily: 'Comfortaa, cursive' }}>{criticalLeads.length}</div>
+                            <div className="text-[9px] font-bold text-slate-400 uppercase mb-1.5">Leads atraso</div>
                         </div>
                         {criticalLeads.length === 0 ? (
                             <div className="flex items-center gap-2 text-emerald-500 text-[13px] font-black bg-emerald-50/50 py-3 px-4 rounded-2xl border border-emerald-100"><CheckCircle2 size={16} /> Operação em dia</div>
@@ -462,16 +531,16 @@ function PageOperational({ data }: { data: any }) {
                 <motion.div whileHover={{ y: -5 }} className="bg-white border border-orange-100/60 rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(249,115,22,0.05)] relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-orange-100/30 blur-[60px] rounded-full group-hover:scale-125 transition-transform" />
                     <div className="relative">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 flex items-center justify-center text-orange-500 shadow-sm"><Zap size={24} strokeWidth={2.5} /></div>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 flex items-center justify-center text-orange-500 shadow-sm"><Zap size={18} strokeWidth={2.5} /></div>
                             <div>
-                                <h3 className="text-xl font-black text-slate-800 tracking-tight">Em Andamento</h3>
-                                <p className="text-[10px] font-black text-orange-500 uppercase tracking-[0.1em]">Cadências Ativas</p>
+                                <h3 className="text-lg font-black text-slate-800 tracking-tight">Em Andamento</h3>
+                                <p className="text-[9px] font-black text-orange-500 uppercase tracking-[0.1em]">Ativas</p>
                             </div>
                         </div>
-                        <div className="flex items-end justify-between mb-4">
-                            <div className="text-5xl font-black text-orange-500 tracking-tighter" style={{ fontFamily: 'Comfortaa, cursive' }}>{totalActiveSteps}</div>
-                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">Fluxo produtivo</div>
+                        <div className="flex items-end justify-between mb-3">
+                            <div className="text-4xl font-black text-orange-500 tracking-tighter" style={{ fontFamily: 'Comfortaa, cursive' }}>{totalActiveSteps}</div>
+                            <div className="text-[9px] font-bold text-slate-400 uppercase mb-1.5">Fluxo produtivo</div>
                         </div>
                         <div className="space-y-3.5">
                             {steps.map((s: any) => (
@@ -495,24 +564,24 @@ function PageOperational({ data }: { data: any }) {
                 <motion.div whileHover={{ y: -5 }} className="bg-white border border-emerald-100/60 rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(16,185,129,0.05)] relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-100/30 blur-[60px] rounded-full group-hover:scale-125 transition-transform" />
                     <div className="relative">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-500 shadow-sm"><CheckCircle2 size={24} strokeWidth={2.5} /></div>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-500 shadow-sm"><CheckCircle2 size={18} strokeWidth={2.5} /></div>
                             <div>
-                                <h3 className="text-xl font-black text-slate-800 tracking-tight">Resultados</h3>
-                                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.1em]">Conversão de Funil</p>
+                                <h3 className="text-lg font-black text-slate-800 tracking-tight">Resultados</h3>
+                                <p className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.1em]">Conversão</p>
                             </div>
                         </div>
-                        <div className="text-5xl font-black text-emerald-500 tracking-tighter mb-4" style={{ fontFamily: 'Comfortaa, cursive' }}>{totalOutcomes}</div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="text-4xl font-black text-emerald-500 tracking-tighter mb-3" style={{ fontFamily: 'Comfortaa, cursive' }}>{totalOutcomes}</div>
+                        <div className="grid grid-cols-2 gap-2.5">
                             {[
                                 { label: 'Total', val: totalOutcomes, color: 'emerald', bg: 'bg-emerald-50/60' },
-                                { label: 'Oportunidade', val: wonCount, color: 'emerald', bg: 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' },
-                                { label: 'Fluxo Esgotado', val: totalOutcomes - wonCount - rejCount, color: 'amber', bg: 'bg-amber-50/60' },
+                                { label: 'Oportunidade', val: wonCount, color: 'emerald', bg: 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/15' },
+                                { label: 'Esgotado', val: totalOutcomes - wonCount - rejCount, color: 'amber', bg: 'bg-amber-50/60' },
                                 { label: 'Rejeitados', val: rejCount, color: 'slate', bg: 'bg-slate-50/60' }
                             ].map((pill, idx) => (
-                                <div key={idx} className={`px-4 py-4 rounded-2xl transition-all border border-transparent ${pill.bg} flex flex-col justify-center`}>
-                                    <div className={`text-[9px] font-black uppercase tracking-widest ${pill.bg.includes('emerald-500') ? 'text-emerald-100' : 'text-slate-400'}`}>{pill.label}</div>
-                                    <div className={`text-xl font-black ${pill.bg.includes('emerald-500') ? 'text-white' : 'text-slate-800'}`}>{pill.val}</div>
+                                <div key={idx} className={`px-3 py-2.5 rounded-xl transition-all border border-transparent ${pill.bg} flex flex-col justify-center`}>
+                                    <div className={`text-[8px] font-black uppercase tracking-widest ${pill.bg.includes('emerald-500') ? 'text-emerald-100' : 'text-slate-400'}`}>{pill.label}</div>
+                                    <div className={`text-[15px] font-black ${pill.bg.includes('emerald-500') ? 'text-white' : 'text-slate-800'}`}>{pill.val}</div>
                                 </div>
                             ))}
                         </div>
@@ -560,7 +629,7 @@ function PageOperational({ data }: { data: any }) {
             </div>
 
             {/* Pipeline + Batch Conversion */}
-            <div className="grid grid-cols-12 gap-6">
+            <div className="grid grid-cols-12 gap-8">
                 {/* Pipeline */}
                 <div className="col-span-5 bg-white border border-slate-100 rounded-[2rem] p-7 shadow-sm">
                     <h3 className="text-[16px] font-black text-slate-800 mb-4" style={{ fontFamily: 'Comfortaa, cursive' }}>Pipeline</h3>
@@ -633,7 +702,7 @@ function PageProductivity({ sdrs, timeline }: any) {
     ];
 
     return (
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-8 space-y-8">
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-4 md:p-8 lg:p-12 space-y-10 w-full overflow-x-hidden">
             {/* SDR Selector */}
             {sdrs.length > 0 && (
             <div className="bg-white/40 backdrop-blur-md border border-white/60 rounded-[2.5rem] p-6 shadow-sm flex items-center gap-5 overflow-x-auto no-scrollbar">
@@ -662,27 +731,27 @@ function PageProductivity({ sdrs, timeline }: any) {
                 {prodItems.map((item: any, i: number) => (
                     <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
                         whileHover={{ y: -5, scale: 1.02 }}
-                        className="bg-white/60 backdrop-blur-md border border-white/80 rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.06)] transition-all group overflow-hidden"
+                        className="bg-white/60 backdrop-blur-md border border-white/80 rounded-[2rem] p-6 shadow-sm hover:shadow-md transition-all group overflow-hidden relative"
                     >
-                        <div className={`absolute -top-10 -right-10 w-32 h-32 blur-[50px] opacity-10 rounded-full ${item.color.split(' ')[0]}`} />
-                        <div className={`w-14 h-14 rounded-[1.25rem] border flex items-center justify-center mb-6 shadow-sm transition-transform group-hover:rotate-6 ${item.color}`}><item.icon size={24} strokeWidth={2.5} /></div>
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-3">{item.label}</div>
-                        <div className="text-5xl font-black text-slate-800 leading-none mb-6 tracking-tighter" style={{ fontFamily: 'Comfortaa, cursive' }}>{item.value}</div>
-                        <div className="h-3 bg-slate-100/50 border border-slate-100/50 rounded-full overflow-hidden p-0.5">
+                        <div className={`absolute -top-10 -right-10 w-24 h-24 blur-[40px] opacity-10 rounded-full ${item.color.split(' ')[0]}`} />
+                        <div className={`w-12 h-12 rounded-xl border flex items-center justify-center mb-5 shadow-sm transition-transform group-hover:rotate-6 ${item.color}`}><item.icon size={20} strokeWidth={2.5} /></div>
+                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">{item.label}</div>
+                        <div className="text-3xl font-black text-slate-800 leading-none mb-5 tracking-tighter" style={{ fontFamily: 'Comfortaa, cursive' }}>{item.value}</div>
+                        <div className="h-2 bg-slate-100/50 border border-slate-100/50 rounded-full overflow-hidden">
                             <motion.div initial={{ width: 0 }} animate={{ width: `${item.progress}%` }}
                                 transition={{ duration: 1, delay: 0.3 + i * 0.1, ease: 'easeOut' }}
-                                className="h-full rounded-full bg-gradient-to-r from-orange-400 via-orange-500 to-rose-500 shadow-sm" />
+                                className="h-full bg-gradient-to-r from-orange-400 via-orange-500 to-rose-500 shadow-sm" />
                         </div>
-                        <div className="flex justify-between mt-3 px-1">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Taxa de Ocupação</span>
-                            <span className="text-[12px] font-black text-slate-700 tracking-tight">{Math.round(item.progress)}%</span>
+                        <div className="flex justify-between mt-2.5 px-0.5">
+                            <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-wider">Taxa de Ocupação</span>
+                            <span className="text-[10px] font-black text-slate-700 tracking-tight">{Math.round(item.progress)}%</span>
                         </div>
                     </motion.div>
                 ))}
             </div>
 
             {/* Bar Chart + Executive Summary */}
-            <div className="grid grid-cols-12 gap-6">
+            <div className="grid grid-cols-12 gap-8">
                 <div className="col-span-8 bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm">
                     <h3 className="text-xl font-black text-slate-800 mb-1" style={{ fontFamily: 'Comfortaa, cursive' }}>Distribuição por Canal</h3>
                     <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-6">Volume diário de interações por tipo</p>
@@ -718,14 +787,14 @@ function PageProductivity({ sdrs, timeline }: any) {
                         { label: 'Cadências Concluídas', value: sdr.cadences, highlight: false, icon: CheckCircle2, gradient: 'from-emerald-500 to-teal-500' },
                         { label: 'Total Interações', value: totalInteractions, highlight: false, icon: Zap, gradient: 'from-slate-700 to-slate-900' },
                     ].map((row: any, i: number) => (
-                        <div key={i} className={`flex items-center justify-between px-6 py-5 rounded-[1.75rem] border transition-all hover:scale-[1.02] active:scale-[0.98] ${row.highlight ? `bg-gradient-to-r ${row.gradient} border-transparent text-white shadow-xl shadow-orange-500/20` : 'bg-white border-white/60 shadow-sm hover:shadow-lg hover:border-orange-200'}`}>
-                            <div className="flex items-center gap-4">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${row.highlight ? 'bg-white/20' : 'bg-slate-50 text-slate-400 group-hover:text-orange-500'}`}>
-                                    <row.icon size={18} strokeWidth={2.5} />
+                        <div key={i} className={`flex items-center justify-between px-5 py-3.5 rounded-2xl border transition-all hover:scale-[1.01] active:scale-[0.99] ${row.highlight ? `bg-gradient-to-r ${row.gradient} border-transparent text-white shadow-lg shadow-orange-500/15` : 'bg-white border-white/60 shadow-sm hover:shadow-md hover:border-orange-200'}`}>
+                            <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${row.highlight ? 'bg-white/20' : 'bg-slate-50 text-slate-400 group-hover:text-orange-500'}`}>
+                                    <row.icon size={15} strokeWidth={2.5} />
                                 </div>
-                                <span className={`text-[13px] font-bold tracking-tight ${row.highlight ? 'text-white' : 'text-slate-600'}`}>{row.label}</span>
+                                <span className={`text-[12px] font-bold tracking-tight ${row.highlight ? 'text-white' : 'text-slate-600'}`}>{row.label}</span>
                             </div>
-                            <span className={`text-xl font-black ${row.highlight ? 'text-white' : 'text-slate-800'}`}>{row.value}</span>
+                            <span className={`text-[16px] font-black ${row.highlight ? 'text-white' : 'text-slate-800'}`}>{row.value}</span>
                         </div>
                     ))}
                 </div>
